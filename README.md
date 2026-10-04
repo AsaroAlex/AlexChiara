@@ -1,6 +1,6 @@
 # Filo · servizi già pronti per il lavoro di ogni giorno
 
-MVP in italiano per piccoli studi di consulenza B2B. Il primo servizio è **Segreteria email**: controlla i clienti prioritari, segnala richieste aperte e prepara bozze da rivedere. La panoramica presenta subito un riepilogo delle richieste, un prossimo passo suggerito e un’agenda manuale con ordine del giorno scaricabile. La sincronizzazione del calendario e i social sono servizi futuri.
+MVP in italiano per piccoli studi di consulenza B2B. Il primo servizio è **Segreteria email**: controlla i clienti prioritari, segnala richieste aperte e prepara bozze da rivedere. La panoramica presenta subito le cose da fare, un riepilogo neutro a destra e un’agenda manuale con ordine del giorno scaricabile. La sincronizzazione del calendario e i social sono servizi futuri.
 
 ## Avvio
 
@@ -26,11 +26,15 @@ La panoramica usa una palette crema e arancione e mantiene «La tua giornata, co
 
 Il riepilogo usa solo i controlli salvati: apre il periodo dalle 18 della sera precedente oppure da venerdì sera durante il weekend e il lunedì, con orari italiani. Indica l’ultimo controllo e segnala quando va aggiornato; oltre un’ora gli ultimi arrivi non sono considerati verificati. I contatti senza messaggi sono indicati come tali soltanto quando la copertura lo prova. Gmail restituisce una selezione limitata di conversazioni in attesa: un’assenza resta «da verificare».
 
-Prima del primo controllo compare un esempio esplicitamente fittizio, separato dalle attività salvate e senza accesso a provider esterni. La pagina propone il passo utile: configurare la posta, ricollegarla, riprendere il servizio, aggiornare il riepilogo o verificare la prima risposta.
+Prima del primo controllo la pagina è vuota, senza richieste o appuntamenti inventati. Su Railway `FILO_REAL_DATA_ONLY=1` nasconde i dati dimostrativi conservati e blocca le esecuzioni demo. La pagina propone il passo utile: configurare la posta, ricollegarla, riprendere il servizio, aggiornare il riepilogo o verificare la prima risposta.
 
 L’agenda contiene gli appuntamenti aggiunti dall’utente, persistenti e ordinati per orario in Europe/Rome. Puoi consultare un’altra giornata e scaricare un file `.txt` con appuntamenti e note. Il calendario esterno non è collegato e non vengono inventati impegni.
 
-## Percorso dimostrativo
+Gli avvisi “oggi/domani se risponde questo contatto dimmelo subito” si possono proporre in chat e salvare, oppure aggiungere direttamente nella panoramica. Richiedono un contatto prioritario già configurato e Gmail collegata. Mentre il servizio autorizzato è attivo, un avviso in attesa per oggi abilita un controllo ogni cinque minuti; quando viene osservato un messaggio arrivato dopo la creazione dell’avviso, la segnalazione compare prima delle altre priorità. Nessuna notifica esterna viene inviata. Pausa e disattivazione fermano anche questi controlli.
+
+## Percorso dimostrativo locale
+
+Questo percorso è disponibile solo con `FILO_REAL_DATA_ONLY` disabilitato, in un’istanza isolata.
 
 1. Dal catalogo scegli **Segreteria email** o chiedi nella chat di seguire le email dei clienti importanti.
 2. Collega la **casella dimostrativa**. L'azienda fittizia Studio Riva e i contatti di esempio sono modificabili.
@@ -73,3 +77,7 @@ Questo è un MVP verificabile, disponibile anche su Railway con accesso protetto
 La prova browser facoltativa `node scripts/browser-smoke.cjs` richiede Playwright e Chromium, già presenti nell'ambiente cloud ma non necessari all'app. Usala contro un'istanza dimostrativa inizialmente inattiva con dati nuovi: modifica soltanto l'azienda fittizia e la sua configurazione. Per isolare la prova puoi avviare il server con `ALEXCHIARA_DATA_DIR` in una cartella temporanea e `FILO_PORT=8001`; imposta anche `FILO_PORT=8001` per il comando del test. Il controllo parte dalla configurazione guidata e verifica risultati, revisione, preferenze, errori, recupero e chat. Le prove API di `scripts/check.sh` isolano automaticamente i dati.
 
 La prova `node scripts/morning-smoke.cjs` usa una nuova istanza isolata sulla porta 8002, con `FILO_ACCESS_PASSWORD=morning-test`; imposta `ALEXCHIARA_DATA_DIR` a una cartella temporanea e avvia Uvicorn con `.venv/bin/python`. Verifica l’accesso protetto, il riepilogo prima e dopo il controllo, la persistenza delle bozze aperte, la revisione senza duplicati, l’agenda con browser in un altro fuso, il download e il layout desktop/mobile. Non usarla sul servizio Railway o su dati reali.
+
+La prova `FILO_PORT=8014 node scripts/real-mode-smoke.cjs` verifica un’istanza nuova con `FILO_REAL_DATA_ONLY=1`: pagina vuota senza dati dimostrativi, accesso alla guida Google, callback corretta e layout mobile. Non configura credenziali né legge email.
+
+La prova completa degli avvisi usa un server fixture riproducibile: in un terminale avvia `.venv/bin/python scripts/watch_smoke_server.py`, nell’altro `FILO_PORT=8016 node scripts/watch-smoke.cjs`. Il server ascolta solo su localhost, disabilita worker e chiamate ai provider e usa un database temporaneo eliminato all’arresto. Verifica form, proposta in chat, conferma, arrivo osservato in cima alle priorità, link alla casella corretta e chiusura persistente.

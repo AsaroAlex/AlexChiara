@@ -16,11 +16,12 @@ from fastapi.staticfiles import StaticFiles
 
 from . import ai
 from .agenda import agenda_summary, create_agenda_router
-from .briefing import build_briefing, build_example_briefing
+from .real_data import real_data_only, visible_service, workspace_data
+from .watches import build_watch_summary, create_watches_router, propose_watch
 from .connectors import ConnectorError, create_router, load_messages
 from .db import Database, iso_now
 from .models import Action, Activation, ChatInput, CompanyInput, DemoFailure, Preferences
-from .service import Scheduler, public_service
+from .service import Scheduler
 
 CATALOG = [
     {"id": "priority-email", "name": "Risposte ai clienti prioritari", "category": "Email", "available": True, "status": "available", "description": "Controlla ogni giorno le richieste in attesa e prepara bozze da verificare."},
@@ -48,6 +49,7 @@ def create_app(data_dir=None, start_worker=True):
     app.state.scheduler = scheduler
     app.state.runtime = runtime
     app.include_router(create_agenda_router(db))
+    app.include_router(create_watches_router(db))
     allowed_hosts = {"127.0.0.1", "localhost", "::1", "testserver"}
     allowed_hosts.update(host.strip().lower() for host in os.environ.get("ALEXCHIARA_ALLOWED_HOSTS", "").split(",") if host.strip())
     access_password = os.environ.get("FILO_ACCESS_PASSWORD", "").encode("utf-8")
@@ -121,21 +123,23 @@ def create_app(data_dir=None, start_worker=True):
     @app.get("/api/bootstrap")
     def bootstrap(request: Request):
         session = db.session(request.cookies.get("alexchiara_session"))
-        briefing = build_briefing(db)
+        company, service, connection, runs, approvals, briefing = workspace_data(db)
         ai_status = ai.ai_status() if hasattr(ai, "ai_status") else {"mode": "deterministic", "configured": False, "enabled": False, "label": "Analisi locale deterministica"}
         result = {
-            "company": db.get_setting("company"), "service": public_service(db), "connection": db.get_connection(),
-            "runs": db.list_runs(), "approvals": db.pending_drafts(), "actions": db.list_actions(), "catalog": CATALOG,
-            "csrf_token": session["csrf"], "mode": "local-demo", "analysis_mode": "deterministic", "ai": ai_status,
-            "demo_failure": db.get_setting("demo_failure"),
+            "company": company, "service": service, "connection": connection,
+            "runs": runs, "approvals": approvals, "actions": [] if real_data_only() else db.list_actions(), "catalog": CATALOG,
+            "csrf_token": session["csrf"], "mode": "real-mail" if real_data_only() else "local-test", "analysis_mode": "deterministic", "ai": ai_status,
+            "demo_failure": None if real_data_only() else db.get_setting("demo_failure"),
             "briefing": briefing,
-            "briefing_example": build_example_briefing(db) if briefing["status"] == "not_started" and not briefing["priorities"] else None,
+            "briefing_example": None,
+            "real_data_only": real_data_only(),
+            "watches": build_watch_summary(db),
             "agenda": agenda_summary(db),
             "limitations": [
-                "Spazio locale con un solo utente: il processo server deve restare acceso per i controlli programmati.",
-                "La casella demo contiene dati fittizi. Gmail legge solo i messaggi con consenso OAuth e non può inviare email.",
+                "Spazio dedicato a una sola attività: il server deve restare attivo per i controlli programmati.",
+                "Gmail legge solo i messaggi con consenso OAuth e non può inviare email.",
                 "Le bozze richiedono revisione umana: approvarle le segna come verificate, senza inviarle.",
-                "L'analisi Gmail è deterministica e locale; l'AI esterna opzionale si usa solo sui dati dimostrativi.",
+                "Le bozze Gmail usano regole locali e richiedono revisione umana.",
                 "L'agenda contiene solo gli appuntamenti aggiunti da te. Calendario collegato e social sono in programma.",
             ],
         }
@@ -153,6 +157,9 @@ def create_app(data_dir=None, start_worker=True):
 
     @app.post("/api/chat")
     def chat(payload: ChatInput):
+        watch = propose_watch(db, payload.message)
+        if watch:
+            return {"supported": bool(watch.get("watch_suggestion")), "service_id": None, **watch}
         message = payload.message.lower()
         send_requested = bool(re.search(r"\b(invia|inviare|inviami|inviate|manda|mandare|spedisci|send)\b", message))
         is_email = any(word in message for word in ("email", "e-mail", "posta", "client", "preventiv", "prioritar", "bozz"))
@@ -161,7 +168,7 @@ def create_app(data_dir=None, start_worker=True):
             return {"supported": False, "reply": "Ti propongo di iniziare dalla panoramica: puoi aggiungere i tuoi appuntamenti e scaricare l'ordine del giorno. Il calendario collegato e i social sono in arrivo. Posso anche aiutarti a configurare un controllo quotidiano delle email importanti e le bozze da verificare.", "service_id": None}
         if not is_email:
             return {"supported": False, "reply": "Posso aiutarti con le risposte ai clienti prioritari: dimmi quali contatti seguire e a che ora controllare la posta ogni giorno.", "service_id": None}
-        service = db.get_setting("service")
+        service = visible_service(db)
         preferences = {key: service[key] for key in ("priority_contacts", "hour", "minute", "timezone")}
         hour_match = re.search(r"\balle\s+(\d{1,2})(?:[:.](\d{2}))?\b", message)
         if hour_match and 0 <= int(hour_match[1]) <= 23 and 0 <= int(hour_match[2] or 0) <= 59:
@@ -178,6 +185,8 @@ def create_app(data_dir=None, start_worker=True):
 
     @app.post("/api/connection/demo")
     def connect_demo():
+        if real_data_only():
+            raise HTTPException(403, "Questo spazio usa soltanto email reali. Collega Gmail.")
         connection = {"provider": "demo", "status": "connected", "label": "Posta dimostrativa — Studio Riva"}
         with db.connection() as conn:
             conn.execute("BEGIN IMMEDIATE")
@@ -198,6 +207,10 @@ def create_app(data_dir=None, start_worker=True):
     @app.post("/api/service/preview")
     def preview(payload: Preferences):
         connection = db.get_connection()
+        if real_data_only() and connection.get("provider") != "gmail":
+            raise HTTPException(409, "Collega Gmail per controllare le email reali.")
+        if real_data_only() and db.get_setting("company").get("demo"):
+            raise HTTPException(409, "Compila il nome del tuo studio nella pagina La tua azienda prima del primo controllo.")
         if connection["status"] != "connected":
             raise HTTPException(409, "Collega la posta dimostrativa o Gmail prima dell'anteprima.")
         preferences = payload.model_dump()
@@ -219,18 +232,20 @@ def create_app(data_dir=None, start_worker=True):
             if old_contacts != new_contacts:
                 conn.execute("UPDATE runs SET status='failed',error='I contatti prioritari sono cambiati. Avvia un nuovo controllo.',error_step='preferenze',retryable=0,next_attempt_at=NULL,finished_at=? WHERE status IN ('queued','retry_wait')", (iso_now(),))
             scheduler._log_in_transaction(conn, "preferences_updated", "priority-email", {"contacts_changed": old_contacts != new_contacts})
-        return {"service": public_service(db)}
+        return {"service": visible_service(db)}
 
     @app.post("/api/service/activate")
     def activate(payload: Activation):
+        if real_data_only() and db.get_setting("company").get("demo"):
+            raise HTTPException(409, "Compila il nome del tuo studio nella pagina La tua azienda prima di attivare i controlli.")
         authorization = payload.authorization
         if authorization.send or not authorization.read or not authorization.draft:
             raise HTTPException(403, "Autorizza solo lettura e preparazione di bozze. L'invio non è consentito.")
         with db.connection() as conn:
             conn.execute("BEGIN IMMEDIATE")
             connection = db.get_connection()
-            if connection["status"] != "connected":
-                raise HTTPException(409, "Collega una casella prima di attivare il servizio.")
+            if connection["status"] != "connected" or (real_data_only() and connection.get("provider") != "gmail"):
+                raise HTTPException(409, "Collega Gmail prima di attivare il servizio.")
             service = db.get_setting("service")
             old_contacts = {contact["email"].lower() for contact in service["priority_contacts"]}
             new_contacts = {contact.email for contact in payload.priority_contacts}
@@ -243,7 +258,7 @@ def create_app(data_dir=None, start_worker=True):
             if old_contacts != new_contacts:
                 conn.execute("UPDATE runs SET status='failed',error='I contatti prioritari sono cambiati. Avvia un nuovo controllo.',error_step='preferenze',retryable=0,next_attempt_at=NULL,finished_at=? WHERE status IN ('queued','retry_wait')", (iso_now(),))
             scheduler._log_in_transaction(conn, "service_activated", "priority-email", {"provider": connection["provider"], "send": False})
-        return {"service": public_service(db)}
+        return {"service": visible_service(db)}
 
     @app.post("/api/service/action")
     def service_action(payload: Action):
@@ -259,7 +274,7 @@ def create_app(data_dir=None, start_worker=True):
             if service["status"] != "paused":
                 raise HTTPException(409, "Il servizio deve essere in pausa per riprenderlo.")
             connection = db.get_connection()
-            if connection["status"] != "connected" or connection["provider"] != service["provider"]:
+            if connection["status"] != "connected" or connection["provider"] != service["provider"] or (real_data_only() and connection.get("provider") != "gmail"):
                 raise HTTPException(409, "Ricollega la casella autorizzata prima di riprendere il servizio.")
             service.update(status="active", activated_at=iso_now())
         elif action == "deactivate":
@@ -268,10 +283,12 @@ def create_app(data_dir=None, start_worker=True):
                 conn.execute("UPDATE runs SET status='failed',error='Servizio disattivato dall’utente.',error_step='mandato',retryable=0,next_attempt_at=NULL,finished_at=? WHERE status IN ('queued','retry_wait')", (iso_now(),))
         db.set_setting("service", service)
         db.log_action("service_" + action, "priority-email")
-        return {"service": public_service(db)}
+        return {"service": visible_service(db)}
 
     @app.post("/api/demo/failure")
     def demo_failure(payload: DemoFailure):
+        if real_data_only():
+            raise HTTPException(403, "Gli scenari fittizi sono disabilitati in questo spazio.")
         connection = db.get_connection()
         if connection["provider"] != "demo":
             raise HTTPException(409, "Le simulazioni di errore funzionano solo con la posta dimostrativa.")
@@ -284,12 +301,15 @@ def create_app(data_dir=None, start_worker=True):
     @app.get("/api/runs/{run_id}")
     def get_run(run_id: str):
         run = db.run(run_id)
-        if not run:
+        if not run or (real_data_only() and run["demo"]):
             raise HTTPException(404, "Controllo non trovato.")
         return run
 
     @app.post("/api/runs/{run_id}/retry")
     def retry_run(run_id: str):
+        run = db.run(run_id)
+        if real_data_only() and run and run["demo"]:
+            raise HTTPException(404, "Controllo non trovato.")
         try:
             return {"run": scheduler.retry(run_id)}
         except LookupError as exc:
@@ -300,7 +320,7 @@ def create_app(data_dir=None, start_worker=True):
     @app.post("/api/drafts/{draft_id}/approve")
     def approve_draft(draft_id: str):
         draft = db.draft(draft_id)
-        if not draft:
+        if not draft or (real_data_only() and db.run(draft["run_id"])["demo"]):
             raise HTTPException(404, "Bozza non trovata.")
         if draft["status"] != "approved":
             with db.connection() as conn:

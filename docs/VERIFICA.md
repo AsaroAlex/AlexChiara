@@ -46,3 +46,17 @@ Il browser ha verificato accesso protetto anche per il download, esempio fittizi
 La suite completa passa con 103 test. Le nuove prove API coprono agenda, date e ora legale, esportazione, migrazioni additive, periodo notte/weekend, copertura incompleta, snapshot con zero bozze, priorità motivate, revisioni e deduplicazione. Le prove usano dati fittizi e istanze isolate, senza modificare il servizio Railway o calendari esterni.
 
 Un test Gmail con MockTransport segue il connettore reale fino al briefing: una risposta dello studio elimina la priorità pendente, una nuova richiesta la ripropone, senza aumentare le chiamate al provider. Le bozze Gmail precedenti senza snapshot restano nello storico e chiedono un nuovo controllo: non vengono sostituite da un esempio fittizio o attribuite a una nuova casella.
+
+## Priorità in primo piano e prove con Gmail — 4 ottobre 2026
+
+La suite completa passa con **183 test**, con controllo sintattico JavaScript e dipendenze senza incompatibilità. I nuovi controlli verificano assenza di dati dimostrativi nella modalità reale, blocco di rotte e worker demo, profilo reale prima della lettura Gmail, conservazione dello storico e slot giornalieri distinti per casella/revisione.
+
+Gli avvisi coprono giorno italiano e ora legale, contatti conosciuti, ambiguità della chat, conferma e chiusura, isolamento tra caselle, arrivi successivi alla creazione e assenza di false conclusioni sui messaggi non osservati. Lo scheduler è verificato senza browser: polling ogni cinque minuti soltanto con avviso odierno e mandato attivo, cooldown dopo controlli manuali/quotidiani, deduplicazione, pausa, revoca, rimozione del contatto prioritario e stop dopo un arrivo riscontrato. I provider di queste prove sono simulati.
+
+Playwright verifica il layout a 1440, 1024 e 390 pixel: priorità sotto il titolo, report compatto grigio caldo in alto a destra e agenda accanto; sul telefono priorità, agenda e riepilogo. Verificati la pagina iniziale vuota in modalità reale e uno scenario visuale inserito esclusivamente nella risposta del browser, senza record inventati nel database. Nessun errore JavaScript o overflow.
+
+`scripts/real-mode-smoke.cjs` verifica solo letture: nessun nome fittizio visibile, nessun pulsante demo, guida Google con callback production completa, collegamenti alle console, controllo di configurazione e profilo vuoto. `scripts/morning-smoke.cjs` verifica su un’altra istanza isolata accesso con password, primo stato vuoto, successivo percorso demo esplicito, priorità, revisione, agenda, download e persistenza.
+
+`scripts/watch-smoke.cjs` passa con fixture localhost, worker e provider disabilitati: creazione dal form, proposta chat e conferma per domani, chiusura di un avviso in attesa, snapshot in ingresso successivo alla creazione, evidenza prima delle priorità urgenti, collegamento Gmail con account e thread corretti, chiusura persistente e pagina senza overflow desktop/mobile. Nessuna lettura o invio di email reali.
+
+Il sito Railway usa `FILO_REAL_DATA_ONLY=1` e la callback `https://filo-production-65a1.up.railway.app/api/gmail/oauth/callback`. Il collegamento a Gmail reale resta da provare: il client OAuth e il segreto Google non sono ancora configurati e il consenso dell’account non è stato concesso. La guida nell’app e `docs/GMAIL.md` descrivono il passaggio concreto.

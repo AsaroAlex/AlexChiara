@@ -240,17 +240,18 @@ def create_router(db):
         credentials = _credentials()
         connection = db.get_connection()
         return {"configured": bool(credentials["client_id"] and credentials["client_secret"]),
+                "redirect_uri": credentials["redirect_uri"],
                 "connected": connection.get("provider") == "gmail" and connection.get("status") == "connected",
                 "label": connection.get("label", "Gmail"), "scope": GMAIL_SCOPE,
                 "limitations": ["Sola lettura: nessun invio e nessuna bozza scritta su Gmail.",
                                  "Collegamento reale da verificare con un account autorizzato.",
-                                 "Analisi deterministica dimostrativa; revisione umana necessaria."]}
+                                 "Bozze locali da rivedere prima di usare."]}
 
     @router.post("/oauth/start")
     def start(request: Request):
         credentials = _credentials()
         if not credentials["client_id"] or not credentials["client_secret"]:
-            raise HTTPException(409, "Gmail reale non è configurato dal gestore. Puoi provare il servizio con la casella dimostrativa.")
+            raise HTTPException(409, "Mancano FILO_GOOGLE_CLIENT_ID e FILO_GOOGLE_CLIENT_SECRET nelle variabili del sito. Apri la guida al collegamento Gmail.")
         if not credentials["redirect_uri"].startswith(("http://127.0.0.1:", "http://localhost:", "https://")):
             raise HTTPException(409, "Il gestore deve configurare un indirizzo di ritorno HTTPS o locale valido.")
         state = secrets.token_urlsafe(32)

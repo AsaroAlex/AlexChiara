@@ -1,14 +1,24 @@
 # Collegare Gmail con permessi di sola lettura
 
-La demo funziona senza credenziali. Queste operazioni sono a carico del gestore del prodotto, non del cliente finale. Il connettore è implementato ma la sua integrazione reale non è stata verificata su un account durante lo sviluppo.
+Il deploy [Filo su Railway](https://filo-production-65a1.up.railway.app) usa soltanto dati reali (`FILO_REAL_DATA_ONLY=1`). Il collegamento Gmail richiede un client OAuth Google; non basta l'accesso a Railway. Queste operazioni sono a carico del gestore del prodotto. L'integrazione è verificata con risposte simulate, senza collegamento a un account reale durante lo sviluppo.
 
 ## Configurazione del gestore
 
-1. Crea o seleziona un progetto Google Cloud e abilita **Gmail API**. Configura il consenso OAuth in **Google Auth Platform** secondo le istruzioni ufficiali; se il progetto è in test, configura gli utenti di test ammessi.
-2. Crea un client OAuth di tipo applicazione web. Registra l'URI di ritorno esatto che il server userà. Per questa macchina privata l'URI predefinito è `http://127.0.0.1:8000/api/gmail/oauth/callback`; per una distribuzione reale serve un dominio HTTPS sotto il tuo controllo. Un browser esterno deve raggiungere lo stesso indirizzo registrato tramite un percorso supportato dalla tua piattaforma.
-3. Inserisci in modo sicuro nell'ambiente del processo `FILO_GOOGLE_CLIENT_ID`, `FILO_GOOGLE_CLIENT_SECRET` e, se diverso, `FILO_GOOGLE_REDIRECT_URI`. Non scrivere valori in file versionati. Il segreto OAuth è letto dal processo server: una sostituzione del proxy su una destinazione HTTPS non deve essere scambiata per un segreto raw disponibile localmente.
-4. Consenti, conservando le regole di rete esistenti, `accounts.google.com`, `oauth2.googleapis.com` e `gmail.googleapis.com`. Il preset package manager non comprende necessariamente questi domini. La configurazione cloud salvata elenca le aggiunte; salvarla non applica da solo l'accesso al processo corrente.
-5. Riavvia il server e controlla lo stato Gmail nella schermata di collegamento.
+1. In [Google Cloud Console](https://console.cloud.google.com/), crea o seleziona il progetto e abilita **Gmail API** da **API e servizi → Libreria**.
+2. In **Google Auth Platform**, completa il nome dell'app e le email di contatto. In **Audience**, scegli **External** per un account Gmail personale e aggiungi come **utente di test** l'indirizzo della casella che collegherai. Per un'organizzazione Google Workspace, **Internal** è utilizzabile solo dagli utenti di quella organizzazione.
+3. In **Data Access**, aggiungi il solo ambito `https://www.googleapis.com/auth/gmail.readonly`.
+4. In **Clients**, crea un client OAuth di tipo **Web application**. Aggiungi agli **Authorized redirect URIs** esattamente questo indirizzo, senza slash finale:
+
+   ```text
+   https://filo-production-65a1.up.railway.app/api/gmail/oauth/callback
+   ```
+
+5. Nel servizio Filo dell'ambiente **production** su Railway, apri **Variables** e inserisci `FILO_GOOGLE_CLIENT_ID` e `FILO_GOOGLE_CLIENT_SECRET` con i valori del client appena creato. `FILO_GOOGLE_REDIRECT_URI` è già impostata all'indirizzo del punto 4: mantieni lo stesso valore. Lascia `FILO_REAL_DATA_ONLY=1`. Salva le variabili e applica il nuovo deploy. Non inserire il segreto nella chat, nel codice o in Git.
+6. Apri Filo, seleziona **Collega Gmail** e accedi con l'account aggiunto tra gli utenti di test. Concedi la lettura e attendi il ritorno all'app. Compila il profilo della tua azienda, scegli i contatti prioritari e autorizza lettura e preparazione di bozze per attivare i controlli automatici.
+
+Se Google mostra `redirect_uri_mismatch`, confronta l'URI registrato con quello del punto 4. Se l'accesso è negato in modalità test, verifica che la casella sia tra gli utenti di test del progetto. Un'app **External** in stato **Testing** può ottenere refresh token con scadenza di sette giorni: per un uso continuativo serve completare il passaggio alla produzione previsto da Google o ricollegare la casella quando richiesto.
+
+Il server deve poter raggiungere `accounts.google.com`, `oauth2.googleapis.com` e `gmail.googleapis.com`. Per mantenere SQLite e la chiave dei token al riavvio, conserva il volume Railway già associato a `ALEXCHIARA_DATA_DIR`.
 
 Il cliente seleziona **Collega Gmail**, legge la spiegazione dell'accesso, concede il consenso nella pagina Google e torna all'app. Il codice usa `state` monouso con scadenza e PKCE, scambia il codice solo sul server e conserva i token cifrati con una chiave locale a permessi `0600`.
 

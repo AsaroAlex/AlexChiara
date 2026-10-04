@@ -46,6 +46,14 @@ Account reali, consenso/verifica OAuth e qualità AI non sono collaudati. Mancan
 
 ## Riepilogo e agenda
 
-Ogni controllo riuscito salva uno snapshot delle osservazioni originali, anche quando nessuna email produce una bozza. Le migrazioni di SQLite aggiungono i campi sorgente senza eliminare storico o revisioni. Il bootstrap ricava il briefing dai dati salvati senza contattare Gmail, mostra un esempio separato solo in assenza di lavoro esistente e indica periodo, copertura e data del controllo. Le assenze Gmail non sono verificabili perché il connettore limita le conversazioni lette. L’ultimo messaggio dei thread controllati include anche una risposta dello studio: questa evidenza elimina una vecchia priorità senza cancellare lo storico. Le priorità seguono urgenze esplicite e attesa, con motivi leggibili; non inferiscono scadenze.
+Ogni controllo riuscito salva uno snapshot delle osservazioni originali, anche quando nessuna email produce una bozza. Le migrazioni di SQLite aggiungono i campi sorgente senza eliminare storico o revisioni. Il bootstrap ricava il briefing dai dati salvati senza contattare Gmail, non sostituisce risultati mancanti con esempi e indica periodo, copertura e data del controllo. Le assenze Gmail non sono verificabili perché il connettore limita le conversazioni lette. L’ultimo messaggio dei thread controllati include anche una risposta dello studio: questa evidenza elimina una vecchia priorità senza cancellare lo storico. Le priorità seguono urgenze esplicite e attesa, con motivi leggibili; non inferiscono scadenze.
 
 L’agenda manuale salva gli orari in UTC e li presenta in Europe/Rome. Le rotte sono protette dai middleware di accesso e CSRF. L’esportazione è un file di testo per la giornata selezionata; non legge né modifica calendari esterni.
+
+## Modalità reale e avvisi di risposta
+
+`FILO_REAL_DATA_ONLY=1` presenta soltanto attività reali: profilo e contatti dimostrativi sono esclusi dalla vista, le rotte demo sono chiuse e il worker blocca controlli con casella o profilo dimostrativo. I record esistenti rimangono conservati. Gli slot quotidiani sono distinti per casella/revisione, così il passaggio a Gmail non viene bloccato dalle prove precedenti.
+
+Gli avvisi persistono in `watch_requests`, vincolati alla casella e revisione Gmail corrente. La chat propone un contatto noto senza salvarlo o attivare mandati; la conferma usa la rotta protetta `/api/watches`. Il riscontro richiede un messaggio in ingresso dello stesso contatto, osservato dopo la creazione, arrivato nel giorno italiano richiesto e dopo la creazione. Nessun messaggio assente viene dato per verificato. Gli avvisi trovati precedono le priorità normali, poi si possono chiudere.
+
+Un avviso odierno in attesa abilita controlli Gmail ogni cinque minuti, solo con servizio e mandato già attivi. Inflight, cooldown e slot con casella/revisione evitano controlli watch duplicati; un controllo quotidiano o manuale recente ritarda il successivo watch. Match, pausa, revoca e scadenza fermano il monitoraggio. I getter restano letture pure del database; la pagina si aggiorna ogni cinque secondi.

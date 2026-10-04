@@ -24,12 +24,9 @@ const fs = require('node:fs/promises');
     let data = await state();
     assert.equal(data.runs.length, 0);
     assert.equal(data.briefing.status, 'not_started');
-    assert.equal(data.briefing_example.preview, true);
-    assert.equal(await page.locator('.priority-item').count(), 3);
-    assert.match(await page.locator('#briefing-period').innerText(), /FITTIZIE/);
-    await page.locator('.priority-inline-draft').first().locator('summary').click();
-    await page.waitForTimeout(5300);
-    assert.equal(await page.locator('.priority-inline-draft').first().getAttribute('open'), '');
+    assert.equal(data.briefing_example, null);
+    assert.equal(await page.locator('.priority-item').count(), 0);
+    assert.equal(await page.locator('#briefing-title').innerText(), 'Il riepilogo');
 
     const today = data.agenda.date;
     const addAppointment = async (title, day, time) => {
@@ -102,7 +99,7 @@ const fs = require('node:fs/promises');
     await page.screenshot({ path: '.runtime/morning-active-mobile.png', fullPage: true });
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Mobile must not overflow.');
     assert.deepEqual(errors, []);
-    console.log('PASS: password, immediate example, persistent drafts during polling, morning priorities, revision and duplicate suppression, Rome agenda with US browser, persistence, daily navigation and downloadable report; desktop/mobile without JS errors or overflow.');
+    console.log('PASS: password, empty initial state, persistent drafts during polling, morning priorities, revision and duplicate suppression, Rome agenda with US browser, persistence, daily navigation and downloadable report; desktop/mobile without JS errors or overflow.');
     await context.close();
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

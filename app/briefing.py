@@ -223,10 +223,10 @@ def _contact_statuses(contacts, snapshots, period, fresh):
     return result
 
 
-def build_briefing(db, now=None):
+def build_briefing(db, now=None, *, service=None):
     """Read existing checks only; never contact a provider or enqueue work."""
     now = _utc(now)
-    service = db.get_setting("service")
+    service = db.get_setting("service") if service is None else service
     connection = db.get_connection()
     provider = connection.get("provider") or service.get("provider")
     scope = mailbox_scope(db, provider)

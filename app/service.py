@@ -4,8 +4,10 @@ The server must run for timers to advance. Restarting it recovers one most-recen
 missed daily slot and interrupted work; SQLite enforces slot uniqueness.
 """
 from datetime import datetime, time as dt_time, timedelta, timezone
+import hashlib
 import json
 import logging
+import os
 from queue import Empty, Queue
 import secrets
 import threading
@@ -18,6 +20,11 @@ from .db import iso_now
 
 logger = logging.getLogger(__name__)
 MAX_ATTEMPTS = 3
+WATCH_INTERVAL = timedelta(minutes=5)
+
+
+def _real_data_only():
+    return os.environ.get("FILO_REAL_DATA_ONLY") == "1"
 
 
 def utc(value=None):
@@ -91,18 +98,37 @@ class Scheduler:
             self._stop.wait(self.poll_interval)
 
     def enqueue(self, trigger="manual", slot_key=None, now=None):
-        now = utc(now).isoformat()
+        observed_at = utc(now)
+        now = observed_at.isoformat()
         run_id = secrets.token_hex(12)
         with self.db.connection() as conn:
             conn.execute("BEGIN IMMEDIATE")
             service = self.db.get_setting("service")
             self._guard(service["provider"])
             prefs = {key: service[key] for key in ("priority_contacts", "hour", "minute", "timezone")}
-            # Repeated manual clicks return the same in-flight operation.
-            if trigger == "manual":
+            # Manual clicks and background watches share one in-flight check.
+            # The transaction also prevents multiple workers from polling the
+            # same mailbox immediately after another check has completed.
+            if trigger in ("manual", "watch"):
                 existing = conn.execute("SELECT id FROM runs WHERE status IN ('queued','running','retry_wait') ORDER BY created_at LIMIT 1").fetchone()
                 if existing:
                     return self.db.run(existing["id"])
+            if trigger == "watch":
+                from .watches import needs_watch_poll
+                if service.get("provider") != "gmail" or not needs_watch_poll(self.db, observed_at):
+                    return None
+                # Bind deduplication to the mailbox still authorized inside
+                # this transaction, even if it changed after scheduling.
+                scope = hashlib.sha256(mailbox_scope(self.db, "gmail").encode()).hexdigest()[:24]
+                bucket = int(observed_at.timestamp()) // int(WATCH_INTERVAL.total_seconds())
+                slot_key = f"priority-email:watch:{scope}:{bucket}"
+                recent = conn.execute("""
+                    SELECT id,COALESCE(finished_at,started_at) AS observed_at
+                    FROM runs WHERE provider='gmail' AND started_at IS NOT NULL
+                    ORDER BY julianday(COALESCE(finished_at,started_at)) DESC LIMIT 1
+                """).fetchone()
+                if recent and observed_at - utc(recent["observed_at"]) < WATCH_INTERVAL:
+                    return self.db.run(recent["id"])
             conn.execute("INSERT OR IGNORE INTO runs(id,slot_key,trigger,provider,status,created_at,demo,preferences,company) VALUES (?,?,?,?,'queued',?,?,?,?)", (
                 run_id, slot_key, trigger, service["provider"], now, int(service["provider"] == "demo"),
                 json.dumps(prefs, ensure_ascii=False), json.dumps(self.db.get_setting("company"), ensure_ascii=False)))
@@ -111,7 +137,14 @@ class Scheduler:
                 run_id = row["id"]
         return self.db.run(run_id)
 
-    def _guard(self, provider, preferences=None):
+    def _guard(self, provider, preferences=None, company=None):
+        if _real_data_only() and provider == "demo":
+            raise ConnectorError("La posta dimostrativa non è disponibile: collega Gmail per usare dati reali.", "collegamento", False)
+        if _real_data_only():
+            if self.db.get_setting("company", {}).get("demo"):
+                raise ConnectorError("Configura il profilo reale della tua attività prima di controllare Gmail e preparare bozze.", "profilo", False)
+            if company is not None and company.get("demo"):
+                raise ConnectorError("Questo controllo usa ancora un profilo dimostrativo. Avvia un nuovo controllo con il profilo reale.", "profilo", False)
         service = self.db.get_setting("service")
         mandate = service.get("mandate") or {}
         if service["status"] != "active" or not mandate.get("read") or not mandate.get("draft") or mandate.get("send"):
@@ -129,11 +162,15 @@ class Scheduler:
 
     def _schedule_due(self, now):
         service = self.db.get_setting("service")
-        if service["status"] != "active":
+        if service["status"] != "active" or (_real_data_only() and service.get("provider") == "demo"):
             return
         # A revoked connection needs intervention, rather than repeated daily failures.
         connection = self.db.get_connection()
         if connection.get("status") != "connected" or connection.get("provider") != service.get("provider"):
+            return
+        try:
+            self._guard(service["provider"])
+        except ConnectorError:
             return
         tz = ZoneInfo(service["timezone"])
         local = now.astimezone(tz)
@@ -144,8 +181,38 @@ class Scheduler:
         if activated_at and slot.astimezone(timezone.utc) < utc(activated_at):
             return
         # The latest daily slot only. Long downtime never creates a backlog.
-        key = f"priority-email:{slot.date().isoformat()}"
+        scope_key = mailbox_scope(self.db, service["provider"])
+        scope = hashlib.sha256(scope_key.encode()).hexdigest()[:24]
+        # A pre-migration daily key is reusable only when its saved observation
+        # proves that it belonged to this exact mailbox, rather than the demo
+        # or a Gmail account that was subsequently replaced.
+        legacy_key = f"priority-email:{slot.date().isoformat()}"
+        with self.db.connection() as conn:
+            existing = conn.execute("""
+                SELECT r.company FROM runs r JOIN briefing_snapshots s ON s.run_id=r.id
+                WHERE r.slot_key=? AND r.status='succeeded' AND s.provider=? AND s.scope_key=?
+                LIMIT 1
+            """, (legacy_key, service["provider"], scope_key)).fetchone()
+        if existing and (not _real_data_only() or not json.loads(existing["company"]).get("demo")):
+            return
+        key = f"priority-email:daily:{scope}:{slot.date().isoformat()}"
         self.enqueue("scheduled", key, now)
+
+    def _schedule_watch_due(self, now):
+        service = self.db.get_setting("service")
+        if service.get("provider") != "gmail":
+            return
+        try:
+            self._guard("gmail")
+        except ConnectorError:
+            return
+        from .watches import needs_watch_poll
+        if not needs_watch_poll(self.db, now):
+            return
+        scope = hashlib.sha256(mailbox_scope(self.db, "gmail").encode()).hexdigest()[:24]
+        bucket = int(now.timestamp()) // int(WATCH_INTERVAL.total_seconds())
+        key = f"priority-email:watch:{scope}:{bucket}"
+        self.enqueue("watch", key, now)
 
     def tick(self, now=None):
         now = utc(now)
@@ -153,9 +220,10 @@ class Scheduler:
             return []
         try:
             service = self.db.get_setting("service")
-            if service["status"] != "active":
+            if service["status"] != "active" or (_real_data_only() and service.get("provider") == "demo"):
                 return []
             self._schedule_due(now)
+            self._schedule_watch_due(now)
             with self.db.connection() as conn:
                 row = conn.execute("SELECT * FROM runs WHERE status IN ('queued','retry_wait') AND (next_attempt_at IS NULL OR next_attempt_at<=?) ORDER BY created_at,id LIMIT 1", (now.isoformat(),)).fetchone()
                 if not row:
@@ -188,7 +256,12 @@ class Scheduler:
     def _execute(self, run, now):
         try:
             preferences = json.loads(run["preferences"])
-            self._guard(run["provider"], preferences)
+            company = json.loads(run["company"])
+            self._guard(run["provider"], preferences, company)
+            if run["trigger"] == "watch":
+                from .watches import needs_watch_poll
+                if not needs_watch_poll(self.db, now):
+                    raise ConnectorError("Non ci sono risposte da monitorare per oggi.", "monitoraggio", False)
             failure = self.db.get_setting("demo_failure") if run["provider"] == "demo" else None
             if failure == "temporary":
                 self.db.set_setting("demo_failure", None)
@@ -196,12 +269,11 @@ class Scheduler:
             if failure == "expired":
                 self.db.set_connection("demo", "expired")
                 raise ConnectorError("Autorizzazione dimostrativa scaduta. Ripristina la connessione per continuare.", "autorizzazione", False, True)
-            company = json.loads(run["company"])
             scope_key = mailbox_scope(self.db, run["provider"])
             def read_and_analyze():
-                self._guard(run["provider"], preferences)
+                self._guard(run["provider"], preferences, company)
                 messages = load_messages(run["provider"], preferences["priority_contacts"], self.db)
-                self._guard(run["provider"], preferences)
+                self._guard(run["provider"], preferences, company)
                 # Provider content never crosses the permission boundary above.
                 analyze = getattr(ai, "analyze", None)
                 if analyze:
@@ -212,11 +284,11 @@ class Scheduler:
                 sources = {str(ai._field(message, "id")): message for message in messages}
                 return result, snapshot, sources
             result, snapshot, sources = self._bounded(read_and_analyze)
-            self._guard(run["provider"], preferences)
+            self._guard(run["provider"], preferences, company)
             finished = now.isoformat()
             with self.db.connection() as conn:
                 conn.execute("BEGIN IMMEDIATE")
-                self._guard(run["provider"], preferences)
+                self._guard(run["provider"], preferences, company)
                 for item in result["items"]:
                     source = sources.get(item["source_id"], {})
                     observation = next((message for message in snapshot["messages"] if message["id"] == item["source_id"]), {})
@@ -240,7 +312,10 @@ class Scheduler:
 
     def _fail(self, run, now, message, step, retryable):
         retry = bool(retryable and run["attempts"] < MAX_ATTEMPTS)
-        next_attempt = (now + timedelta(seconds=2 ** run["attempts"])).isoformat() if retry else None
+        delay = timedelta(seconds=2 ** run["attempts"])
+        if run.get("trigger") == "watch":
+            delay = max(delay, WATCH_INTERVAL)
+        next_attempt = (now + delay).isoformat() if retry else None
         with self.db.connection() as conn:
             conn.execute("UPDATE runs SET status=?,error=?,error_step=?,retryable=?,next_attempt_at=?,finished_at=? WHERE id=?", (
                 "retry_wait" if retry else "failed", message, step, int(retry), next_attempt,
@@ -254,8 +329,8 @@ class Scheduler:
         if run["status"] not in ("failed", "retry_wait") or not run["retryable"] or run["attempts"] >= MAX_ATTEMPTS:
             raise ValueError("Questo controllo non può essere riprovato. Avvia un nuovo controllo dopo aver risolto il problema.")
         with self.db.connection() as conn:
-            row = conn.execute("SELECT preferences FROM runs WHERE id=?", (run_id,)).fetchone()
-        self._guard(run["provider"], json.loads(row["preferences"]))
+            row = conn.execute("SELECT preferences,company FROM runs WHERE id=?", (run_id,)).fetchone()
+        self._guard(run["provider"], json.loads(row["preferences"]), json.loads(row["company"]))
         with self.db.connection() as conn:
             conn.execute("UPDATE runs SET status='queued',next_attempt_at=NULL WHERE id=?", (run_id,))
         self.db.log_action("run_manual_retry", run_id)

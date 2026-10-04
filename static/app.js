@@ -2,7 +2,7 @@
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-const state = { data: null, gmail: null, page: 'overview', companyDirty: false, companyInitialized: false, loading: false, wizard: null, currentRun: null, chatBusy: false, chatPreferences: null, briefingSignature: null, agendaSignature: null, agendaDate: null, agendaView: null };
+const state = { data: null, gmail: null, page: 'overview', companyDirty: false, companyInitialized: false, loading: false, wizard: null, currentRun: null, chatBusy: false, chatPreferences: null, watchSuggestion: null, watchSignature: null, briefingSignature: null, agendaSignature: null, agendaDate: null, agendaView: null };
 let toastTimer;
 let lastFocused;
 
@@ -106,18 +106,11 @@ function render(forceCompany = false) {
   $('#greeting-label').textContent = `${hour < 13 ? 'BUONGIORNO' : hour < 19 ? 'BUON POMERIGGIO' : 'BUONASERA'}${company.name ? `, ${company.name.toLocaleUpperCase('it')}` : ', C’È FILO'}`;
   setPill('#overview-service-status', service.status);
   const expired = connection.status === 'expired';
-  notice('#connection-alert', expired ? 'La connessione alla casella è scaduta. Filo conserva lo storico ma non può leggere nuove email. Ricollega la casella dal servizio; per la demo puoi usare “Ripristina demo” negli scenari di prova.' : '');
-  if (connection.provider === 'gmail') {
-    $('.demo-banner p').replaceChildren(el('strong', '', 'La tua casella Gmail è collegata. '), document.createTextNode('Filo mette in evidenza le richieste e prepara bozze da verificare. Nessuna email viene inviata.'));
-    $('.demo-chip').lastChild.textContent = ' Prototipo con Gmail';
-  } else {
-    $('.demo-banner p').replaceChildren(el('strong', '', 'Un assaggio di Filo, con dati fittizi. '), document.createTextNode('Puoi provare priorità e bozze senza collegare la tua posta. Nessuna email viene inviata.'));
-    $('.demo-chip').lastChild.textContent = ' Ambiente di prova';
-  }
-  if (connection.provider !== 'gmail' && state.data.ai?.enabled && state.data.ai?.configured) {
-    $('.demo-banner p').replaceChildren(el('strong', '', 'Email di esempio, servizio in prova. '), document.createTextNode('L’anteprima usa una simulazione deterministica. Le esecuzioni possono usare l’AI esterna configurata solo sui dati demo. Nessun messaggio viene inviato.'));
-  }
-  $('.form-intro').textContent = company.demo ? 'Studio Riva è un esempio fittizio. Personalizza questi dati prima di usare il servizio per il tuo studio.' : 'Mantieni aggiornati il profilo e la firma usati nelle bozze. Non inserire password o dati sensibili.';
+  notice('#connection-alert', expired ? 'La connessione alla casella è scaduta. Ricollega Gmail per riprendere i controlli.' : '');
+  $('.demo-banner').hidden = Boolean(state.data.real_data_only) || connection.provider !== 'demo';
+  $('.demo-controls').hidden = Boolean(state.data.real_data_only);
+  $('.demo-chip').lastChild.textContent = connection.provider === 'gmail' && connection.status === 'connected' ? ' Gmail collegata' : state.data.real_data_only ? ' La tua segreteria' : ' Ambiente di prova';
+  $('.form-intro').textContent = company.needs_setup ? 'Inserisci il nome della tua attività e la firma da usare nelle risposte.' : 'Mantieni aggiornati il profilo e la firma usati nelle bozze.';
   const isActive = service.status === 'active';
   const isPaused = service.status === 'paused';
   $('#overview-service-description').textContent = isActive ? 'La tua segreteria è al lavoro: seleziona le email prioritarie e prepara bozze locali che potrai rivedere.' : isPaused ? 'Hai messo il servizio in pausa. Le esecuzioni programmate si fermano; attività e bozze restano a disposizione.' : 'Le email importanti, in evidenza. Le risposte, già abbozzate. Sempre sotto il tuo controllo.';
@@ -164,35 +157,34 @@ function render(forceCompany = false) {
   $('#demo-scenario-status').textContent = expired ? 'Connessione demo scaduta: il servizio richiede un ripristino.' : state.data.demo_failure === 'expired' ? 'La prossima esecuzione demo simulerà una connessione scaduta.' : state.data.demo_failure === 'temporary' ? 'La prossima esecuzione demo simulerà un errore temporaneo.' : '';
   $$('[data-action^="simulate-"]').forEach(button => { button.disabled = connection.provider !== 'demo'; });
   renderMorning();
+  renderWatches();
   renderAgenda();
 }
 
 function currentBriefing() {
-  const briefing = state.data?.briefing;
-  return briefing?.status === 'not_started' && state.data.briefing_example ? state.data.briefing_example : briefing;
+  return state.data?.briefing;
 }
 function renderMorning() {
   const real = state.data.briefing;
   const briefing = currentBriefing();
   if (!briefing) return;
-  const preview = Boolean(briefing.preview);
   const priorities = briefing.priorities || [];
-  $('#briefing-title').textContent = preview ? 'Un esempio del tuo buongiorno.' : priorities.length ? 'Ecco da dove cominciare.' : 'Il tuo buongiorno, già in ordine.';
-  $('#briefing-period').textContent = preview ? 'EMAIL FITTIZIE · ANTEPRIMA' : (briefing.period?.label || 'IL TUO RIEPILOGO').toLocaleUpperCase('it');
+  $('#briefing-title').textContent = 'Il riepilogo';
+  $('#briefing-period').textContent = (briefing.period?.label || 'IL TUO RIEPILOGO').toLocaleUpperCase('it');
   $('#briefing-summary').textContent = briefing.summary || 'Il riepilogo arriverà dopo il primo controllo della posta.';
   const nextAppointment = state.data.agenda?.next_event;
   $('#briefing-next-appointment').hidden = !nextAppointment;
   $('#briefing-next-appointment').textContent = nextAppointment ? `Il prossimo appuntamento: ${nextAppointment.time_label} · ${nextAppointment.title}` : '';
-  $('#briefing-freshness').textContent = preview ? 'Nessuna casella letta' : briefing.last_checked_at ? `Ultimo controllo: ${prettyDate(briefing.last_checked_at)}` : briefing.stale ? 'Da aggiornare' : 'In attesa del primo controllo';
+  $('#briefing-freshness').textContent = briefing.last_checked_at ? `Ultimo controllo: ${prettyDate(briefing.last_checked_at)}` : briefing.stale ? 'Da aggiornare' : 'In attesa del primo controllo';
   $('#briefing-freshness').classList.toggle('stale', Boolean(briefing.stale));
   const counts = briefing.counts || {};
-  const stats = [[counts.pending ?? priorities.length, preview ? 'Risposte nell’esempio' : 'Risposte da rivedere'], [counts.high_priority ?? 0, preview ? 'Priorità nell’esempio' : 'Da guardare per prime'], [state.data.agenda?.items?.length || 0, 'Appuntamenti oggi']];
+  const stats = [[counts.pending ?? priorities.length, 'Risposte da rivedere'], [counts.high_priority ?? 0, 'Da guardare per prime'], [state.data.agenda?.items?.length || 0, 'Appuntamenti oggi']];
   replace('#briefing-stats', ...stats.map(([value, label]) => { const card = el('div', 'briefing-stat'); card.append(el('strong', '', value), el('small', '', label)); return card; }));
-  const suggestion = preview ? { label: 'Prepara il tuo primo riepilogo', action: 'open-wizard', reason: 'Scegli i contatti che contano. Filo ti proporrà ogni giorno da dove iniziare.' } : real?.suggested_action;
+  const suggestion = real?.suggested_action;
   const suggestionNodes = [];
   if (suggestion) {
     const mark = el('span', 'icon-box peach'); mark.append(icon('spark'));
-    const copy = el('div', 'suggestion-copy'); copy.append(el('strong', '', preview ? 'Il prossimo passo lo propone Filo.' : 'Ti propongo questo.'), el('p', '', suggestion.reason || suggestion.label));
+    const copy = el('div', 'suggestion-copy'); copy.append(el('strong', '', 'Ti propongo questo.'), el('p', '', suggestion.reason || suggestion.label));
     const action = suggestion.action === 'review-priority' ? 'review-priority' : ['open-wizard', 'run', 'resume', 'reconnect', 'edit-preferences'].includes(suggestion.action) ? suggestion.action : priorities.length ? 'review-priority' : 'run';
     const button = actionButton(suggestion.label || 'Comincia da qui', action, 'primary', 'arrow', { id: suggestion.draft_id || priorities[0]?.draft_id || '' });
     if (real?.status === 'checking') button.disabled = true;
@@ -205,16 +197,16 @@ function renderMorning() {
     state.suggestionSignature = suggestionSignature;
   }
   $('#suggestion-card').hidden = !suggestionNodes.length;
-  const signature = JSON.stringify({ preview, priorities: preview ? priorities.map(({ received_at, ...item }) => item) : priorities, contacts: preview ? briefing.contacts?.map(({ last_received_at, ...contact }) => contact) : briefing.contacts, summary: briefing.summary, status: briefing.status, last_checked_at: briefing.last_checked_at });
+  const signature = JSON.stringify({ priorities, contacts: briefing.contacts, summary: briefing.summary, status: briefing.status, last_checked_at: briefing.last_checked_at });
   if (signature === state.briefingSignature) return;
   state.briefingSignature = signature;
   if (!priorities.length) {
-    const empty = el('div', 'briefing-empty'); empty.append(icon('check'), el('h3', '', real?.legacy_pending_count ? 'Le bozze precedenti restano nello storico.' : real?.status === 'not_started' ? 'Il primo passo è collegare la posta.' : real?.status === 'checking' ? 'Filo sta preparando il riepilogo.' : 'Nessuna risposta da rivedere qui.'), el('p', '', real?.legacy_pending_count ? 'Un nuovo controllo verificherà quali richieste aspettano ancora una risposta. Puoi consultare le bozze precedenti nelle attività.' : real?.status === 'not_started' ? 'Parti dalla casella demo o da Gmail. Poi troverai le richieste importanti direttamente in questa pagina.' : 'Il riepilogo riguarda i messaggi controllati: aggiornalo per verificare nuove richieste.'));
+    const empty = el('div', 'briefing-empty'); empty.append(icon('check'), el('h3', '', real?.legacy_pending_count ? 'Le bozze precedenti restano nello storico.' : real?.status === 'not_started' ? 'Il primo passo è collegare la posta.' : real?.status === 'checking' ? 'Filo sta preparando il riepilogo.' : 'Nessuna risposta da rivedere qui.'), el('p', '', real?.legacy_pending_count ? 'Un nuovo controllo verificherà quali richieste aspettano ancora una risposta. Puoi consultare le bozze precedenti nelle attività.' : real?.status === 'not_started' ? 'Collega Gmail e scegli i contatti da seguire. Qui compariranno le richieste vere, già ordinate.' : 'Il riepilogo riguarda i messaggi controllati: aggiornalo per verificare nuove richieste.'));
     if (real?.legacy_pending_count) { const link = el('a', 'text-link', 'Consulta le attività'); link.href = '#activity'; empty.append(link); }
     replace('#priority-list', empty);
   } else {
     replace('#priority-list', ...priorities.map((item, index) => {
-      const row = el('article', 'priority-item'); row.dataset.draftId = item.draft_id || `example-${index}`;
+      const row = el('article', 'priority-item'); row.dataset.draftId = item.draft_id || `priority-${index}`;
       const rank = el('span', 'priority-rank', String(index + 1).padStart(2, '0'));
       const body = el('div', 'priority-main');
       const meta = el('div', 'priority-meta'); meta.append(el('strong', '', item.client), el('span', `priority-badge ${item.priority === 'high' ? 'high' : 'normal'}`, item.priority_label || (item.priority === 'high' ? 'Da guardare prima' : 'A seguire')));
@@ -223,24 +215,81 @@ function renderMorning() {
       if (item.source_excerpt) { const context = el('p', 'priority-context', item.source_excerpt.length > 220 ? `${item.source_excerpt.slice(0, 220).trim()}…` : item.source_excerpt); body.append(context); }
       body.append(el('p', 'small-text', item.reason), el('p', 'priority-next-step', item.next_step || 'Rivedi la bozza e controlla i dettagli prima di rispondere.'));
       const draft = el('details', 'priority-inline-draft');
-      draft.append(el('summary', '', preview ? 'La bozza di esempio è già pronta' : 'La bozza è già pronta'));
+      draft.append(el('summary', '', 'La bozza è già pronta'));
       draft.append(el('pre', 'draft-text', item.draft));
-      if (!preview && item.draft_id) {
+      if (item.draft_id) {
         const actions = el('div', 'card-actions'); actions.append(actionButton('Copia la bozza', 'copy-priority', 'secondary', undefined, { id: item.draft_id }), actionButton('Segna come rivista', 'approve-draft', 'primary', 'check', { id: item.draft_id })); draft.append(actions);
         draft.append(el('p', 'small-text', 'La revisione resta in Filo. L’email non viene inviata.'));
       }
       body.append(draft); row.append(rank, body); return row;
     }));
   }
+  $('.contacts-section').hidden = !(briefing.contacts || []).length;
   const checkedBeforePeriod = briefing.last_checked_at && briefing.period?.start && new Date(briefing.last_checked_at) < new Date(briefing.period.start);
-  $('#contacts-period').textContent = preview ? 'Contatti fittizi dell’esempio.' : checkedBeforePeriod ? 'L’ultimo controllo precede questo periodo. Aggiorna per verificare i nuovi arrivi.' : `${briefing.period?.start ? `Da ${prettyDate(briefing.period.start)}` : 'Periodo del riepilogo'}${briefing.last_checked_at ? ` al controllo del ${prettyDate(briefing.last_checked_at)}` : ''}.`;
+  $('#contacts-period').textContent = checkedBeforePeriod ? 'L’ultimo controllo precede questo periodo. Aggiorna per verificare i nuovi arrivi.' : `${briefing.period?.start ? `Da ${prettyDate(briefing.period.start)}` : 'Periodo del riepilogo'}${briefing.last_checked_at ? ` al controllo del ${prettyDate(briefing.last_checked_at)}` : ''}.`;
   replace('#contact-snapshot', ...(briefing.contacts || []).map(contact => {
     const card = el('div', 'contact-status'); const status = contact.status === 'wrote' ? 'wrote' : contact.status === 'no_messages' ? 'quiet' : 'unverified'; card.classList.add(status);
     card.append(el('strong', '', contact.name), el('span', '', status === 'wrote' ? 'Ha scritto' : status === 'quiet' ? 'Nessuna email nel periodo controllato' : 'Da verificare con un nuovo controllo'));
     if (contact.last_received_at && status === 'wrote') card.append(el('small', '', prettyDate(contact.last_received_at)));
     return card;
   }));
-  if (briefing.coverage_note && !preview) $('#contact-snapshot').append(el('p', 'small-text', briefing.coverage_note));
+  if (briefing.coverage_note) $('#contact-snapshot').append(el('p', 'small-text', briefing.coverage_note));
+}
+
+function renderWatches() {
+  const summary = state.data.watches || { items: [] };
+  const contacts = state.data.service.priority_contacts || [];
+  const available = state.data.connection.provider === 'gmail' && state.data.connection.status === 'connected' && contacts.length;
+  $('#reply-watch-form-panel').hidden = !available;
+  const contactSelect = $('#watch-contact');
+  const selected = contactSelect.value;
+  if (JSON.stringify(contacts) !== state.watchContactsSignature) {
+    contactSelect.replaceChildren(...contacts.map(contact => { const option = el('option', '', contact.name); option.value = contact.email; return option; }));
+    if (contacts.some(contact => contact.email === selected)) contactSelect.value = selected;
+    state.watchContactsSignature = JSON.stringify(contacts);
+  }
+  const today = state.data.agenda.date;
+  $('#watch-day').min = today;
+  $('#watch-day').max = new Date(new Date(`${today}T12:00:00Z`).valueOf() + 30 * 86400000).toISOString().slice(0, 10);
+  if (!$('#watch-day').value) $('#watch-day').value = today;
+  const signature = JSON.stringify(summary);
+  if (signature === state.watchSignature) return;
+  state.watchSignature = signature;
+  replace('#reply-watch-list', ...(summary.items || []).map(item => {
+    const found = item.status === 'matched';
+    const card = el('article', `reply-watch${found ? ' reply-watch--matched' : ''}`);
+    card.dataset.watchId = item.id;
+    const text = el('div');
+    text.append(el('strong', '', found ? `${item.name} ha scritto · da guardare subito` : `${item.name} · ${prettyDate(`${item.day}T12:00:00Z`, false)}`));
+    const detail = found ? `È arrivata un’email ${prettyDate(item.match.received_at)}. Aprila per verificare la risposta che aspettavi.` : item.status === 'expired' ? 'Il giorno è concluso. Non abbiamo un riscontro verificato: il controllo copre una selezione di messaggi.' : item.contact_active === false ? 'Il contatto non è più seguito. Riaggiungilo nelle preferenze o chiudi l’avviso.' : !summary.monitoring_active ? 'Avviso salvato. Attiva o riprendi la segreteria per controllare Gmail.' : summary.next_check_at ? `Risposta da seguire. Prossimo controllo: ${prettyDate(summary.next_check_at)}.` : 'Risposta da seguire. Controllo in corso.';
+    text.append(el('p', 'small-text', detail));
+    const actions = el('div', 'watch-actions');
+    if (found) {
+      const link = el('a', 'button secondary', 'Apri Gmail');
+      const account = state.data.connection.label || '';
+      const url = new URL('https://mail.google.com/mail/');
+      if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(account)) url.searchParams.set('authuser', account);
+      url.hash = `all/${encodeURIComponent(item.match.thread_id || item.match.source_id)}`;
+      link.href = url.href; link.target = '_blank'; link.rel = 'noopener noreferrer'; actions.append(link);
+    }
+    actions.append(actionButton(found ? 'Segna come vista' : 'Chiudi avviso', 'dismiss-watch', 'ghost', undefined, { id: item.id }));
+    card.append(text, actions); return card;
+  }));
+}
+
+function gmailSetupGuide() {
+  const guide = el('div', 'boundary-note');
+  guide.style.display = 'block';
+  guide.append(el('h3', '', 'Una sola configurazione, poi collega la tua casella.'));
+  const steps = el('ol');
+  const first = el('li', '', 'In Google Cloud abilita Gmail API, configura il consenso e aggiungi la tua email tra gli utenti di test. Crea un client OAuth di tipo Applicazione web.');
+  const link = el('a', 'text-link', 'Apri Google Cloud'); link.href = 'https://console.cloud.google.com/apis/credentials'; link.target = '_blank'; link.rel = 'noopener noreferrer'; first.append(document.createTextNode(' '), link);
+  const second = el('li', '', 'Inserisci questo URI di reindirizzamento autorizzato:');
+  const callback = el('code', '', state.gmail?.redirect_uri || `${location.origin}/api/gmail/oauth/callback`); callback.style.overflowWrap = 'anywhere'; second.append(el('br'), callback);
+  const third = el('li', '', 'Nelle variabili del servizio Railway salva FILO_GOOGLE_CLIENT_ID e FILO_GOOGLE_CLIENT_SECRET, poi distribuisci la modifica.');
+  const railway = el('a', 'text-link', 'Apri le variabili Railway'); railway.href = 'https://railway.com/project/23154853-8a90-4944-bac7-2315cd4f816f/service/9d3ce564-55cc-482e-ba8b-6e381cff9127/variables?environmentId=16183f90-7643-4954-9f1e-6efdb2fb16d3'; railway.target = '_blank'; railway.rel = 'noopener noreferrer'; third.append(document.createTextNode(' '), railway);
+  steps.append(first, second, third); guide.append(steps, actionButton('Verifica configurazione', 'check-gmail-setup', 'secondary', 'refresh'));
+  return guide;
 }
 
 function renderAgenda() {
@@ -324,7 +373,7 @@ function renderWizard() {
     if (state.data.ai?.enabled && state.data.ai?.configured) body.append(el('p', 'step-disclosure', 'Questo ambiente usa un servizio AI esterno solo sulle email dimostrative, durante le esecuzioni attivate. L’anteprima e le email Gmail usano regole locali.'));
     footer.append(actionButton('Iniziamo', 'wizard-next', 'primary', 'arrow'));
   } else if (wizard.step === 2) {
-    title('Collega una casella.', 'Puoi provare il percorso completo con le email di esempio oppure collegare Gmail, quando configurato.');
+    title('Collega Gmail.', 'La tua posta, con i contatti che scegli tu. Google ti chiederà il consenso alla lettura.');
     const grid = el('div', 'provider-grid');
     const demo = el('div', `provider-card ${state.data.connection.provider === 'demo' && state.data.connection.status === 'connected' ? 'selected' : ''}`);
     const demoMark = el('span', 'icon-box teal'); demoMark.append(icon('mail')); demo.append(demoMark, el('h3', '', 'Casella demo'), el('p', '', 'Email fittizie per esplorare priorità, bozze e storico. Nessun accesso alla tua casella reale.'));
@@ -337,8 +386,9 @@ function renderWizard() {
     const gmailConnected = state.data.connection.provider === 'gmail' && state.data.connection.status === 'connected';
     if (gmailConnected) gmail.append(statusPill('connected'));
     else if (!gmailReady) gmail.append(el('span', 'status-pill neutral', 'Configurazione necessaria'));
-    const gmailButton = actionButton(gmailConnected ? 'Usa Gmail' : 'Collega Gmail', 'connect-gmail', 'secondary', 'link'); gmailButton.disabled = !gmailReady && !gmailConnected; gmail.append(gmailButton); grid.append(demo, gmail); body.append(grid);
-    body.append(el('p', 'step-disclosure', gmailReady ? 'L’anteprima demo usa una simulazione deterministica senza AI reale. Con Gmail le email sono reali, le bozze sono locali e generate con regole, senza AI reale.' : 'Gmail non è ancora configurato in questo ambiente. La casella demo permette di provare tutte le funzioni senza credenziali.'));
+    const gmailButton = actionButton(gmailConnected ? 'Usa Gmail' : 'Collega Gmail', 'connect-gmail', 'secondary', 'link'); gmailButton.dataset.action = gmailReady || gmailConnected ? 'connect-gmail' : 'show-gmail-setup'; gmailButton.textContent = gmailReady || gmailConnected ? (gmailConnected ? 'Usa Gmail' : 'Collega Gmail') : 'Prepara il collegamento Gmail'; gmail.append(gmailButton); if (!state.data.real_data_only) grid.append(demo); grid.append(gmail); body.append(grid);
+    body.append(el('p', 'step-disclosure', gmailReady ? 'Le bozze restano in Filo, da controllare prima di usarle.' : 'Manca la configurazione Google del sito. Apri la guida per completarla e poi collega la tua casella.'));
+    if (wizard.gmailSetup) body.append(gmailSetupGuide());
     if (wizard.reconnect) { const next = actionButton('Torna alla panoramica', 'wizard-finish-reconnect', 'primary', 'arrow'); next.disabled = state.data.connection.status !== 'connected'; footer.append(next); }
     else { const next = actionButton('Continua', 'wizard-next', 'primary', 'arrow'); next.disabled = state.data.connection.status !== 'connected'; footer.append(next); }
   } else if (wizard.step === 3) {
@@ -457,6 +507,7 @@ async function handleAction(button) {
     if (item?.draft) { await navigator.clipboard.writeText(item.draft); toast('Bozza copiata. Puoi rivederla nella tua casella prima di inviarla.'); }
     return;
   }
+  if (action === 'show-gmail-setup') { state.wizard.gmailSetup = true; renderWizard(); return; }
   if (action === 'open-wizard') { startWizard(); return; }
   if (action === 'open-chat-wizard') { startWizard(false, false, state.chatPreferences); return; }
   if (action === 'edit-chat-preferences') { startWizard(true, false, state.chatPreferences); return; }
@@ -479,7 +530,10 @@ async function handleAction(button) {
   if (inWizard) notice('#wizard-error', '');
   await withBusy(button, async () => {
     try {
-      if (action === 'connect-demo') { await api('/api/connection/demo', { method: 'POST', body: {} }); await refresh(); renderWizard(); }
+      if (action === 'check-gmail-setup') { state.gmail = await api('/api/gmail/status'); renderWizard(); toast(state.gmail.configured ? 'Configurazione pronta. Ora puoi collegare Gmail.' : 'Mancano ancora le credenziali Google nelle variabili del sito.'); }
+      else if (action === 'confirm-watch') { if (!state.watchSuggestion) return; await api('/api/watches', { method: 'POST', body: state.watchSuggestion }); state.watchSuggestion = null; $('#chat-suggestion').hidden = true; await refresh(); toast('Avviso salvato. Lo troverai tra le cose da fare.'); }
+      else if (action === 'dismiss-watch') { await api(`/api/watches/${encodeURIComponent(button.dataset.id)}`, { method: 'DELETE' }); await refresh(); toast('Promemoria chiuso.'); }
+      else if (action === 'connect-demo') { await api('/api/connection/demo', { method: 'POST', body: {} }); await refresh(); renderWizard(); }
       else if (action === 'connect-gmail') {
         if (state.data.connection.provider === 'gmail' && state.data.connection.status === 'connected') { state.wizard.step = 3; renderWizard(); }
         else { const result = await api('/api/gmail/oauth/start', { method: 'POST', body: {} }); if (!result.authorization_url) throw new Error('Il collegamento Gmail non è ancora disponibile.'); const target = new URL(result.authorization_url, location.origin); if (target.protocol !== 'https:') throw new Error('Il collegamento ricevuto non è valido.'); sessionStorage.setItem('filo-pending-wizard', JSON.stringify({ preferences: state.wizard.preferences, edit: state.wizard.edit, createdAt: Date.now() })); location.assign(target.href); }
@@ -531,6 +585,18 @@ $('#company-form').addEventListener('submit', async event => {
     catch (error) { toast(error.message, true); }
   });
 });
+$('#reply-watch-form').addEventListener('submit', async event => {
+  event.preventDefault(); const form = event.currentTarget;
+  if (!form.reportValidity()) return;
+  notice('#reply-watch-error', '');
+  await withBusy($('button[type=submit]', form), async () => {
+    try {
+      const contact = state.data.service.priority_contacts.find(item => item.email === $('#watch-contact').value);
+      await api('/api/watches', { method: 'POST', body: { name: contact.name, email: contact.email, day: $('#watch-day').value } });
+      $('#reply-watch-form-panel').open = false; await refresh(); toast('Avviso salvato tra le cose da fare.');
+    } catch (error) { notice('#reply-watch-error', error.message); }
+  });
+});
 $('#agenda-form').addEventListener('submit', async event => {
   event.preventDefault();
   const form = event.currentTarget;
@@ -560,7 +626,7 @@ $('#chat-form').addEventListener('submit', async event => {
   const input = $('#chat-input'); const message = input.value.trim(); if (!message) return;
   addChatMessage(message, 'user'); input.value = ''; state.chatBusy = true;
   await withBusy($('button', event.currentTarget), async () => {
-    try { const result = await api('/api/chat', { method: 'POST', body: { message } }); addChatMessage(result.reply || 'Posso aiutarti a configurare la segreteria email.'); state.chatPreferences = result.preferences || null; const suggestion = $('#chat-suggestion'); suggestion.replaceChildren(); suggestion.hidden = !result.supported; if (result.supported) suggestion.append(actionButton(state.data.service.status === 'inactive' ? 'Configura la segreteria email' : 'Rivedi le preferenze', state.data.service.status === 'inactive' ? 'open-chat-wizard' : 'edit-chat-preferences', 'secondary', 'arrow')); }
+    try { const result = await api('/api/chat', { method: 'POST', body: { message } }); addChatMessage(result.reply || 'Posso aiutarti a configurare la segreteria email.'); state.chatPreferences = result.preferences || null; state.watchSuggestion = result.watch_suggestion || null; const suggestion = $('#chat-suggestion'); suggestion.replaceChildren(); suggestion.hidden = !result.supported; if (state.watchSuggestion) suggestion.append(actionButton('Segui questa risposta', 'confirm-watch', 'secondary', 'check')); else if (result.supported) suggestion.append(actionButton(state.data.service.status === 'inactive' ? 'Configura la segreteria email' : 'Rivedi le preferenze', state.data.service.status === 'inactive' ? 'open-chat-wizard' : 'edit-chat-preferences', 'secondary', 'arrow')); }
     catch (error) { addChatMessage(error.message, 'assistant error'); }
     finally { state.chatBusy = false; }
   });
