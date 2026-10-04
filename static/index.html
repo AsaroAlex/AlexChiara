@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#173c38">
+  <meta name="description" content="Filo, la segreteria email per piccoli studi e imprese B2B. Priorità chiare e bozze da rivedere, senza invii automatici.">
+  <title>Filo · Il tuo lavoro, con più spazio</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <svg class="svg-defs" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs>
+    <symbol id="icon-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></symbol>
+    <symbol id="icon-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m3 7 9 6 9-6"/></symbol>
+    <symbol id="icon-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="icon-building" viewBox="0 0 24 24"><path d="M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16M16 9h3a1 1 0 0 1 1 1v11M2 21h20M8 7h4M8 11h4M8 15h4M9 21v-3h2v3"/></symbol>
+    <symbol id="icon-arrow" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></symbol>
+    <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="icon-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="icon-spark" viewBox="0 0 24 24"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z"/></symbol>
+    <symbol id="icon-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18M8 15h2M14 15h2"/></symbol>
+    <symbol id="icon-chat" viewBox="0 0 24 24"><path d="M21 11a8 8 0 0 1-8 8H7l-4 3V11a9 9 0 0 1 18 0Z"/><path d="M7 11h10M7 15h6"/></symbol>
+    <symbol id="icon-shield" viewBox="0 0 24 24"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6l8-3Z"/><path d="m8 12 3 3 5-6"/></symbol>
+    <symbol id="icon-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
+    <symbol id="icon-play" viewBox="0 0 24 24"><path d="m8 4 12 8-12 8V4Z"/></symbol>
+    <symbol id="icon-link" viewBox="0 0 24 24"><path d="m9 15 6-6M8 13l-2 2a4 4 0 0 0 6 6l3-3M16 11l2-2a4 4 0 0 0-6-6L9 6"/></symbol>
+    <symbol id="icon-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v.1"/></symbol>
+    <symbol id="icon-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5M19 12a7 7 0 0 0-12-5L4 10M5 12a7 7 0 0 0 12 5l3-3"/></symbol>
+  </defs></svg>
+  <a class="skip-link" href="#main-content">Vai al contenuto</a>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Navigazione principale">
+      <a class="brand" href="#overview" aria-label="Filo, panoramica"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span>filo<span class="brand-dot">.</span></span></a>
+      <div class="workspace-label">IL TUO SPAZIO DI LAVORO</div>
+      <nav class="main-nav">
+        <a href="#overview" class="nav-item active" data-page="overview"><svg class="icon"><use href="#icon-grid"/></svg><span>Panoramica</span></a>
+        <a href="#services" class="nav-item" data-page="services"><svg class="icon"><use href="#icon-spark"/></svg><span>Servizi</span><span class="nav-count">1</span></a>
+        <a href="#activity" class="nav-item" data-page="activity"><svg class="icon"><use href="#icon-clock"/></svg><span>Attività</span><span id="activity-count" class="nav-count" hidden></span></a>
+        <a href="#company" class="nav-item" data-page="company"><svg class="icon"><use href="#icon-building"/></svg><span>La tua azienda</span></a>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="sidebar-note"><span class="mini-orbit" aria-hidden="true">✳︎</span><p>Un po’ di ordine.<br>Più tempo per i clienti.</p></div>
+        <div class="workspace-profile"><span class="company-avatar" id="company-avatar">SR</span><div><strong id="sidebar-company">Il tuo studio</strong><small>Spazio aziendale</small></div><span class="profile-dot" aria-label="Spazio personale"></span></div>
+      </div>
+    </aside>
+    <div class="main-shell">
+      <header class="topbar"><div class="breadcrumb">Il tuo spazio <span>/</span> <strong id="page-crumb">Panoramica</strong></div><div class="topbar-right"><span class="demo-chip"><span></span> Ambiente di prova</span><span id="today-label" class="today-label"></span></div></header>
+      <main id="main-content" tabindex="-1">
+        <div id="loading" class="loading-card" role="status"><span class="loader"></span> Prepariamo il tuo spazio…</div>
+        <div id="load-error" class="notice error" role="alert" hidden></div>
+        <div id="app-content" hidden>
+          <div class="demo-banner"><svg class="icon"><use href="#icon-info"/></svg><p><strong>Dati demo, spazio per sperimentare.</strong> Le email di esempio e le bozze sono una simulazione deterministica, senza AI reale. Nessun messaggio viene inviato.</p><button class="text-button" data-action="open-demo-info">Come funziona <span aria-hidden="true">↗</span></button></div>
+          <div id="connection-alert" class="notice warning" role="status" hidden></div>
+          <section id="page-overview" class="page-view" aria-labelledby="overview-title">
+            <div class="page-heading"><div><div class="eyebrow" id="greeting-label">IL TUO PUNTO DI PARTENZA</div><h1 id="overview-title">La tua giornata,<br>con più spazio.</h1><p>Una segreteria che mette in ordine le email.<br>Tu scegli cosa conta, Filo prepara il prossimo passo.</p></div><div class="heading-illustration" aria-hidden="true"><span class="illustration-orbit"></span><span class="illustration-paper paper-back"></span><span class="illustration-paper paper-front"><svg><use href="#icon-mail"/></svg><i></i><i></i></span><span class="illustration-spark">✳︎</span></div></div>
+            <div class="overview-grid">
+              <article class="card service-card"><div class="card-topline"><span class="icon-box teal"><svg class="icon"><use href="#icon-mail"/></svg></span><span id="overview-service-status" class="status-pill neutral">Da attivare</span></div><div class="eyebrow">IL TUO PRIMO SERVIZIO</div><h2>Segreteria email</h2><p id="overview-service-description">Le email importanti, in evidenza. Le risposte, già abbozzate. Sempre sotto il tuo controllo.</p><div id="overview-service-facts" class="service-facts"></div><div id="overview-service-actions" class="card-actions"></div></article>
+              <article class="card schedule-card"><div class="card-title-row"><h3>Il prossimo giro</h3><svg class="icon muted"><use href="#icon-clock"/></svg></div><div class="schedule-time" id="schedule-time">—<span>:</span>—</div><p id="schedule-detail">Scegli l’orario durante l’attivazione.</p><div class="schedule-footer"><span class="small-dot"></span><span id="schedule-footer">Tutto comincia dalle tue priorità</span></div></article>
+            </div>
+            <div class="section-title"><div><h2>Il lavoro, in chiaro</h2><p>Ogni esecuzione lascia una traccia che puoi consultare.</p></div><a href="#activity" class="text-link">Tutte le attività <svg class="icon"><use href="#icon-arrow"/></svg></a></div>
+            <div id="recent-runs" class="card recent-card"></div>
+            <div class="bottom-grid"><article class="card conversation-invite"><span class="icon-box peach"><svg class="icon"><use href="#icon-chat"/></svg></span><div><h3>Da dove vuoi iniziare?</h3><p>Raccontaci cosa ti porta via tempo. Ti aiutiamo a scegliere tra i servizi disponibili.</p></div><button class="button secondary" data-action="open-chat">Parliamone <svg class="icon"><use href="#icon-arrow"/></svg></button></article><article class="assurance"><svg class="icon"><use href="#icon-shield"/></svg><div><strong>Il controllo resta tuo.</strong><p>Filo legge e prepara bozze solo con il tuo consenso. Le email non vengono inviate.</p></div></article></div>
+          </section>
+          <section id="page-services" class="page-view" aria-labelledby="services-title" hidden>
+            <div class="page-heading compact"><div><div class="eyebrow">PICCOLE DELEGHE, PIÙ TEMPO</div><h1 id="services-title">Un servizio alla volta.</h1><p>Compiti precisi, confini chiari. Scegli ciò che serve al tuo studio.</p></div></div>
+            <div class="catalog-grid"><article class="card catalog-feature"><div class="card-topline"><span class="icon-box teal"><svg class="icon"><use href="#icon-mail"/></svg></span><span class="status-pill success">Disponibile</span></div><h2>Segreteria email</h2><p>Ogni giorno, una selezione delle email prioritarie e bozze di risposta da rivedere con calma.</p><ul class="check-list"><li><svg class="icon"><use href="#icon-check"/></svg> Priorità per clienti e contatti che scegli tu</li><li><svg class="icon"><use href="#icon-check"/></svg> Risposte coerenti con il tuo studio</li><li><svg class="icon"><use href="#icon-check"/></svg> Un orario fisso e attività consultabili</li></ul><div class="boundary-note"><svg class="icon"><use href="#icon-shield"/></svg> Legge e prepara bozze. Nessun invio automatico.</div><div id="catalog-service-actions" class="card-actions"></div></article><div class="future-services"><article class="card future-card"><div class="card-topline"><span class="icon-box neutral"><svg class="icon"><use href="#icon-calendar"/></svg></span><span class="status-pill neutral">In programma</span></div><h3>Agenda dello studio</h3><p>Un aiuto per appuntamenti e impegni. Questo servizio non è ancora disponibile.</p></article><article class="card future-card"><div class="card-topline"><span class="icon-box neutral"><svg class="icon"><use href="#icon-chat"/></svg></span><span class="status-pill neutral">In programma</span></div><h3>Presenza sui social</h3><p>Un supporto ai contenuti dello studio. Questo servizio non è ancora disponibile.</p></article></div></div>
+            <article class="card chat-card"><div class="chat-card-header"><span class="icon-box peach"><svg class="icon"><use href="#icon-spark"/></svg></span><div><h2>Troviamo un punto di partenza.</h2><p>Un orientamento guidato verso la segreteria email, il servizio disponibile oggi.</p></div></div><div id="chat-messages" class="chat-messages" aria-live="polite"><div class="chat-message assistant">Quale attività ti porta via più tempo? Posso aiutarti a configurare la segreteria email: priorità, bozze e orario. Agenda e social sono ancora in programma.</div></div><form id="chat-form" class="chat-form"><label class="sr-only" for="chat-input">Il tuo bisogno</label><input id="chat-input" name="message" placeholder="Per esempio: vorrei dare priorità ai miei clienti…" maxlength="2000" required autocomplete="off"><button class="button primary" type="submit" aria-label="Invia il messaggio"><svg class="icon"><use href="#icon-arrow"/></svg></button></form><div id="chat-suggestion" hidden></div></article>
+          </section>
+          <section id="page-activity" class="page-view" aria-labelledby="activity-title" hidden><div class="page-heading compact"><div><div class="eyebrow">TUTTO SOTTO CONTROLLO</div><h1 id="activity-title">Un filo delle attività.</h1><p>Risultati, bozze e imprevisti. Nessun passaggio nascosto.</p></div><button id="activity-run-button" class="button primary" data-action="run" hidden>Esegui ora <svg class="icon"><use href="#icon-play"/></svg></button></div><div id="activity-summary" class="activity-summary"></div><div id="all-runs" class="card recent-card"></div></section>
+          <section id="page-company" class="page-view" aria-labelledby="company-title" hidden><div class="page-heading compact"><div><div class="eyebrow">LA TUA IDENTITÀ</div><h1 id="company-title">Parliamo del tuo studio.</h1><p>Queste informazioni aiutano a dare il giusto contesto alle bozze.</p></div></div><div class="company-layout"><form id="company-form" class="card form-card"><div class="card-title-row"><h2>Profilo aziendale</h2><span class="status-pill neutral">Modificabile</span></div><p class="form-intro">I dati iniziali sono un esempio. Personalizzali prima di attivare il servizio.</p><label for="company-name">Nome dello studio o dell’azienda</label><input id="company-name" name="name" required maxlength="120" placeholder="Il nome del tuo studio"><label for="company-sector">Settore</label><input id="company-sector" name="sector" maxlength="160" placeholder="Per esempio: consulenza aziendale"><label for="company-description">Di cosa vi occupate?</label><textarea id="company-description" name="description" rows="4" maxlength="2000" placeholder="Servizi, clienti e tono con cui lavorate"></textarea><label for="company-signature">Firma per le bozze</label><textarea id="company-signature" name="signature" rows="3" maxlength="600" placeholder="Nome, ruolo e riferimenti dello studio"></textarea><div class="form-footer"><span id="company-save-status" role="status"></span><button class="button primary" type="submit">Salva le informazioni <svg class="icon"><use href="#icon-check"/></svg></button></div></form><aside class="company-aside"><div class="assurance"><svg class="icon"><use href="#icon-info"/></svg><div><strong>Solo le informazioni utili.</strong><p>Non inserire password o dati sensibili. Questo profilo serve a personalizzare il servizio.</p></div></div><article class="card connection-card"><h3>La tua casella</h3><div id="company-connection"></div></article></aside></div></section>
+          <footer class="page-footer"><span>Filo · Più spazio al lavoro che conta.</span><details class="demo-controls"><summary>Scenari di prova</summary><p>Solo per la connessione demo. Simula un imprevisto per verificare messaggi e recupero.</p><div><button class="button tiny secondary" data-action="simulate-temporary">Errore temporaneo</button><button class="button tiny secondary" data-action="simulate-expired">Connessione scaduta</button><button class="button tiny secondary" data-action="simulate-clear">Ripristina demo</button></div><p id="demo-scenario-status" class="small-text" role="status"></p></details></footer>
+        </div>
+      </main>
+    </div>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <dialog id="wizard-dialog" class="wizard-dialog" aria-labelledby="wizard-title">
+    <div class="dialog-top"><a class="brand small-brand" href="#overview" tabindex="-1"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span>filo.</span></a><button class="icon-button" data-action="close-wizard" aria-label="Chiudi l’attivazione"><svg class="icon"><use href="#icon-close"/></svg></button></div>
+    <ol id="wizard-progress" class="wizard-progress" aria-label="Passaggi dell’attivazione"></ol>
+    <div id="wizard-body" class="wizard-body"></div><div id="wizard-error" class="notice error" role="alert" hidden></div><div id="wizard-footer" class="wizard-footer"></div>
+  </dialog>
+  <dialog id="detail-dialog" class="detail-dialog" aria-labelledby="detail-title"><div class="dialog-top"><span class="eyebrow">DETTAGLIO ATTIVITÀ</span><button class="icon-button" data-action="close-detail" aria-label="Chiudi il dettaglio"><svg class="icon"><use href="#icon-close"/></svg></button></div><div id="detail-body"></div></dialog>
+  <dialog id="confirm-dialog" class="confirm-dialog" aria-labelledby="confirm-title"><div class="dialog-top"><span class="icon-box neutral"><svg class="icon"><use href="#icon-pause"/></svg></span><button class="icon-button" data-action="close-confirm" aria-label="Chiudi"><svg class="icon"><use href="#icon-close"/></svg></button></div><h2 id="confirm-title">Disattivare la segreteria?</h2><p>Le esecuzioni programmate si fermano. Lo storico resta consultabile e potrai attivare di nuovo il servizio.</p><div class="dialog-actions"><button class="button secondary" data-action="close-confirm">Mantieni il servizio</button><button class="button danger" data-action="confirm-deactivate">Disattiva il servizio</button></div></dialog>
+  <dialog id="info-dialog" class="confirm-dialog" aria-labelledby="info-title"><div class="dialog-top"><span class="icon-box teal"><svg class="icon"><use href="#icon-info"/></svg></span><button class="icon-button" data-action="close-info" aria-label="Chiudi"><svg class="icon"><use href="#icon-close"/></svg></button></div><h2 id="info-title">Una prova, con confini chiari.</h2><p>La casella demo contiene email di esempio. Il sistema seleziona le priorità e prepara risposte attraverso regole deterministiche: qui non viene usata un’AI reale.</p><p>Le approvazioni registrano la tua revisione nella piattaforma. Non inviano email e non creano bozze nella casella del provider.</p><p id="gmail-info">Gmail richiede una configurazione dedicata. L’accesso reale, quando disponibile, resta distinto dalla demo.</p><button class="button primary" data-action="close-info">Ho capito</button></dialog>
+</body>
+</html>

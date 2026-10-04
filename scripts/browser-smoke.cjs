@@ -1,0 +1,102 @@
+/* Optional end-to-end check: uses the environment's Playwright and Chromium.
+ * Run against a fresh demo instance. It mutates only the fictional workspace.
+ */
+const { chromium } = require('playwright');
+const assert = require('node:assert/strict');
+
+(async () => {
+  const browser = await chromium.launch({ executablePath: process.env.FILO_CHROMIUM_PATH || '/usr/bin/chromium', headless: true, args: ['--no-sandbox'] });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await page.goto('http://127.0.0.1:' + (process.env.FILO_PORT || '8000'));
+    await page.waitForSelector('#app-content:not([hidden])');
+    const click = action => page.locator(`[data-action="${action}"]:visible`).first().click();
+    const state = () => page.evaluate(async () => (await fetch('/api/bootstrap')).json());
+    const before = await state();
+    assert.equal(before.service.status, 'inactive', 'Use a fresh demo instance for the activation test.');
+    await click('open-wizard');
+    await click('wizard-next');
+    await click('connect-demo');
+    await click('wizard-next');
+    await page.locator('#wizard-time').fill('09:20');
+    await click('wizard-preview');
+    await page.waitForSelector('.preview-item');
+    assert.ok(await page.locator('.preview-item').count() > 0);
+    await page.screenshot({ path: '.runtime/activation-preview.png', fullPage: true });
+    await click('wizard-next');
+    assert.ok(await page.locator('#activate-button').isDisabled());
+    await page.locator('#authorize-read').check();
+    await page.locator('#authorize-draft').check();
+    await click('wizard-activate');
+    await click('wizard-finish');
+    await click('run');
+    await page.waitForFunction(async () => (await (await fetch('/api/bootstrap')).json()).runs.some(run => run.status === 'succeeded'));
+    await page.waitForTimeout(5200); // UI polling interval, independent from server scheduling.
+    let current = await state();
+    assert.equal(current.service.status, 'active');
+    assert.equal(current.service.minute, 20);
+    assert.ok(current.runs[0].items.length > 0);
+    await click('open-run');
+    await click('approve-draft');
+    await page.waitForSelector('.approval-bar .status-pill.success');
+    await click('close-detail');
+    await click('pause');
+    await page.waitForFunction(async () => (await (await fetch('/api/bootstrap')).json()).service.status === 'paused');
+    assert.equal((await state()).service.status, 'paused');
+    await click('resume');
+    await page.waitForFunction(async () => (await (await fetch('/api/bootstrap')).json()).service.status === 'active');
+    assert.equal((await state()).service.status, 'active');
+    await click('edit-preferences');
+    await page.locator('#wizard-time').fill('10:30');
+    await click('wizard-preview');
+    await click('wizard-save-preferences');
+    await click('wizard-finish');
+    await page.waitForFunction(async () => (await (await fetch('/api/bootstrap')).json()).service.minute === 30);
+    assert.equal((await state()).service.hour, 10);
+    assert.equal((await state()).service.minute, 30);
+    await page.locator('.demo-controls summary').click();
+    await click('simulate-temporary');
+    await click('run');
+    await page.waitForFunction(async () => (await (await fetch('/api/bootstrap')).json()).runs.some(run => run.status === 'succeeded' && run.attempts === 2));
+    await page.waitForTimeout(5200);
+    await click('simulate-expired');
+    await click('run');
+    await page.waitForFunction(async () => (await (await fetch('/api/bootstrap')).json()).connection.status === 'expired');
+    await page.waitForTimeout(5200);
+    assert.ok(await page.locator('#connection-alert').isVisible());
+    await click('simulate-clear');
+    await page.waitForFunction(async () => (await (await fetch('/api/bootstrap')).json()).connection.status === 'connected');
+    assert.equal((await state()).connection.status, 'connected');
+    await click('run');
+    await page.waitForFunction(async () => (await (await fetch('/api/bootstrap')).json()).runs.filter(run => run.status === 'succeeded').length >= 3);
+    await page.waitForTimeout(5200);
+    await page.screenshot({ path: '.runtime/dashboard-active.png', fullPage: true });
+    await page.locator('[data-page="company"]').click();
+    await page.locator('#company-name').fill('Studio Riva · Demo verificata');
+    await page.locator('#company-form button[type="submit"]').click();
+    await page.waitForFunction(async () => (await (await fetch('/api/bootstrap')).json()).company.name === 'Studio Riva · Demo verificata');
+    assert.equal((await state()).company.name, 'Studio Riva · Demo verificata');
+    await page.locator('[data-page="services"]').click();
+    await page.locator('#chat-input').fill('Controlla le email ogni giorno alle 11:15');
+    await page.locator('#chat-form button').click();
+    await page.waitForSelector('#chat-suggestion:not([hidden])');
+    await page.locator('#chat-suggestion button').click();
+    assert.equal(await page.locator('#wizard-time').inputValue(), '11:15');
+    await click('close-wizard');
+    await page.locator('#chat-input').fill('Pubblica una campagna e spendi 500 euro');
+    await page.locator('#chat-form button').click();
+    await page.waitForSelector('#chat-suggestion', { state: 'hidden' });
+    await page.reload();
+    await page.waitForSelector('#app-content:not([hidden])');
+    current = await state();
+    assert.equal(current.service.status, 'active');
+    assert.equal(current.company.name, 'Studio Riva · Demo verificata');
+    assert.equal(current.service.mandate.send, false);
+    assert.deepEqual(errors, []);
+    console.log('Browser PASS: wizard, preview, consent, activation, result, revision, preferences, pause/resume, retry, expired access, recovery, company persistence, bounded chat; no JS errors.');
+  } finally {
+    await browser.close();
+  }
+})().catch(error => { console.error(error); process.exit(1); });
