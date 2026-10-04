@@ -1,6 +1,6 @@
 # Filo · servizi già pronti per il lavoro di ogni giorno
 
-MVP in italiano per piccoli studi di consulenza B2B. Il primo servizio è **Segreteria email**: controlla i clienti prioritari, segnala richieste aperte e prepara bozze da rivedere. Il catalogo presenta anche servizi futuri, che non possono essere attivati.
+MVP in italiano per piccoli studi di consulenza B2B. Il primo servizio è **Segreteria email**: controlla i clienti prioritari, segnala richieste aperte e prepara bozze da rivedere. La panoramica presenta subito un riepilogo delle richieste, un prossimo passo suggerito e un’agenda manuale con ordine del giorno scaricabile. La sincronizzazione del calendario e i social sono servizi futuri.
 
 ## Avvio
 
@@ -19,6 +19,16 @@ bash scripts/check.sh
 ```
 
 `requirements.lock` blocca anche le dipendenze transitive. Le istruzioni di installazione non modificano codice, test o file delle dipendenze. L'ambiente cloud è già isolato: usa il checkout esistente, senza creare worktree.
+
+## Il tuo buongiorno, già in ordine
+
+La panoramica usa una palette crema e arancione e mantiene «La tua giornata, con più spazio». Mostra le risposte da rivedere, il motivo della priorità, un estratto della richiesta e un prossimo passo concreto. Le urgenze esplicite precedono le richieste in attesa da almeno due giorni; le altre seguono l’ordine di arrivo. Le bozze sono leggibili, copiabili e segnabili come riviste nella stessa pagina. I controlli successivi non duplicano le conversazioni e non ripropongono una sorgente già rivista.
+
+Il riepilogo usa solo i controlli salvati: apre il periodo dalle 18 della sera precedente oppure da venerdì sera durante il weekend e il lunedì, con orari italiani. Indica l’ultimo controllo e segnala quando va aggiornato; oltre un’ora gli ultimi arrivi non sono considerati verificati. I contatti senza messaggi sono indicati come tali soltanto quando la copertura lo prova. Gmail restituisce una selezione limitata di conversazioni in attesa: un’assenza resta «da verificare».
+
+Prima del primo controllo compare un esempio esplicitamente fittizio, separato dalle attività salvate e senza accesso a provider esterni. La pagina propone il passo utile: configurare la posta, ricollegarla, riprendere il servizio, aggiornare il riepilogo o verificare la prima risposta.
+
+L’agenda contiene gli appuntamenti aggiunti dall’utente, persistenti e ordinati per orario in Europe/Rome. Puoi consultare un’altra giornata e scaricare un file `.txt` con appuntamenti e note. Il calendario esterno non è collegato e non vengono inventati impegni.
 
 ## Percorso dimostrativo
 
@@ -58,6 +68,8 @@ La progettazione del prodotto, il confronto dei moduli, le fonti e la proposta c
 
 ## Ambito
 
-Questo è un MVP verificabile, disponibile anche su Railway con accesso protetto. Non include pagamenti, invio email, sincronizzazione delle bozze Gmail, calendari, telefonia, campagne o gestione multiutente. Non modifica account esterni e non impegna budget pubblicitario.
+Questo è un MVP verificabile, disponibile anche su Railway con accesso protetto. Non include pagamenti, invio email, sincronizzazione delle bozze Gmail o dei calendari esterni, telefonia, campagne o gestione multiutente. Non modifica account esterni e non impegna budget pubblicitario.
 
 La prova browser facoltativa `node scripts/browser-smoke.cjs` richiede Playwright e Chromium, già presenti nell'ambiente cloud ma non necessari all'app. Usala contro un'istanza dimostrativa inizialmente inattiva con dati nuovi: modifica soltanto l'azienda fittizia e la sua configurazione. Per isolare la prova puoi avviare il server con `ALEXCHIARA_DATA_DIR` in una cartella temporanea e `FILO_PORT=8001`; imposta anche `FILO_PORT=8001` per il comando del test. Il controllo parte dalla configurazione guidata e verifica risultati, revisione, preferenze, errori, recupero e chat. Le prove API di `scripts/check.sh` isolano automaticamente i dati.
+
+La prova `node scripts/morning-smoke.cjs` usa una nuova istanza isolata sulla porta 8002, con `FILO_ACCESS_PASSWORD=morning-test`; imposta `ALEXCHIARA_DATA_DIR` a una cartella temporanea e avvia Uvicorn con `.venv/bin/python`. Verifica l’accesso protetto, il riepilogo prima e dopo il controllo, la persistenza delle bozze aperte, la revisione senza duplicati, l’agenda con browser in un altro fuso, il download e il layout desktop/mobile. Non usarla sul servizio Railway o su dati reali.

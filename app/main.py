@@ -15,6 +15,8 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import ai
+from .agenda import agenda_summary, create_agenda_router
+from .briefing import build_briefing, build_example_briefing
 from .connectors import ConnectorError, create_router, load_messages
 from .db import Database, iso_now
 from .models import Action, Activation, ChatInput, CompanyInput, DemoFailure, Preferences
@@ -22,7 +24,7 @@ from .service import Scheduler, public_service
 
 CATALOG = [
     {"id": "priority-email", "name": "Risposte ai clienti prioritari", "category": "Email", "available": True, "status": "available", "description": "Controlla ogni giorno le richieste in attesa e prepara bozze da verificare."},
-    {"id": "agenda", "name": "Agenda e appuntamenti", "category": "Agenda", "available": False, "status": "coming_soon", "description": "In arrivo. La gestione del calendario non è disponibile."},
+    {"id": "agenda", "name": "Calendario collegato", "category": "Agenda", "available": False, "status": "coming_soon", "description": "In arrivo: sincronizzazione automatica del calendario. L'agenda manuale è già nella panoramica."},
     {"id": "social", "name": "Contenuti social", "category": "Social", "available": False, "status": "coming_soon", "description": "In arrivo. La pubblicazione sui social non è disponibile."},
 ]
 
@@ -45,6 +47,7 @@ def create_app(data_dir=None, start_worker=True):
     app.state.db = db
     app.state.scheduler = scheduler
     app.state.runtime = runtime
+    app.include_router(create_agenda_router(db))
     allowed_hosts = {"127.0.0.1", "localhost", "::1", "testserver"}
     allowed_hosts.update(host.strip().lower() for host in os.environ.get("ALEXCHIARA_ALLOWED_HOSTS", "").split(",") if host.strip())
     access_password = os.environ.get("FILO_ACCESS_PASSWORD", "").encode("utf-8")
@@ -118,18 +121,22 @@ def create_app(data_dir=None, start_worker=True):
     @app.get("/api/bootstrap")
     def bootstrap(request: Request):
         session = db.session(request.cookies.get("alexchiara_session"))
+        briefing = build_briefing(db)
         ai_status = ai.ai_status() if hasattr(ai, "ai_status") else {"mode": "deterministic", "configured": False, "enabled": False, "label": "Analisi locale deterministica"}
         result = {
             "company": db.get_setting("company"), "service": public_service(db), "connection": db.get_connection(),
             "runs": db.list_runs(), "approvals": db.pending_drafts(), "actions": db.list_actions(), "catalog": CATALOG,
             "csrf_token": session["csrf"], "mode": "local-demo", "analysis_mode": "deterministic", "ai": ai_status,
             "demo_failure": db.get_setting("demo_failure"),
+            "briefing": briefing,
+            "briefing_example": build_example_briefing(db) if briefing["status"] == "not_started" and not briefing["priorities"] else None,
+            "agenda": agenda_summary(db),
             "limitations": [
                 "Spazio locale con un solo utente: il processo server deve restare acceso per i controlli programmati.",
                 "La casella demo contiene dati fittizi. Gmail legge solo i messaggi con consenso OAuth e non può inviare email.",
                 "Le bozze richiedono revisione umana: approvarle le segna come verificate, senza inviarle.",
                 "L'analisi Gmail è deterministica e locale; l'AI esterna opzionale si usa solo sui dati dimostrativi.",
-                "Agenda e social sono servizi futuri e non eseguono azioni.",
+                "L'agenda contiene solo gli appuntamenti aggiunti da te. Calendario collegato e social sono in programma.",
             ],
         }
         response = JSONResponse(result)
@@ -151,7 +158,7 @@ def create_app(data_dir=None, start_worker=True):
         is_email = any(word in message for word in ("email", "e-mail", "posta", "client", "preventiv", "prioritar", "bozz"))
         future_service = any(word in message for word in ("agenda", "appuntament", "calendario", "social", "instagram", "facebook"))
         if future_service and not is_email:
-            return {"supported": False, "reply": "Agenda e social sono in arrivo. Oggi posso proporti un controllo quotidiano delle email dei clienti prioritari e preparare bozze da verificare.", "service_id": None}
+            return {"supported": False, "reply": "Ti propongo di iniziare dalla panoramica: puoi aggiungere i tuoi appuntamenti e scaricare l'ordine del giorno. Il calendario collegato e i social sono in arrivo. Posso anche aiutarti a configurare un controllo quotidiano delle email importanti e le bozze da verificare.", "service_id": None}
         if not is_email:
             return {"supported": False, "reply": "Posso aiutarti con le risposte ai clienti prioritari: dimmi quali contatti seguire e a che ora controllare la posta ogni giorno.", "service_id": None}
         service = db.get_setting("service")

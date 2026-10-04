@@ -1,6 +1,6 @@
 # Verifica dell'MVP e dell'ambiente
 
-Prove eseguite il **4 ottobre 2026** in `/workspace/AlexChiara`, Linux x86_64, Python 3.12.14. Il repository iniziale era vuoto e senza commit, con checkout sul ramo locale `work`; il remoto GitHub era accessibile tramite autenticazione esistente ma non conteneva riferimenti, incluso `main`. Il codice è stato creato localmente in seguito alla richiesta di sviluppo dell'MVP. Non sono stati creati worktree, PR o commit remoti.
+Prove eseguite il **4 ottobre 2026** in `/workspace/AlexChiara`, Linux x86_64, Python 3.12.14. Il repository iniziale era vuoto e senza commit, con checkout sul ramo locale `work`; il remoto GitHub era accessibile tramite autenticazione esistente ma non conteneva riferimenti, incluso `main`. Il codice è stato creato localmente in seguito alla richiesta di sviluppo dell'MVP. Il codice è stato successivamente pubblicato sul ramo remoto main e su Railway con accesso protetto e volume persistente. Non sono stati creati worktree o PR.
 
 ## Risultati
 
@@ -37,4 +37,12 @@ Il salvataggio della bozza è confermato. La bozza non esegue script, non applic
 
 Tutti i contenuti sono fittizi. Nessun messaggio è stato inviato, nessun calendario modificato e nessuna spesa pubblicitaria impegnata. Gmail OAuth e AI con account reali non sono stati validati perché non ci sono credenziali configurate; non si dichiara qualità di un modello, approvazione Google o disponibilità di un SaaS in produzione.
 
-La ricerca ufficiale su GitHub è documentata in PRODOTTO.md; alcuni siti dei fornitori e il testo GDPR erano bloccati dal proxy. Prezzi concorrenti, termini correnti e requisiti di verifica pubblica restano da controllare. Prima di un pilota reale servono autenticazione, isolamento, retention/cancellazione, backup, processo supervisionato e accordi di trattamento.
+La ricerca ufficiale su GitHub è documentata in PRODOTTO.md; alcuni siti dei fornitori e il testo GDPR erano bloccati dal proxy. Prezzi concorrenti, termini correnti e requisiti di verifica pubblica restano da controllare. Railway fornisce HTTPS e un processo supervisionato; l’app richiede la password condivisa. Prima di un pilota reale restano da verificare account individuali e isolamento, retention/cancellazione, backup e accordi di trattamento.
+
+## Dashboard mattutina e agenda — 4 ottobre 2026
+
+Il browser ha verificato accesso protetto anche per il download, esempio fittizio visibile senza attivazione, riepilogo dei controlli salvati, bozze che rimangono aperte durante il polling, revisione inline e mancata ricomparsa della stessa sorgente dopo un nuovo controllo. Agenda: orari italiani corretti anche con browser America/Los_Angeles, ordinamento, giorni futuri, persistenza dopo ricarica e ordine del giorno scaricato con titoli e note. Nessun errore JavaScript o overflow orizzontale a 1440 e 390 pixel. La palette e i simboli sono arancioni, senza verde o viola.
+
+La suite completa passa con 103 test. Le nuove prove API coprono agenda, date e ora legale, esportazione, migrazioni additive, periodo notte/weekend, copertura incompleta, snapshot con zero bozze, priorità motivate, revisioni e deduplicazione. Le prove usano dati fittizi e istanze isolate, senza modificare il servizio Railway o calendari esterni.
+
+Un test Gmail con MockTransport segue il connettore reale fino al briefing: una risposta dello studio elimina la priorità pendente, una nuova richiesta la ripropone, senza aumentare le chiamate al provider. Le bozze Gmail precedenti senza snapshot restano nello storico e chiedono un nuovo controllo: non vengono sostituite da un esempio fittizio o attribuite a una nuova casella.

@@ -2,7 +2,7 @@
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-const state = { data: null, gmail: null, page: 'overview', companyDirty: false, companyInitialized: false, loading: false, wizard: null, currentRun: null, chatBusy: false, chatPreferences: null };
+const state = { data: null, gmail: null, page: 'overview', companyDirty: false, companyInitialized: false, loading: false, wizard: null, currentRun: null, chatBusy: false, chatPreferences: null, briefingSignature: null, agendaSignature: null, agendaDate: null, agendaView: null };
 let toastTimer;
 let lastFocused;
 
@@ -80,6 +80,11 @@ function closeDialog(selector) { $(selector).close(); if (lastFocused?.isConnect
 async function refresh(forceCompany = false) {
   const data = await api('/api/bootstrap');
   state.data = data;
+  if (state.agendaDate && state.agendaDate !== data.agenda?.date) {
+    const day = state.agendaDate;
+    const agenda = await api(`/api/agenda?date=${encodeURIComponent(day)}`);
+    if (state.agendaDate === day) state.agendaView = agenda;
+  } else state.agendaView = null;
   render(forceCompany);
   $('#loading').hidden = true;
   $('#load-error').hidden = true;
@@ -97,15 +102,16 @@ function render(forceCompany = false) {
   const { company = {}, service = {}, connection = {}, approvals = [] } = state.data;
   $('#sidebar-company').textContent = company.name || 'Il tuo studio';
   $('#company-avatar').textContent = (company.name || 'Il tuo studio').split(/\s+/).filter(Boolean).slice(0, 2).map(x => x[0]).join('').toUpperCase();
-  $('#greeting-label').textContent = company.name ? `BENVENUTO, ${company.name.toLocaleUpperCase('it')}` : 'IL TUO PUNTO DI PARTENZA';
+  const hour = Number(new Intl.DateTimeFormat('it-IT', { timeZone: 'Europe/Rome', hour: 'numeric', hourCycle: 'h23' }).format(new Date()));
+  $('#greeting-label').textContent = `${hour < 13 ? 'BUONGIORNO' : hour < 19 ? 'BUON POMERIGGIO' : 'BUONASERA'}${company.name ? `, ${company.name.toLocaleUpperCase('it')}` : ', C’È FILO'}`;
   setPill('#overview-service-status', service.status);
   const expired = connection.status === 'expired';
   notice('#connection-alert', expired ? 'La connessione alla casella è scaduta. Filo conserva lo storico ma non può leggere nuove email. Ricollega la casella dal servizio; per la demo puoi usare “Ripristina demo” negli scenari di prova.' : '');
   if (connection.provider === 'gmail') {
-    $('.demo-banner p').replaceChildren(el('strong', '', 'Casella Gmail collegata, elaborazione guidata. '), document.createTextNode('Le email sono reali. Selezione e bozze usano regole deterministiche, senza AI reale. Le bozze restano in Filo e nessun messaggio viene inviato.'));
+    $('.demo-banner p').replaceChildren(el('strong', '', 'La tua casella Gmail è collegata. '), document.createTextNode('Filo mette in evidenza le richieste e prepara bozze da verificare. Nessuna email viene inviata.'));
     $('.demo-chip').lastChild.textContent = ' Prototipo con Gmail';
   } else {
-    $('.demo-banner p').replaceChildren(el('strong', '', 'Dati demo, spazio per sperimentare. '), document.createTextNode('Le email di esempio e le bozze sono una simulazione deterministica, senza AI reale. Nessun messaggio viene inviato.'));
+    $('.demo-banner p').replaceChildren(el('strong', '', 'Un assaggio di Filo, con dati fittizi. '), document.createTextNode('Puoi provare priorità e bozze senza collegare la tua posta. Nessuna email viene inviata.'));
     $('.demo-chip').lastChild.textContent = ' Ambiente di prova';
   }
   if (connection.provider !== 'gmail' && state.data.ai?.enabled && state.data.ai?.configured) {
@@ -157,6 +163,121 @@ function render(forceCompany = false) {
   replace('#company-connection', ...connectionNodes);
   $('#demo-scenario-status').textContent = expired ? 'Connessione demo scaduta: il servizio richiede un ripristino.' : state.data.demo_failure === 'expired' ? 'La prossima esecuzione demo simulerà una connessione scaduta.' : state.data.demo_failure === 'temporary' ? 'La prossima esecuzione demo simulerà un errore temporaneo.' : '';
   $$('[data-action^="simulate-"]').forEach(button => { button.disabled = connection.provider !== 'demo'; });
+  renderMorning();
+  renderAgenda();
+}
+
+function currentBriefing() {
+  const briefing = state.data?.briefing;
+  return briefing?.status === 'not_started' && state.data.briefing_example ? state.data.briefing_example : briefing;
+}
+function renderMorning() {
+  const real = state.data.briefing;
+  const briefing = currentBriefing();
+  if (!briefing) return;
+  const preview = Boolean(briefing.preview);
+  const priorities = briefing.priorities || [];
+  $('#briefing-title').textContent = preview ? 'Un esempio del tuo buongiorno.' : priorities.length ? 'Ecco da dove cominciare.' : 'Il tuo buongiorno, già in ordine.';
+  $('#briefing-period').textContent = preview ? 'EMAIL FITTIZIE · ANTEPRIMA' : (briefing.period?.label || 'IL TUO RIEPILOGO').toLocaleUpperCase('it');
+  $('#briefing-summary').textContent = briefing.summary || 'Il riepilogo arriverà dopo il primo controllo della posta.';
+  const nextAppointment = state.data.agenda?.next_event;
+  $('#briefing-next-appointment').hidden = !nextAppointment;
+  $('#briefing-next-appointment').textContent = nextAppointment ? `Il prossimo appuntamento: ${nextAppointment.time_label} · ${nextAppointment.title}` : '';
+  $('#briefing-freshness').textContent = preview ? 'Nessuna casella letta' : briefing.last_checked_at ? `Ultimo controllo: ${prettyDate(briefing.last_checked_at)}` : briefing.stale ? 'Da aggiornare' : 'In attesa del primo controllo';
+  $('#briefing-freshness').classList.toggle('stale', Boolean(briefing.stale));
+  const counts = briefing.counts || {};
+  const stats = [[counts.pending ?? priorities.length, preview ? 'Risposte nell’esempio' : 'Risposte da rivedere'], [counts.high_priority ?? 0, preview ? 'Priorità nell’esempio' : 'Da guardare per prime'], [state.data.agenda?.items?.length || 0, 'Appuntamenti oggi']];
+  replace('#briefing-stats', ...stats.map(([value, label]) => { const card = el('div', 'briefing-stat'); card.append(el('strong', '', value), el('small', '', label)); return card; }));
+  const suggestion = preview ? { label: 'Prepara il tuo primo riepilogo', action: 'open-wizard', reason: 'Scegli i contatti che contano. Filo ti proporrà ogni giorno da dove iniziare.' } : real?.suggested_action;
+  const suggestionNodes = [];
+  if (suggestion) {
+    const mark = el('span', 'icon-box peach'); mark.append(icon('spark'));
+    const copy = el('div', 'suggestion-copy'); copy.append(el('strong', '', preview ? 'Il prossimo passo lo propone Filo.' : 'Ti propongo questo.'), el('p', '', suggestion.reason || suggestion.label));
+    const action = suggestion.action === 'review-priority' ? 'review-priority' : ['open-wizard', 'run', 'resume', 'reconnect', 'edit-preferences'].includes(suggestion.action) ? suggestion.action : priorities.length ? 'review-priority' : 'run';
+    const button = actionButton(suggestion.label || 'Comincia da qui', action, 'primary', 'arrow', { id: suggestion.draft_id || priorities[0]?.draft_id || '' });
+    if (real?.status === 'checking') button.disabled = true;
+    suggestionNodes.push(mark, copy);
+    if (!['none', 'wait'].includes(suggestion.action)) suggestionNodes.push(button);
+  }
+  const suggestionSignature = JSON.stringify({ suggestion, checking: real?.status === 'checking' });
+  if (state.suggestionSignature !== suggestionSignature) {
+    replace('#suggestion-card', ...suggestionNodes);
+    state.suggestionSignature = suggestionSignature;
+  }
+  $('#suggestion-card').hidden = !suggestionNodes.length;
+  const signature = JSON.stringify({ preview, priorities: preview ? priorities.map(({ received_at, ...item }) => item) : priorities, contacts: preview ? briefing.contacts?.map(({ last_received_at, ...contact }) => contact) : briefing.contacts, summary: briefing.summary, status: briefing.status, last_checked_at: briefing.last_checked_at });
+  if (signature === state.briefingSignature) return;
+  state.briefingSignature = signature;
+  if (!priorities.length) {
+    const empty = el('div', 'briefing-empty'); empty.append(icon('check'), el('h3', '', real?.legacy_pending_count ? 'Le bozze precedenti restano nello storico.' : real?.status === 'not_started' ? 'Il primo passo è collegare la posta.' : real?.status === 'checking' ? 'Filo sta preparando il riepilogo.' : 'Nessuna risposta da rivedere qui.'), el('p', '', real?.legacy_pending_count ? 'Un nuovo controllo verificherà quali richieste aspettano ancora una risposta. Puoi consultare le bozze precedenti nelle attività.' : real?.status === 'not_started' ? 'Parti dalla casella demo o da Gmail. Poi troverai le richieste importanti direttamente in questa pagina.' : 'Il riepilogo riguarda i messaggi controllati: aggiornalo per verificare nuove richieste.'));
+    if (real?.legacy_pending_count) { const link = el('a', 'text-link', 'Consulta le attività'); link.href = '#activity'; empty.append(link); }
+    replace('#priority-list', empty);
+  } else {
+    replace('#priority-list', ...priorities.map((item, index) => {
+      const row = el('article', 'priority-item'); row.dataset.draftId = item.draft_id || `example-${index}`;
+      const rank = el('span', 'priority-rank', String(index + 1).padStart(2, '0'));
+      const body = el('div', 'priority-main');
+      const meta = el('div', 'priority-meta'); meta.append(el('strong', '', item.client), el('span', `priority-badge ${item.priority === 'high' ? 'high' : 'normal'}`, item.priority_label || (item.priority === 'high' ? 'Da guardare prima' : 'A seguire')));
+      if (item.received_at) meta.append(el('span', 'small-text', `Ha scritto ${prettyDate(item.received_at)}`));
+      body.append(meta, el('h3', 'priority-subject', item.subject));
+      if (item.source_excerpt) { const context = el('p', 'priority-context', item.source_excerpt.length > 220 ? `${item.source_excerpt.slice(0, 220).trim()}…` : item.source_excerpt); body.append(context); }
+      body.append(el('p', 'small-text', item.reason), el('p', 'priority-next-step', item.next_step || 'Rivedi la bozza e controlla i dettagli prima di rispondere.'));
+      const draft = el('details', 'priority-inline-draft');
+      draft.append(el('summary', '', preview ? 'La bozza di esempio è già pronta' : 'La bozza è già pronta'));
+      draft.append(el('pre', 'draft-text', item.draft));
+      if (!preview && item.draft_id) {
+        const actions = el('div', 'card-actions'); actions.append(actionButton('Copia la bozza', 'copy-priority', 'secondary', undefined, { id: item.draft_id }), actionButton('Segna come rivista', 'approve-draft', 'primary', 'check', { id: item.draft_id })); draft.append(actions);
+        draft.append(el('p', 'small-text', 'La revisione resta in Filo. L’email non viene inviata.'));
+      }
+      body.append(draft); row.append(rank, body); return row;
+    }));
+  }
+  const checkedBeforePeriod = briefing.last_checked_at && briefing.period?.start && new Date(briefing.last_checked_at) < new Date(briefing.period.start);
+  $('#contacts-period').textContent = preview ? 'Contatti fittizi dell’esempio.' : checkedBeforePeriod ? 'L’ultimo controllo precede questo periodo. Aggiorna per verificare i nuovi arrivi.' : `${briefing.period?.start ? `Da ${prettyDate(briefing.period.start)}` : 'Periodo del riepilogo'}${briefing.last_checked_at ? ` al controllo del ${prettyDate(briefing.last_checked_at)}` : ''}.`;
+  replace('#contact-snapshot', ...(briefing.contacts || []).map(contact => {
+    const card = el('div', 'contact-status'); const status = contact.status === 'wrote' ? 'wrote' : contact.status === 'no_messages' ? 'quiet' : 'unverified'; card.classList.add(status);
+    card.append(el('strong', '', contact.name), el('span', '', status === 'wrote' ? 'Ha scritto' : status === 'quiet' ? 'Nessuna email nel periodo controllato' : 'Da verificare con un nuovo controllo'));
+    if (contact.last_received_at && status === 'wrote') card.append(el('small', '', prettyDate(contact.last_received_at)));
+    return card;
+  }));
+  if (briefing.coverage_note && !preview) $('#contact-snapshot').append(el('p', 'small-text', briefing.coverage_note));
+}
+
+function renderAgenda() {
+  const agenda = state.agendaView || state.data.agenda;
+  if (!agenda) return;
+  $('#agenda-source').textContent = 'Appuntamenti aggiunti da te · orari italiani. Il calendario esterno non è ancora collegato.';
+  $('#agenda-export').href = `/api/agenda/export?date=${encodeURIComponent(agenda.date)}`;
+  if (document.activeElement !== $('#agenda-view-date')) $('#agenda-view-date').value = agenda.date;
+  if (!$('#agenda-event-date').value) $('#agenda-event-date').value = agenda.date;
+  const signature = JSON.stringify(agenda);
+  if (signature === state.agendaSignature) return;
+  state.agendaSignature = signature;
+  if (!agenda.items.length) {
+    const empty = el('div', 'agenda-empty'); empty.append(icon('calendar'), el('h3', '', 'La giornata aspetta i tuoi impegni.'), el('p', '', 'Aggiungi un incontro: lo troverai qui, in ordine di orario, e nel tuo ordine del giorno.'));
+    replace('#agenda-timeline', empty);
+  } else {
+    replace('#agenda-timeline', ...agenda.items.map(item => {
+      const card = el('article', 'agenda-event'); const copy = el('div'); copy.append(el('h3', '', item.title));
+      if (agenda.next_event?.id === item.id) copy.append(el('span', 'status-pill warning', 'Il prossimo appuntamento'));
+      if (item.notes) copy.append(el('p', 'agenda-note', item.notes));
+      const remove = actionButton('Rimuovi', 'delete-agenda-event', 'ghost', undefined, { id: item.id }); remove.setAttribute('aria-label', `Rimuovi ${item.title}`);
+      card.append(el('time', 'agenda-time', item.time_label), copy, remove); return card;
+    }));
+  }
+}
+
+function romeDateTimeISO(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
+  if (!match) throw new Error('Scegli un giorno e un orario validi.');
+  const [, year, month, day, hour, minute] = match.map(Number);
+  const target = Date.UTC(year, month - 1, day, hour, minute);
+  let result = target;
+  const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  const wallTime = timestamp => { const parts = Object.fromEntries(formatter.formatToParts(new Date(timestamp)).filter(part => part.type !== 'literal').map(part => [part.type, Number(part.value)])); return Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute); };
+  for (let iteration = 0; iteration < 3; iteration++) result += target - wallTime(result);
+  if (wallTime(result) !== target) throw new Error('Questo orario non esiste per il cambio dell’ora. Scegli un altro orario.');
+  return new Date(result).toISOString();
 }
 function renderRuns(selector, runs) {
   if (!runs.length) {
@@ -326,6 +447,16 @@ function renderRunDetail(run) {
 
 async function handleAction(button) {
   const action = button.dataset.action;
+  if (action === 'review-priority') {
+    const row = $$('.priority-item').find(item => item.dataset.draftId === button.dataset.id) || $('.priority-item');
+    if (row) { $('details', row).open = true; row.scrollIntoView({ behavior: 'smooth', block: 'center' }); $('summary', row).focus({ preventScroll: true }); }
+    return;
+  }
+  if (action === 'copy-priority') {
+    const item = currentBriefing()?.priorities?.find(item => item.draft_id === button.dataset.id);
+    if (item?.draft) { await navigator.clipboard.writeText(item.draft); toast('Bozza copiata. Puoi rivederla nella tua casella prima di inviarla.'); }
+    return;
+  }
   if (action === 'open-wizard') { startWizard(); return; }
   if (action === 'open-chat-wizard') { startWizard(false, false, state.chatPreferences); return; }
   if (action === 'edit-chat-preferences') { startWizard(true, false, state.chatPreferences); return; }
@@ -366,11 +497,12 @@ async function handleAction(button) {
         const kind = action === 'confirm-deactivate' ? 'deactivate' : action;
         await api('/api/service/action', { method: 'POST', body: { action: kind } }); await refresh();
         if (kind === 'deactivate') closeDialog('#confirm-dialog');
-        toast({ run: 'Esecuzione avviata. Segui il risultato nelle attività.', pause: 'Segreteria in pausa. La programmazione è ferma.', resume: 'Segreteria ripresa. La programmazione è di nuovo attiva.', deactivate: 'Servizio disattivato. Lo storico resta disponibile.' }[kind]);
+        toast({ run: 'Controllo avviato. Il riepilogo si aggiornerà qui tra poco.', pause: 'Segreteria in pausa. La programmazione è ferma.', resume: 'Segreteria ripresa. La programmazione è di nuovo attiva.', deactivate: 'Servizio disattivato. Lo storico resta disponibile.' }[kind]);
       }
       else if (action === 'open-run') await openRun(button.dataset.id);
       else if (action === 'retry-run') { await api(`/api/runs/${encodeURIComponent(button.dataset.id)}/retry`, { method: 'POST', body: {} }); await refresh(); await openRun(button.dataset.id); toast('Nuovo tentativo avviato.'); }
-      else if (action === 'approve-draft') { await api(`/api/drafts/${encodeURIComponent(button.dataset.id)}/approve`, { method: 'POST', body: {} }); await refresh(); if (state.currentRun) await openRun(state.currentRun.id); toast('Revisione registrata in Filo. Nessun messaggio inviato.'); }
+      else if (action === 'approve-draft') { await api(`/api/drafts/${encodeURIComponent(button.dataset.id)}/approve`, { method: 'POST', body: {} }); await refresh(); if ($('#detail-dialog').open && state.currentRun) await openRun(state.currentRun.id); toast('Revisione registrata in Filo. Nessun messaggio inviato.'); }
+      else if (action === 'delete-agenda-event') { await api(`/api/agenda/${encodeURIComponent(button.dataset.id)}`, { method: 'DELETE' }); await refresh(); toast('Appuntamento rimosso dall’agenda.'); }
       else if (action.startsWith('simulate-')) { const kind = action.replace('simulate-', ''); await api('/api/demo/failure', { method: 'POST', body: { kind } }); await refresh(); toast({ temporary: 'Imprevisto temporaneo preparato per la prossima esecuzione demo.', expired: 'Simulazione pronta: la connessione demo scadrà alla prossima esecuzione.', clear: 'Connessione demo ripristinata.' }[kind]); }
       else if (action === 'disconnect-gmail') { await api('/api/gmail/disconnect', { method: 'POST', body: {} }); await refresh(); state.gmail = await api('/api/gmail/status'); toast('Gmail scollegato. Non verranno lette nuove email.'); }
     } catch (error) { if (inWizard) notice('#wizard-error', error.message); else toast(error.message, true); }
@@ -398,6 +530,30 @@ $('#company-form').addEventListener('submit', async event => {
     try { await api('/api/company', { method: 'PUT', body }); await refresh(true); $('#company-save-status').textContent = 'Informazioni salvate'; toast('Profilo aziendale aggiornato.'); }
     catch (error) { toast(error.message, true); }
   });
+});
+$('#agenda-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  if (!form.reportValidity()) return;
+  notice('#agenda-error', '');
+  await withBusy($('button[type=submit]', form), async () => {
+    try {
+      const fields = Object.fromEntries(new FormData(form).entries());
+      await api('/api/agenda', { method: 'POST', body: { title: fields.title, starts_at: romeDateTimeISO(`${fields.date}T${fields.time}`), notes: fields.notes } });
+      state.agendaDate = fields.date;
+      form.reset(); $('#agenda-event-date').value = fields.date; $('#agenda-add').open = false;
+      await refresh(); toast('Appuntamento aggiunto. Lo troverai nel giorno scelto e nell’ordine del giorno.');
+    } catch (error) { notice('#agenda-error', error.message); }
+  });
+});
+$('#agenda-view-date').addEventListener('change', async event => {
+  const day = event.target.value;
+  if (!day) return;
+  state.agendaDate = day;
+  try {
+    const agenda = await api(`/api/agenda?date=${encodeURIComponent(day)}`);
+    if (state.agendaDate === day) { state.agendaView = agenda; renderAgenda(); }
+  } catch (error) { toast(error.message, true); }
 });
 $('#chat-form').addEventListener('submit', async event => {
   event.preventDefault(); if (state.chatBusy) return;

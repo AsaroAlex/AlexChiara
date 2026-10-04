@@ -215,10 +215,11 @@ def _gmail_messages(db, contacts):
                           "received_at": datetime.fromtimestamp(int(message.get("internalDate", 0)) / 1000, timezone.utc).isoformat(),
                           "from_client": parseaddr(sender)[1].strip().lower() in addresses}
             if latest:
-                # Skip already answered conversations; bounded context stays available for review.
+                # Keep the last observed message even after an outgoing reply.
+                # Analysis excludes from_client=False from drafts, while the
+                # briefing can retire an older suggestion using this evidence.
                 latest["context"] = "\n\n".join(context)[-18000:]
-                if latest["from_client"]:
-                    result.append(latest)
+                result.append(latest)
         return result
 
 

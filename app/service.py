@@ -12,6 +12,7 @@ import threading
 from zoneinfo import ZoneInfo
 
 from . import ai
+from .briefing import capture_snapshot, mailbox_scope, persist_snapshot
 from .connectors import ConnectorError, load_messages
 from .db import iso_now
 
@@ -196,6 +197,7 @@ class Scheduler:
                 self.db.set_connection("demo", "expired")
                 raise ConnectorError("Autorizzazione dimostrativa scaduta. Ripristina la connessione per continuare.", "autorizzazione", False, True)
             company = json.loads(run["company"])
+            scope_key = mailbox_scope(self.db, run["provider"])
             def read_and_analyze():
                 self._guard(run["provider"], preferences)
                 messages = load_messages(run["provider"], preferences["priority_contacts"], self.db)
@@ -203,17 +205,25 @@ class Scheduler:
                 # Provider content never crosses the permission boundary above.
                 analyze = getattr(ai, "analyze", None)
                 if analyze:
-                    return analyze(messages, company, preferences["priority_contacts"], provider=run["provider"])
-                return ai.analyze_messages(messages, company, preferences["priority_contacts"])
-            result = self._bounded(read_and_analyze)
+                    result = analyze(messages, company, preferences["priority_contacts"], provider=run["provider"])
+                else:
+                    result = ai.analyze_messages(messages, company, preferences["priority_contacts"])
+                snapshot = capture_snapshot(messages, preferences["priority_contacts"], run["provider"], now, scope_key)
+                sources = {str(ai._field(message, "id")): message for message in messages}
+                return result, snapshot, sources
+            result, snapshot, sources = self._bounded(read_and_analyze)
             self._guard(run["provider"], preferences)
             finished = now.isoformat()
             with self.db.connection() as conn:
                 conn.execute("BEGIN IMMEDIATE")
                 self._guard(run["provider"], preferences)
                 for item in result["items"]:
-                    conn.execute("INSERT OR IGNORE INTO drafts(id,run_id,source_id,client,subject,reason,draft,thread_id,source_excerpt,status,created_at) VALUES (?,?,?,?,?,?,?,?,?,'pending',?)", (
-                        secrets.token_hex(12), run["id"], item["source_id"], item["client"], item["subject"], item["reason"], item["draft"], item.get("thread_id"), str(item.get("source_excerpt", ""))[:4000], finished))
+                    source = sources.get(item["source_id"], {})
+                    observation = next((message for message in snapshot["messages"] if message["id"] == item["source_id"]), {})
+                    conn.execute("INSERT OR IGNORE INTO drafts(id,run_id,source_id,client,subject,reason,draft,thread_id,source_excerpt,received_at,email,source_body,status,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,'pending',?)", (
+                        secrets.token_hex(12), run["id"], item["source_id"], item["client"], item["subject"], item["reason"], item["draft"], item.get("thread_id"), str(item.get("source_excerpt", ""))[:4000],
+                        observation.get("received_at"), observation.get("email"), str(ai._field(source, "body"))[:4000], finished))
+                persist_snapshot(conn, run["id"], snapshot)
                 conn.execute("UPDATE runs SET status='succeeded',finished_at=?,summary=?,error=NULL,error_step=NULL,retryable=0,next_attempt_at=NULL,analysis_mode=? WHERE id=?", (finished, result["summary"], result.get("analysis_mode", "deterministic"), run["id"]))
                 self._log_in_transaction(conn, "run_succeeded", run["id"], {"items": len(result["items"]), "analysis_mode": result.get("analysis_mode", "deterministic")})
             service = self.db.get_setting("service")

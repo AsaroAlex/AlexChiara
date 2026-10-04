@@ -60,6 +60,7 @@ class Database:
                     source_id TEXT NOT NULL, client TEXT NOT NULL, subject TEXT NOT NULL,
                     reason TEXT NOT NULL, draft TEXT NOT NULL, thread_id TEXT,
                     source_excerpt TEXT NOT NULL DEFAULT '',
+                    received_at TEXT, email TEXT, source_body TEXT NOT NULL DEFAULT '',
                     status TEXT NOT NULL DEFAULT 'pending', created_at TEXT NOT NULL,
                     approved_at TEXT, UNIQUE(run_id, source_id)
                 );
@@ -71,11 +72,23 @@ class Database:
                     id TEXT PRIMARY KEY, csrf TEXT NOT NULL, created_at TEXT NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS run_queue ON runs(status, next_attempt_at, created_at);
+                CREATE TABLE IF NOT EXISTS briefing_snapshots (
+                    run_id TEXT PRIMARY KEY REFERENCES runs(id), provider TEXT NOT NULL,
+                    scope_key TEXT NOT NULL, checked_at TEXT NOT NULL,
+                    coverage_start TEXT NOT NULL, coverage_end TEXT NOT NULL,
+                    coverage_complete INTEGER NOT NULL DEFAULT 0,
+                    contacts TEXT NOT NULL, messages TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS briefing_latest ON briefing_snapshots(provider,scope_key,checked_at);
             """)
             # Additive migration keeps existing local drafts and approvals intact.
             columns = {row["name"] for row in conn.execute("PRAGMA table_info(drafts)")}
             if "source_excerpt" not in columns:
                 conn.execute("ALTER TABLE drafts ADD COLUMN source_excerpt TEXT NOT NULL DEFAULT ''")
+            for name, definition in (("received_at", "TEXT"), ("email", "TEXT"),
+                                     ("source_body", "TEXT NOT NULL DEFAULT ''")):
+                if name not in columns:
+                    conn.execute(f"ALTER TABLE drafts ADD COLUMN {name} {definition}")
             defaults = {
                 "company": DEFAULT_COMPANY,
                 "service": {"id": "priority-email", "status": "inactive", "provider": None,
@@ -151,8 +164,18 @@ class Database:
         return [self.run(run_id) for run_id in ids]
 
     def pending_drafts(self):
+        from .briefing import latest_pending_drafts
         with self.connection() as conn:
-            return [dict(row) for row in conn.execute("SELECT * FROM drafts WHERE status='pending' ORDER BY created_at DESC LIMIT 100")]
+            rows = [dict(row) for row in conn.execute("""
+                SELECT d.*, r.provider AS _provider, s.scope_key AS _scope_key
+                FROM drafts d JOIN runs r ON r.id=d.run_id
+                LEFT JOIN briefing_snapshots s ON s.run_id=r.id
+                ORDER BY d.created_at DESC,d.id DESC
+            """)]
+            snapshots = [dict(row) for row in conn.execute("SELECT * FROM briefing_snapshots")]
+        items = latest_pending_drafts(rows, snapshots)
+        return [{key: value for key, value in item.items() if not key.startswith("_")}
+                for item in items[:100]]
 
     def list_actions(self, limit=30):
         with self.connection() as conn:

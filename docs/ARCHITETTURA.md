@@ -38,8 +38,14 @@ In assenza di un fornitore AI configurato il risultato usa regole deterministich
 
 ## Accesso
 
-Questo MVP è per una sola azienda in una macchina privata. Le mutazioni richiedono sessione e token CSRF; la cookie è HttpOnly e SameSite. Il server controlla l'origine e ascolta solo sull'interfaccia locale. Il log degli accessi è disabilitato per non registrare codici OAuth nella query del callback. Queste misure non sostituiscono un login e non consentono una distribuzione pubblica.
+Questo MVP è per una sola azienda. L’avvio locale ascolta sull’interfaccia locale; Railway usa HTTPS e HTTP Basic con password server obbligatoria. Interfaccia, risorse statiche e API sono protette; solo GET /api/health espone uno stato tecnico minimo. Le mutazioni richiedono anche sessione e CSRF; il cookie è HttpOnly, SameSite e Secure su HTTPS. Il server controlla host e origine. Il log degli accessi è disabilitato per non registrare codici OAuth. L’accesso condiviso non introduce utenti separati o isolamento multiutente.
 
 ## Limiti prima del pilota reale
 
-Account reali, consenso/verifica OAuth e qualità AI non sono collaudati. Mancano isolamento per azienda, autenticazione, cifratura dell'intero archivio, cancellazione/retention automatica, backup operativi, monitoraggio centralizzato, billing e supervisione continua. Prima del pilota con email reali occorre completare questi passaggi e gli accordi di trattamento. Il pilota iniziale può usare dati sintetici o anonimizzati; nessun cliente deve confondere questo MVP con un servizio già disponibile in produzione.
+Account reali, consenso/verifica OAuth e qualità AI non sono collaudati. Mancano isolamento multiutente per azienda, account individuali, cifratura dell'intero archivio, cancellazione/retention automatica, backup operativi, monitoraggio centralizzato, billing e supervisione continua. Prima del pilota con email reali occorre completare questi passaggi e gli accordi di trattamento. Il pilota iniziale può usare dati sintetici o anonimizzati; nessun cliente deve confondere questo MVP con un servizio già disponibile in produzione.
+
+## Riepilogo e agenda
+
+Ogni controllo riuscito salva uno snapshot delle osservazioni originali, anche quando nessuna email produce una bozza. Le migrazioni di SQLite aggiungono i campi sorgente senza eliminare storico o revisioni. Il bootstrap ricava il briefing dai dati salvati senza contattare Gmail, mostra un esempio separato solo in assenza di lavoro esistente e indica periodo, copertura e data del controllo. Le assenze Gmail non sono verificabili perché il connettore limita le conversazioni lette. L’ultimo messaggio dei thread controllati include anche una risposta dello studio: questa evidenza elimina una vecchia priorità senza cancellare lo storico. Le priorità seguono urgenze esplicite e attesa, con motivi leggibili; non inferiscono scadenze.
+
+L’agenda manuale salva gli orari in UTC e li presenta in Europe/Rome. Le rotte sono protette dai middleware di accesso e CSRF. L’esportazione è un file di testo per la giornata selezionata; non legge né modifica calendari esterni.
