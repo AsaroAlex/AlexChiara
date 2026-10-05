@@ -132,7 +132,13 @@ async function login(page, identifier, secret) {
     // Change the password from the account page.
     await page.goto(`${origin}/account`);
     await page.waitForSelector('#account-content:not([hidden])');
-    for (const width of [1440, 390]) { await page.setViewportSize({ width, height: 900 }); await noOverflow(page, width, 'account'); }
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await noOverflow(page, width, 'account');
+      // The warning keeps its distance from the first field's label.
+      const gap = await page.evaluate(() => document.querySelector('label[for="delete-password"]').getBoundingClientRect().top - document.querySelector('.danger-copy').getBoundingClientRect().bottom);
+      assert.ok(gap >= 12, `The deletion warning touches the password label at ${width}px (${gap}px)`);
+    }
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.fill('#current-password', 'non-e-quella-giusta');
     await page.fill('#new-password', changed);
