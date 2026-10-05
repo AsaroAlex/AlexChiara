@@ -151,7 +151,7 @@ async function logout(page) {
     assert.equal(redirect.headers()['www-authenticate'], undefined);
 
     browser = await chromium.launch({
-      executablePath: process.env.FILO_CHROMIUM_PATH || '/usr/bin/chromium',
+      executablePath: process.env.FILO_CHROMIUM_PATH || (require('node:fs').existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' : undefined),
       headless: true, args: ['--no-sandbox'],
     });
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'it-IT', timezoneId: 'America/Los_Angeles' });

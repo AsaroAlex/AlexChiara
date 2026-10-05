@@ -42,7 +42,7 @@ async function inspect(page, label) {
     for (let attempt = 0; attempt < 100; attempt++) { if (server.exitCode !== null) throw new Error(logs); if (!logs.includes('Uvicorn running on')) { await pause(100); continue; } try { ready = (await probe.get('/api/health', { timeout: 1000 })).ok(); } catch (_) {} if (ready) break; await pause(100); }
     assert.ok(ready, logs);
     await fs.mkdir(path.join(root, '.runtime'), { recursive: true });
-    browser = await chromium.launch({ executablePath: process.env.FILO_CHROMIUM_PATH || '/usr/bin/chromium', headless: true, args: ['--no-sandbox'] });
+    browser = await chromium.launch({ executablePath: process.env.FILO_CHROMIUM_PATH || (require('node:fs').existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' : undefined), headless: true, args: ['--no-sandbox'] });
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'it-IT', timezoneId: 'America/Los_Angeles' });
     const page = await context.newPage();
     page.on('pageerror', error => errors.push(error.message));
