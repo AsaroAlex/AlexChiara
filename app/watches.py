@@ -14,7 +14,7 @@ from zoneinfo import ZoneInfo
 from fastapi import APIRouter, HTTPException, Path
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from .briefing import mailbox_scope
+from .briefing import mailbox_scope, migrate_scope_keys
 
 
 ROME = ZoneInfo("Europe/Rome")
@@ -83,6 +83,7 @@ def _initialize(db):
             CREATE INDEX IF NOT EXISTS watch_requests_scope
                 ON watch_requests(provider, scope_key, done_at, day);
         """)
+        migrate_scope_keys(conn, "watch_requests")
 
 
 def _now(value=None):

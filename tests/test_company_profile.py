@@ -12,14 +12,14 @@ PROFILE = {
     "name": "  Studio Aurora  ", "sector": " Consulenza ",
     "description": "Servizi per imprese\nConsulenza organizzativa",
     "signature": "Marta\nStudio Aurora", "legal_name": " Aurora Srl ",
-    "vat_number": " it12345678901 ", "tax_code": "rssmra80a01h501u",
+    "vat_number": " it12345678903 ", "tax_code": "rssmra80a01h501u",
     "address": " Via del Lavoro 12 ", "postal_code": "00100", "city": " Roma ",
     "province": "rm", "email": "INFO@EXAMPLE.TEST", "phone": "+39 06 1234567",
     "pec": "AURORA@PEC.EXAMPLE.TEST", "sdi_code": "abc1234",
 }
 NORMALIZED_PROFILE = {
     **PROFILE, "name": "Studio Aurora", "sector": "Consulenza", "legal_name": "Aurora Srl",
-    "vat_number": "12345678901", "tax_code": "RSSMRA80A01H501U",
+    "vat_number": "12345678903", "tax_code": "RSSMRA80A01H501U",
     "address": "Via del Lavoro 12", "city": "Roma", "province": "RM",
     "email": "info@example.test", "pec": "aurora@pec.example.test", "sdi_code": "ABC1234",
 }
@@ -129,9 +129,9 @@ def test_invalid_company_data_is_rejected_without_overwriting_saved_profile(site
 def test_structural_validation_accepts_company_tax_code_and_special_sdi_code(site):
     _, client, _ = site
     csrf = register(client, "structural@example.test")
-    response = save(client, csrf, {"name": "Studio", "tax_code": "12345678901", "sdi_code": "0000000"})
+    response = save(client, csrf, {"name": "Studio", "tax_code": "12345678903", "sdi_code": "0000000"})
     assert response.status_code == 200, response.text
-    assert response.json()["company"]["tax_code"] == "12345678901"
+    assert response.json()["company"]["tax_code"] == "12345678903"
     # This is a formatting check, not a public-register or SDI verification.
     assert response.json()["company"]["sdi_code"] == "0000000"
 
@@ -155,12 +155,12 @@ def test_company_identity_stays_private_between_accounts_and_owner(site):
     with TestClient(app) as bob:
         bob_csrf = register(bob, "company-bob@example.test")
         assert save(alice, alice_csrf, PROFILE).status_code == 200
-        bob_profile = {"name": "Studio Bob", "vat_number": "98765432109", "address": "Via Bob 3"}
+        bob_profile = {"name": "Studio Bob", "vat_number": "98765432103", "address": "Via Bob 3"}
         assert save(bob, bob_csrf, bob_profile).status_code == 200
         alice_identity = get_document_company(private_db(app, alice))
         bob_identity = get_document_company(private_db(app, bob))
         assert alice_identity == NORMALIZED_PROFILE
-        assert bob_identity["name"] == "Studio Bob" and bob_identity["vat_number"] == "98765432109"
+        assert bob_identity["name"] == "Studio Bob" and bob_identity["vat_number"] == "98765432103"
         assert bob_identity["address"] == "Via Bob 3" and bob_identity["legal_name"] == ""
         assert "Aurora" not in str(bob_identity)
         assert save(bob, alice_csrf, {"name": "Intrusione"}).status_code == 403

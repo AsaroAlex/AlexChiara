@@ -704,6 +704,13 @@ def stored_tokens(db, *, expires_at=None):
     return value
 
 
+def assert_oauth_failure(response, provider="gmail"):
+    """A failed provider return lands back in the app, never on raw JSON."""
+    first = response.history[0] if response.history else response
+    assert first.status_code == 303
+    assert first.headers["location"].endswith(f"?mail_error={provider}#connections")
+
+
 def begin_oauth(browser):
     result = browser.ok("POST", "/api/gmail/oauth/start")
     parsed = urlparse(result["authorization_url"])
@@ -757,7 +764,7 @@ def test_oauth_state_is_one_use_and_tokens_are_encrypted(
     replay = browser.client.get(
         "/api/gmail/oauth/callback", params={"state": state, "code": "mock-authorization-code"}
     )
-    assert replay.status_code == 400
+    assert_oauth_failure(replay)
     assert len(requests) == previous_calls
     assert requests == [("POST", "/token"), ("GET", "/gmail/v1/users/me/profile")]
 
@@ -780,7 +787,7 @@ def test_expired_or_unknown_oauth_state_does_not_contact_google(
         response = browser.client.get(
             "/api/gmail/oauth/callback", params={"state": value, "code": "unused"}
         )
-        assert response.status_code == 400
+        assert_oauth_failure(response)
     assert app.state.db.get_setting("gmail_tokens") is None
 
 
@@ -805,7 +812,7 @@ def test_oauth_callback_requires_the_browser_session_that_started_it(
         response = other_client.get(
             "/api/gmail/oauth/callback", params={"state": state, "code": "mock-code"}
         )
-        assert response.status_code == 400
+        assert_oauth_failure(response)
     assert calls == []
     assert app.state.db.get_setting("gmail_tokens") is None
     assert app.state.db.get_connection()["status"] == "disconnected"
@@ -813,7 +820,7 @@ def test_oauth_callback_requires_the_browser_session_that_started_it(
     replay = browser.client.get(
         "/api/gmail/oauth/callback", params={"state": state, "code": "mock-code"}
     )
-    assert replay.status_code == 400
+    assert_oauth_failure(replay)
     assert calls == []
 
 
@@ -897,7 +904,7 @@ def test_disconnect_during_refresh_cannot_restore_tokens_or_pending_oauth(
     response = browser.client.get(
         "/api/gmail/oauth/callback", params={"state": state, "code": "must-not-exchange"}
     )
-    assert response.status_code == 400
+    assert_oauth_failure(response)
     assert calls == [("POST", "/token")]
 
 
@@ -924,7 +931,7 @@ def test_disconnect_during_callback_cannot_reconnect_the_account(
         "/api/gmail/oauth/callback", params={"state": state, "code": "mock-code"},
         follow_redirects=False,
     )
-    assert response.status_code == 502
+    assert_oauth_failure(response)
     assert app.state.db.get_setting("gmail_tokens") is None
     assert app.state.db.get_connection()["status"] == "disconnected"
     assert app.state.db.get_setting("service")["mandate"] is None
@@ -964,7 +971,7 @@ def test_oauth_rejects_permissions_beyond_read_only(
     response = browser.client.get(
         "/api/gmail/oauth/callback", params={"state": state, "code": "mock-code"}
     )
-    assert response.status_code == 502
+    assert_oauth_failure(response)
     assert app.state.db.get_setting("gmail_tokens") is None
     assert requests == ["/token"]
     assert browser.client.get("/api/gmail/status").json()["connected"] is False

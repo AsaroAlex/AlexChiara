@@ -5,6 +5,8 @@ cd "$(dirname "$0")/.."
 # Preserve the existing owner login while every private workspace requires an account.
 : "${FILO_ACCESS_PASSWORD:?Imposta FILO_ACCESS_PASSWORD nelle variabili Railway.}"
 export ALEXCHIARA_DATA_DIR="${ALEXCHIARA_DATA_DIR:-/data}"
+# Railway's edge sets X-Real-IP to the visitor's address; throttle on it.
+export FILO_CLIENT_IP_HEADER="${FILO_CLIENT_IP_HEADER:-X-Real-IP}"
 export ALEXCHIARA_ALLOWED_HOSTS="${ALEXCHIARA_ALLOWED_HOSTS:+${ALEXCHIARA_ALLOWED_HOSTS},}${RAILWAY_PUBLIC_DOMAIN:-},${RAILWAY_PRIVATE_DOMAIN:-},healthcheck.railway.app"
 
 exec python -m uvicorn app.main:create_app --factory \

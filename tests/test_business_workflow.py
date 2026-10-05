@@ -196,7 +196,7 @@ def test_documents_reuse_current_private_issuer_and_hide_demo_or_missing_identit
     db, client = business
     source = quote(client)
     assert "Studio Riva" not in source["document"] and "Azienda emittente:" not in source["document"]
-    db.set_setting("company", {"name": "Studio visibile", "legal_name": "Aurora SRL", "vat_number": "IT12345678901",
+    db.set_setting("company", {"name": "Studio visibile", "legal_name": "Aurora SRL", "vat_number": "IT12345678903",
                               "address": "Via Roma 12", "postal_code": "20100", "city": "Milano", "province": "mi"})
     invoice = convert(client, source, "invoices")["item"]
     receivable = convert(client, invoice, "receivables")["item"]
@@ -204,13 +204,13 @@ def test_documents_reuse_current_private_issuer_and_hide_demo_or_missing_identit
     summary = client.get("/api/business/summary").json()["next_actions"]
     for item in [*listing, *summary]:
         assert "Azienda emittente: Aurora SRL" in item["document"]
-        assert "Partita IVA: 12345678901" in item["document"] and "Provincia: MI" in item["document"]
+        assert "Partita IVA: 12345678903" in item["document"] and "Provincia: MI" in item["document"]
         assert "Via Roma 12" in item["document"] and "None" not in item["document"]
     db.set_setting("company", {"name": "Nuovo studio"})
     for item in (source, invoice, receivable):
         text = client.get(f'/api/business/records/{item["id"]}/export').text
         assert "Azienda emittente: Nuovo studio" in text and "Aurora SRL" not in text
-    db.set_setting("company", {"name": "Finta azienda", "vat_number": "12345678901", "demo": True})
+    db.set_setting("company", {"name": "Finta azienda", "vat_number": "12345678903", "demo": True})
     assert "Finta azienda" not in client.get(f'/api/business/records/{invoice["id"]}/export').text
 
 

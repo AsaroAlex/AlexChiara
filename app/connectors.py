@@ -11,13 +11,14 @@ import re
 import secrets
 import time
 from datetime import datetime, timezone
-from email.utils import parseaddr
 from urllib.parse import urlencode
 
 from cryptography.fernet import Fernet, InvalidToken
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
 import httpx
+
+from .ai import sender_address
 
 GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.readonly"
 GMAIL_API = "https://gmail.googleapis.com/gmail/v1/users/me"
@@ -97,29 +98,55 @@ def _read_tokens(db):
 
 
 def _credentials():
+    public_url = os.environ.get("FILO_PUBLIC_URL", "").strip().rstrip("/")
+    if not public_url and os.environ.get("RAILWAY_PUBLIC_DOMAIN", "").strip():
+        public_url = "https://" + os.environ["RAILWAY_PUBLIC_DOMAIN"].strip().rstrip("/")
     return {
         "client_id": os.environ.get("FILO_GOOGLE_CLIENT_ID", ""),
         "client_secret": os.environ.get("FILO_GOOGLE_CLIENT_SECRET", ""),
-        "redirect_uri": os.environ.get("FILO_GOOGLE_REDIRECT_URI", "http://127.0.0.1:8000/api/gmail/oauth/callback"),
+        "redirect_uri": os.environ.get("FILO_GOOGLE_REDIRECT_URI") or (public_url or "http://127.0.0.1:8000") + "/api/gmail/oauth/callback",
     }
+
+
+def oauth_failure(request, db, provider, message):
+    """Return the browser to the app; the message is kept server-side, never in the URL."""
+    db.set_setting("mail_oauth_error", {"provider": provider, "message": message, "at": time.time()})
+    base = "/app" if getattr(request.state, "filo_user", None) else "/"
+    return RedirectResponse(f"{base}?mail_error={provider}#connections", status_code=303)
+
+
+RATE_LIMIT_REASONS = {"rateLimitExceeded", "userRateLimitExceeded", "quotaExceeded", "dailyLimitExceeded", "backendError"}
+
+
+def _rate_limited(response):
+    """Gmail reports per-user rate limits as 403; only the reason is inspected."""
+    try:
+        error = response.json().get("error", {})
+        reasons = {item.get("reason") for item in error.get("errors", []) if isinstance(item, dict)}
+        return bool(reasons & RATE_LIMIT_REASONS) or error.get("status") == "RESOURCE_EXHAUSTED"
+    except (ValueError, AttributeError, TypeError):
+        return False
 
 
 def _request(client, method, url, **kwargs):
     try:
         response = client.request(method, url, **kwargs)
-    except (httpx.TimeoutException, httpx.NetworkError) as exc:
+    except httpx.HTTPError as exc:
         raise ConnectorError("Google non risponde entro il tempo previsto. Il controllo può essere riprovato.", "connessione Google", True) from exc
     if response.status_code == 401:
         raise ConnectorError("L'autorizzazione Gmail è scaduta o è stata revocata. Ricollega la casella.", "autorizzazione", False, True)
-    if response.status_code == 429 or response.status_code >= 500:
+    if response.status_code == 429 or response.status_code >= 500 or (response.status_code == 403 and _rate_limited(response)):
         raise ConnectorError("Google è temporaneamente indisponibile o ha raggiunto il limite di richieste.", "lettura Gmail", True)
     if response.status_code >= 400:
         # Never expose response bodies that might contain tokens or personal data.
         raise ConnectorError("Google ha negato l'operazione. Verifica accessi, consenso e domini consentiti.", "accesso Google", False)
     try:
-        return response.json()
+        result = response.json()
     except ValueError as exc:
         raise ConnectorError("Google ha restituito una risposta non leggibile.", "lettura Gmail", True) from exc
+    if not isinstance(result, dict):
+        raise ConnectorError("Google ha restituito una risposta non valida.", "lettura Gmail", True)
+    return result
 
 
 def _access_token(db, client, force_refresh=False):
@@ -137,7 +164,7 @@ def _access_token(db, client, force_refresh=False):
             "client_id": credentials["client_id"], "client_secret": credentials["client_secret"],
             "refresh_token": tokens["refresh_token"], "grant_type": "refresh_token",
         })
-    except (httpx.TimeoutException, httpx.NetworkError) as exc:
+    except httpx.HTTPError as exc:
         raise ConnectorError("Impossibile rinnovare l'accesso: Google non risponde. Riproveremo.", "rinnovo autorizzazione", True) from exc
     if response.status_code in (400, 401):
         raise ConnectorError("Google richiede un nuovo consenso. Ricollega Gmail.", "rinnovo autorizzazione", False, True)
@@ -145,34 +172,96 @@ def _access_token(db, client, force_refresh=False):
         raise ConnectorError("Rinnovo Gmail temporaneamente indisponibile.", "rinnovo autorizzazione", True)
     if response.status_code >= 400:
         raise ConnectorError("Rinnovo Gmail negato. Verifica la configurazione del servizio.", "rinnovo autorizzazione", False)
-    refreshed = response.json()
-    if "access_token" not in refreshed:
+    try:
+        refreshed = response.json()
+    except ValueError:
+        raise ConnectorError("Google ha restituito una risposta non leggibile durante il rinnovo.", "rinnovo autorizzazione", True) from None
+    if not isinstance(refreshed, dict) or not isinstance(refreshed.get("access_token"), str):
         raise ConnectorError("Google non ha restituito un accesso valido.", "rinnovo autorizzazione", False, True)
     tokens.update(refreshed)
-    tokens["expires_at"] = time.time() + int(refreshed.get("expires_in", 3600))
+    tokens["expires_at"] = time.time() + _lifetime(refreshed)
     _save_tokens(db, tokens, expected_revision=revision)
     return tokens["access_token"]
 
 
+def _lifetime(tokens):
+    try:
+        return max(60, min(int(tokens.get("expires_in", 3600)), 86400))
+    except (TypeError, ValueError):
+        return 3600
+
+
+def _charset(payload):
+    for header in payload.get("headers") or []:
+        if isinstance(header, dict) and str(header.get("name", "")).lower() == "content-type":
+            found = re.search(r'charset\s*=\s*"?([A-Za-z0-9._:-]{1,40})', str(header.get("value", "")))
+            if found:
+                return found.group(1).lower()
+    return "utf-8"
+
+
+def _decode_bytes(raw, charset):
+    # Gmail keeps each part in its declared charset. Valid UTF-8 is kept as is;
+    # otherwise the declared charset (or Windows-1252) avoids replacement marks.
+    try:
+        return raw.decode("utf-8")
+    except UnicodeDecodeError:
+        pass
+    for candidate in (charset, "cp1252"):
+        try:
+            return raw.decode(candidate, errors="replace")
+        except LookupError:
+            continue
+    return raw.decode("utf-8", errors="replace")
+
+
 def _decode_part(payload):
     """Only text, bounded; attachments and HTML instructions are never executed."""
-    parts = payload.get("parts", [])
-    if parts:
-        plain = [p for p in parts if p.get("mimeType") == "text/plain"]
-        return "\n".join(_decode_part(p) for p in (plain or parts))[:12000]
-    if payload.get("filename"):
+    if not isinstance(payload, dict):
         return ""
-    encoded = payload.get("body", {}).get("data", "")
-    if not encoded:
+    mime = str(payload.get("mimeType") or "").lower()
+    # Attachments, even text/plain ones, are never mistaken for the message body.
+    parts = [part for part in payload.get("parts") or [] if isinstance(part, dict) and not part.get("filename")]
+    if mime.startswith("multipart/") or (payload.get("parts") and not mime):
+        if mime == "multipart/alternative":
+            for preferred in ("text/plain", "text/html"):
+                for part in parts:
+                    if str(part.get("mimeType") or "").lower() == preferred:
+                        return _decode_part(part)
+            return next((text for text in (_decode_part(part) for part in parts) if text), "")
+        return "\n".join(text for text in (_decode_part(part) for part in parts) if text)[:12000]
+    if payload.get("filename") or (mime and not mime.startswith("text/")):
+        return ""
+    body = payload.get("body")
+    encoded = body.get("data", "") if isinstance(body, dict) else ""
+    if not encoded or not isinstance(encoded, str):
         return ""
     try:
-        decoded = base64.urlsafe_b64decode(encoded + "=" * (-len(encoded) % 4)).decode("utf-8", errors="replace")[:12000]
+        raw = base64.urlsafe_b64decode(encoded + "=" * (-len(encoded) % 4))
     except (ValueError, TypeError):
         return "[contenuto non leggibile]"
-    if payload.get("mimeType") == "text/html":
+    decoded = _decode_bytes(raw[:48000], _charset(payload))[:12000]
+    if mime == "text/html":
         decoded = re.sub(r"<(script|style)\b[^>]*>.*?</\1>", "", decoded, flags=re.I | re.S)
         decoded = html.unescape(re.sub(r"<[^>]+>", " ", decoded))
     return decoded.strip()
+
+
+HIDDEN_LABELS = {"DRAFT", "TRASH", "SPAM"}
+
+
+def _readable_message(message):
+    if not isinstance(message, dict) or not isinstance(message.get("id"), str) or not message["id"]:
+        return False
+    labels = message.get("labelIds") or []
+    return not (isinstance(labels, list) and HIDDEN_LABELS.intersection(labels))
+
+
+def _internal_date(message):
+    try:
+        return min(max(int(message.get("internalDate", 0)), 0), 253402300799000)
+    except (TypeError, ValueError):
+        return 0
 
 
 def _gmail_messages(db, contacts):
@@ -193,7 +282,10 @@ def _gmail_messages(db, contacts):
                 raise
             headers["Authorization"] = "Bearer " + _access_token(db, client, force_refresh=True)
             listing = _request(client, "GET", GMAIL_API + "/messages", headers=headers, params={"q": query, "maxResults": 25})
-        thread_ids = list(dict.fromkeys(m["threadId"] for m in listing.get("messages", []) if m.get("threadId")))[:20]
+        listed = listing.get("messages") or []
+        if not isinstance(listed, list):
+            raise ConnectorError("Google ha restituito una risposta non valida.", "lettura Gmail", True)
+        thread_ids = list(dict.fromkeys(m["threadId"] for m in listed if isinstance(m, dict) and isinstance(m.get("threadId"), str) and re.fullmatch(r"[A-Za-z0-9_-]{1,64}", m["threadId"])))[:20]
         result = []
         for thread_id in thread_ids:
             if db.get_setting("gmail_revision", 0) != revision:
@@ -201,19 +293,21 @@ def _gmail_messages(db, contacts):
             if time.monotonic() > deadline:
                 raise ConnectorError("Il controllo Gmail ha raggiunto il tempo massimo prima di completare tutte le conversazioni. Nessun risultato parziale è stato salvato.", "tempo massimo lettura", True)
             thread = _request(client, "GET", GMAIL_API + "/threads/" + thread_id, headers=headers, params={"format": "full"})
-            messages = sorted(thread.get("messages", []), key=lambda m: int(m.get("internalDate", 0)))
+            # Unsent drafts (Gmail saves them while the user types), trashed and
+            # spam messages are not part of the conversation.
+            messages = sorted((m for m in thread.get("messages") or [] if _readable_message(m)), key=_internal_date)
             context = []
             latest = None
             for message in messages[-12:]:
-                payload = message.get("payload", {})
-                values = {h["name"].lower(): h.get("value", "") for h in payload.get("headers", [])}
+                payload = message.get("payload") if isinstance(message.get("payload"), dict) else {}
+                values = {str(h.get("name", "")).lower(): str(h.get("value", "")) for h in payload.get("headers") or [] if isinstance(h, dict)}
                 sender = values.get("from", "")
                 body = _decode_part(payload)
                 context.append("Da: " + sender + "\n" + body[:4000])
                 latest = {"id": message["id"], "thread_id": thread_id, "sender": sender,
-                          "subject": values.get("subject", "(senza oggetto)"), "body": body,
-                          "received_at": datetime.fromtimestamp(int(message.get("internalDate", 0)) / 1000, timezone.utc).isoformat(),
-                          "from_client": parseaddr(sender)[1].strip().lower() in addresses}
+                          "subject": values.get("subject") or "(senza oggetto)", "body": body,
+                          "received_at": datetime.fromtimestamp(_internal_date(message) / 1000, timezone.utc).isoformat(),
+                          "from_client": sender_address(sender) in addresses}
             if latest:
                 # Keep the last observed message even after an outgoing reply.
                 # Analysis excludes from_client=False from drafts, while the
@@ -284,30 +378,33 @@ def create_router(db):
             row = conn.execute("SELECT value FROM kv WHERE key = ?", ("oauth:" + digest,)).fetchone()
             conn.execute("DELETE FROM kv WHERE key = ?", ("oauth:" + digest,))
         if not row:
-            raise HTTPException(400, "Richiesta di collegamento non valida o già utilizzata.")
+            return oauth_failure(request, db, "gmail", "Richiesta di collegamento non valida o già utilizzata. Avvia di nuovo il collegamento.")
         pending = json.loads(row["value"])
         if not secrets.compare_digest(pending.get("session_id", ""), request.cookies.get("alexchiara_session", "")):
-            raise HTTPException(400, "Completa il collegamento nello stesso browser che lo ha avviato.")
+            return oauth_failure(request, db, "gmail", "Completa il collegamento nello stesso browser che lo ha avviato.")
         if pending["expires"] < time.time():
-            raise HTTPException(400, "Il collegamento è scaduto. Avvialo nuovamente.")
+            return oauth_failure(request, db, "gmail", "Il collegamento è scaduto. Avvialo nuovamente.")
         if error or not code:
-            raise HTTPException(400, "Collegamento annullato o consenso non concesso. Nessun accesso è stato salvato.")
+            return oauth_failure(request, db, "gmail", "Collegamento annullato o consenso non concesso. Nessun accesso è stato salvato.")
         credentials = _credentials()
-        verifier = _cipher(db).decrypt(pending["verifier"].encode()).decode()
         try:
+            try:
+                verifier = _cipher(db).decrypt(pending["verifier"].encode()).decode()
+            except InvalidToken:
+                raise ConnectorError("La chiave locale è cambiata durante il collegamento. Avvialo nuovamente.", "credenziali", False) from None
             with _client() as client:
                 tokens = _request(client, "POST", TOKEN_URL, data={**credentials, "code": code,
                                   "code_verifier": verifier, "grant_type": "authorization_code"})
-                if "access_token" not in tokens:
+                if not isinstance(tokens.get("access_token"), str):
                     raise ConnectorError("Google non ha fornito un accesso valido.", "autorizzazione", False)
-                granted = tokens.get("scope", GMAIL_SCOPE).split()
+                granted = str(tokens.get("scope", GMAIL_SCOPE)).split()
                 if GMAIL_SCOPE not in granted:
                     raise ConnectorError("Il consenso di sola lettura Gmail non è stato concesso.", "autorizzazione", False)
                 # No wider token may be silently accepted by this product.
                 if any(s != GMAIL_SCOPE for s in granted):
                     raise ConnectorError("Sono presenti permessi più ampi del servizio. Revoca il consenso e ripeti il collegamento di sola lettura.", "autorizzazione", False)
                 profile = _request(client, "GET", GMAIL_API + "/profile", headers={"Authorization": "Bearer " + tokens["access_token"]})
-                tokens["expires_at"] = time.time() + int(tokens.get("expires_in", 3600))
+                tokens["expires_at"] = time.time() + _lifetime(tokens)
                 encrypted = _cipher(db).encrypt(json.dumps(tokens).encode()).decode()
                 with db.connection() as conn:
                     conn.execute("BEGIN IMMEDIATE")
@@ -318,11 +415,11 @@ def create_router(db):
                     clear_mail_credentials(conn)
                     _invalidate_in_transaction(conn, "La casella Gmail è stata collegata. Attiva nuovamente il servizio per autorizzare questa connessione.")
                     updates = {"gmail_tokens": encrypted, "gmail_revision": revision + 1,
-                               "connection": {"provider": "gmail", "status": "connected", "label": profile.get("emailAddress", "Casella Gmail")}}
+                               "connection": {"provider": "gmail", "status": "connected", "label": str(profile.get("emailAddress") or "Casella Gmail")[:254]}}
                     for key, value in updates.items():
                         conn.execute("INSERT INTO kv(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (key, json.dumps(value)))
         except ConnectorError as exc:
-            raise HTTPException(502, exc.message) from exc
+            return oauth_failure(request, db, "gmail", exc.message)
         return RedirectResponse("/app?gmail=connected" if getattr(request.state, "filo_user", None) else "/?gmail=connected", status_code=303)
 
     @router.post("/disconnect")

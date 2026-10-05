@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import re
 import threading
+import time
 from urllib.parse import urlsplit
 
 from fastapi import FastAPI, HTTPException, Request
@@ -28,6 +29,14 @@ from .models import Action, Activation, ChatInput, CompanyInput, DemoFailure, Pr
 from .service import Scheduler
 
 CATALOG = list_services()
+
+
+def recent_oauth_error(db):
+    """The last provider return that failed, shown once the browser is back."""
+    error = db.get_setting("mail_oauth_error")
+    if not isinstance(error, dict) or not isinstance(error.get("at"), (int, float)) or time.time() - error["at"] > 900:
+        return None
+    return {"provider": error.get("provider"), "message": error.get("message")}
 _HOST_HEADER = re.compile(r"(?:[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?|\[[0-9A-Fa-f:.]{2,45}\])(?::[0-9]{1,5})?")
 
 
@@ -128,6 +137,7 @@ def create_workspace_app(data_dir=None, start_worker=True):
             "briefing": briefing,
             "briefing_example": None,
             "real_data_only": real_data_only(),
+            "mail_oauth_error": recent_oauth_error(db),
             "watches": build_watch_summary(db),
             "agenda": agenda_summary(db),
             "business": business_summary(db),

@@ -54,16 +54,16 @@ async function inspect(page, label) {
     await page.locator('[data-page="company"]').click();
     assert.equal(await page.locator('#company-vat_number').evaluate(node => node.required), false);
     await page.locator('#company-fiscal-details > summary').click(); await page.locator('#company-contact-details > summary').click();
-    const company = { name: 'Studio Workflow', legal_name: 'Studio Workflow S.r.l.', vat_number: 'IT01234567890', tax_code: '01234567890', address: 'Via del Lavoro 12', postal_code: '20100', city: 'Milano', province: 'mi', email: 'studio@workflow.invalid', phone: '+39 02 123456', pec: 'studio@pec.invalid', sdi_code: 'abc1234', signature: 'Segreteria Studio Workflow' };
+    const company = { name: 'Studio Workflow', legal_name: 'Studio Workflow S.r.l.', vat_number: 'IT01234567897', tax_code: '01234567897', address: 'Via del Lavoro 12', postal_code: '20100', city: 'Milano', province: 'mi', email: 'studio@workflow.invalid', phone: '+39 02 123456', pec: 'studio@pec.invalid', sdi_code: 'abc1234', signature: 'Segreteria Studio Workflow' };
     for (const [field, value] of Object.entries(company)) await page.locator(`#company-${field}`).fill(value);
     for (const width of [1440, 390, 320]) { await page.setViewportSize({ width, height: 1000 }); await inspect(page, 'company'); }
     await page.locator('#company-form button[type="submit"]').click();
     await page.waitForFunction(() => document.querySelector('#company-save-status').textContent === 'Informazioni salvate');
     const profile = (await api(page, '/api/bootstrap')).body.company;
-    assert.equal(profile.vat_number, '01234567890'); assert.equal(profile.province, 'MI'); assert.equal(profile.sdi_code, 'ABC1234');
+    assert.equal(profile.vat_number, '01234567897'); assert.equal(profile.province, 'MI'); assert.equal(profile.sdi_code, 'ABC1234');
     await page.locator('#company-name').focus(); await page.keyboard.press('Control+k'); assert.equal(await page.locator('#business-search-dialog').evaluate(node => node.open), false, 'Do not intercept text editing.');
     const quote = (await api(page, '/api/business/records', 'POST', { service_id: 'quotes', title: 'Consulenza 50% <img src=x onerror=alert(1)>', contact: 'Cliente Workflow', due_date: '2020-01-01', status: 'waiting', priority: 'urgent', saved_minutes: 42, details: { client: 'Cliente Workflow', scope: 'Consulenza da rivedere', net_amount: '100.01', vat_rate: '22', payment_terms: 'Bonifico a 30 giorni' } })).body.item;
-    assert.ok(quote.id); assert.match(quote.document, /Studio Workflow S.r.l./); assert.match(quote.document, /01234567890/);
+    assert.ok(quote.id); assert.match(quote.document, /Studio Workflow S.r.l./); assert.match(quote.document, /01234567897/);
     await page.reload(); await page.waitForSelector('#app-content:not([hidden])');
     // Search searches real records across modules and treats markup and % as text.
     await page.locator('#business-search-button').click(); await page.waitForSelector('#business-search-dialog[open]');

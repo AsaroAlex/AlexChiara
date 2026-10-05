@@ -152,7 +152,7 @@ def test_only_new_correct_day_incoming_current_mailbox_sources_match(watches, re
     elif reason == "different_sender":
         options["sender"] = "sempronio@studio.test"
     elif reason == "different_scope":
-        options["scope"] = "gmail:99:another@studio.test"
+        options["scope"] = "gmail:mailbox:another@studio.test"
     elif reason == "different_provider":
         options["provider"] = "imported"
     elif reason == "future_received":

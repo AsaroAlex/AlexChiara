@@ -415,7 +415,7 @@ function renderBusinessDetail(record) {
     const stock = el('section', 'business-stock-reorder'); const number = value => new Intl.NumberFormat('it-IT', { maximumFractionDigits: 6 }).format(Number(value));
     stock.append(el('h3', '', 'Riordino da valutare'), el('p', '', `${number(record.stock_reorder.suggested_quantity)} ${record.details?.unit || 'unità'} per raggiungere la soglia indicata.`), el('p', 'helper-text', `Disponibili ${number(record.stock_reorder.quantity)} · Soglia ${number(record.stock_reorder.minimum)}. Calcolo dai tuoi dati: nessun ordine viene inviato.`)); body.append(stock);
   }
-  if (['quotes', 'invoices'].includes(record.service_id)) {
+  if (['quotes', 'invoices'].includes(record.service_id) && record.status !== 'cancelled') {
     const target = record.service_id === 'quotes' ? 'invoices' : 'receivables';
     const workflow = el('div', 'business-commercial-step');
     workflow.append(el('h3', '', 'Il prossimo passo'), el('p', 'small-text', target === 'invoices' ? 'Riprendi cliente e importi in una bozza interna, da rivedere. Nessun invio allo SDI.' : 'Prepara il promemoria dell’incasso con importo e riferimento. Scegli tu la scadenza.'), actionButton(target === 'invoices' ? 'Prepara bozza fattura' : 'Prepara incasso', 'business-convert', 'secondary', 'arrow', { id: record.id, target })); body.append(workflow);
@@ -1133,6 +1133,13 @@ async function initialize() {
       if (pending && Date.now() - pending.createdAt < 3600000 && Array.isArray(pending.preferences?.priority_contacts)) { startWizard(Boolean(pending.edit), false, pending.preferences); state.wizard.step = 3; renderWizard(); }
       else if (pending?.reconnect) { location.hash = 'connections'; }
       history.replaceState(null, '', `${location.pathname}${location.hash}`);
+    }
+    const failedProvider = params.get('mail_error');
+    if (failedProvider) {
+      const failure = state.data.mail_oauth_error;
+      const label = failedProvider === 'outlook' ? 'Outlook' : 'Gmail';
+      toast(failure?.provider === failedProvider && failure.message ? failure.message : `Il collegamento ${label} non è stato completato. Nessun accesso è stato salvato.`, true);
+      history.replaceState(null, '', `${location.pathname}${location.hash || '#connections'}`);
     }
   }
   catch (error) { $('#loading').hidden = true; notice('#load-error', error.message); const retry = actionButton('Riprova', 'reload', 'secondary'); retry.addEventListener('click', initialize); $('#load-error').append(document.createTextNode(' '), retry); }

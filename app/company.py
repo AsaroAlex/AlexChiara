@@ -25,13 +25,47 @@ EMAIL_PATTERN = re.compile(
 )
 
 
+# Official check characters: 11-digit codes use a Luhn-style digit, personal
+# codes a letter computed from odd/even character values (DM 23/12/1976).
+_ODD_VALUES = dict(zip("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", (
+    1, 0, 5, 7, 9, 13, 15, 17, 19, 21, 1, 0, 5, 7, 9, 13, 15, 17, 19, 21, 2, 4, 18, 20, 11, 3, 6, 8, 12, 14, 16, 10, 22, 25, 24, 23)))
+_PERSONAL_CODE = re.compile(r"[A-Z]{6}[0-9LMNPQRSTUV]{2}[ABCDEHLMPRST][0-9LMNPQRSTUV]{2}[A-Z][0-9LMNPQRSTUV]{3}[A-Z]")
+
+
+def _numeric_code_valid(value):
+    total = 0
+    for index, char in enumerate(value[:10]):
+        digit = int(char)
+        if index % 2:
+            digit *= 2
+            digit -= 9 if digit > 9 else 0
+        total += digit
+    return (10 - total % 10) % 10 == int(value[10])
+
+
+def _personal_code_valid(value):
+    if not _PERSONAL_CODE.fullmatch(value):
+        return False
+    total = 0
+    for index, char in enumerate(value[:15]):
+        total += _ODD_VALUES[char] if index % 2 == 0 else (int(char) if char.isdigit() else ord(char) - ord("A"))
+    return chr(ord("A") + total % 26) == value[15]
+
+
+def has_hidden_characters(value, allowed=""):
+    """Control characters, direction overrides and invisible marks can disguise
+    names and amounts; the zero-width joiner stays allowed for emoji."""
+    return any(char not in allowed and (unicodedata.category(char) == "Cc" or (unicodedata.category(char) == "Cf" and char != "\u200d"))
+               for char in value)
+
+
 def normalize_company_field(field, value):
     """Normalize text and validate only the entered field's basic structure."""
     if not isinstance(value, str):
         raise ValueError("Indica un testo per questo campo.")
     value = value.strip()
     allowed = "\n\t" if field in ("description", "signature") else ""
-    if any(unicodedata.category(char) in ("Cc", "Cf") and char not in allowed for char in value):
+    if has_hidden_characters(value, allowed):
         raise ValueError("Il testo contiene caratteri di controllo non consentiti.")
     if len(value) > FIELD_LIMITS[field]:
         raise ValueError("Il testo è troppo lungo.")
@@ -43,10 +77,14 @@ def normalize_company_field(field, value):
             value = value[2:]
         if not re.fullmatch(r"[0-9]{11}", value):
             raise ValueError("Indica una partita IVA di 11 cifre, con prefisso IT facoltativo.")
+        if not _numeric_code_valid(value):
+            raise ValueError("La partita IVA non è valida: controlla le cifre.")
     elif field == "tax_code":
         value = value.upper()
         if not re.fullmatch(r"(?:[0-9]{11}|[A-Z0-9]{16})", value):
             raise ValueError("Indica un codice fiscale di 11 cifre o 16 caratteri alfanumerici.")
+        if not (_numeric_code_valid(value) if len(value) == 11 else _personal_code_valid(value)):
+            raise ValueError("Il codice fiscale non è valido: controlla i caratteri.")
     elif field == "postal_code":
         if not re.fullmatch(r"[0-9]{5}", value):
             raise ValueError("Indica un CAP di 5 cifre.")

@@ -5,11 +5,14 @@ Registration never grants ownership of the original workspace.
 """
 from contextlib import contextmanager
 import hashlib
+import ipaddress
+import logging
 import os
 from pathlib import Path
 import re
 import secrets
 import sqlite3
+import threading
 import time
 from urllib.parse import urlsplit
 import uuid
@@ -19,6 +22,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
+logger = logging.getLogger(__name__)
 OWNER_ID = "owner"
 SESSION_COOKIE = "filo_session"
 SESSION_TTL = 7 * 24 * 3600
@@ -27,6 +31,9 @@ PASSWORD_MIN_LENGTH = 12
 PASSWORD_MAX_LENGTH = 128
 _TOKEN = re.compile(r"[A-Za-z0-9_-]{43}\Z")
 _EMAIL = re.compile(r"[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?\.[A-Za-z]{2,63}\Z")
+# Each scrypt derivation allocates 16 MiB: bound concurrent hashing so a burst
+# of logins cannot exhaust a small instance's memory.
+_HASHING = threading.BoundedSemaphore(4)
 _LOGIN_ERROR = "Email o password non corrette."
 _REGISTER_ERROR = "Registrazione non riuscita. Se hai già un account, accedi."
 
@@ -40,7 +47,8 @@ class AccountError(Exception):
 
 def _password_hash(password):
     salt = secrets.token_bytes(16)
-    derived = hashlib.scrypt(password.encode("utf-8"), salt=salt, n=16384, r=8, p=1, dklen=32, maxmem=64 * 1024 * 1024)
+    with _HASHING:
+        derived = hashlib.scrypt(password.encode("utf-8"), salt=salt, n=16384, r=8, p=1, dklen=32, maxmem=64 * 1024 * 1024)
     return f"scrypt$16384$8$1${salt.hex()}${derived.hex()}"
 
 
@@ -51,7 +59,8 @@ def _password_matches(password, encoded):
         # turn an authentication request into an unbounded allocation.
         if (algorithm, n, r, p) != ("scrypt", "16384", "8", "1") or len(salt) != 32 or len(expected) != 64:
             return False
-        derived = hashlib.scrypt(password.encode("utf-8"), salt=bytes.fromhex(salt), n=16384, r=8, p=1, dklen=32, maxmem=64 * 1024 * 1024)
+        with _HASHING:
+            derived = hashlib.scrypt(password.encode("utf-8"), salt=bytes.fromhex(salt), n=16384, r=8, p=1, dklen=32, maxmem=64 * 1024 * 1024)
         return secrets.compare_digest(derived, bytes.fromhex(expected))
     except (AttributeError, ValueError, TypeError, UnicodeError):
         return False
@@ -105,14 +114,24 @@ class AccountStore:
                 CREATE INDEX IF NOT EXISTS auth_attempt_expiry ON auth_attempts(expires_at);
             """)
             if self.owner_enabled:
-                owner = conn.execute("SELECT password_hash FROM users WHERE id=?", (OWNER_ID,)).fetchone()
-                if owner is None:
+                owner = conn.execute("SELECT email,password_hash FROM users WHERE id=?", (OWNER_ID,)).fetchone()
+                taken = conn.execute("SELECT 1 FROM users WHERE email=? COLLATE NOCASE AND id<>?", (self.owner_identifier, OWNER_ID)).fetchone()
+                if taken:
+                    # Never shadow a registered member or crash the whole service
+                    # because the configured owner name collides with an account.
+                    logger.error("FILO_ACCESS_USERNAME coincide con l'email di un account registrato: accesso del gestore disattivato finché non scegli un altro nome utente.")
+                    self.owner_enabled = False
+                elif owner is None:
                     # A legacy email-shaped username is reserved before any
                     # registration is accepted, so it cannot be claimed.
                     conn.execute("INSERT INTO users VALUES (?,?,?,?,?,?)", (OWNER_ID, self.owner_identifier, "Amministratore", "owner", _password_hash(legacy_password), time.time()))
-                elif not _password_matches(legacy_password, owner["password_hash"]):
-                    conn.execute("UPDATE users SET password_hash=? WHERE id=?", (_password_hash(legacy_password), OWNER_ID))
-                    conn.execute("DELETE FROM account_sessions WHERE user_id=?", (OWNER_ID,))
+                else:
+                    if owner["email"] != self.owner_identifier:
+                        # A renamed owner keeps the same workspace and frees the old name.
+                        conn.execute("UPDATE users SET email=? WHERE id=?", (self.owner_identifier, OWNER_ID))
+                    if not _password_matches(legacy_password, owner["password_hash"]):
+                        conn.execute("UPDATE users SET password_hash=? WHERE id=?", (_password_hash(legacy_password), OWNER_ID))
+                        conn.execute("DELETE FROM account_sessions WHERE user_id=?", (OWNER_ID,))
         self.path.chmod(0o600)
 
     @contextmanager
@@ -192,12 +211,16 @@ class AccountStore:
         if not self.resolve_session(cookie):
             raise AccountError(403, "Sessione scaduta. Ricarica la pagina prima di continuare.")
 
+    @staticmethod
+    def _pair_key(kind, ip, identifier):
+        return _digest(f"{kind}\0{ip}\0{identifier}")
+
     def _throttle(self, kind, ip, identifier):
         now = time.time()
         # Hash identifiers/IPs to avoid storing submitted addresses for failed
         # attempts. Both pair and IP limits prevent easy username spraying.
         duration, pair_limit, ip_limit = (600, 8, 60) if kind == "login" else (3600, 5, 12)
-        pair = _digest(f"{kind}\0{ip}\0{identifier}")
+        pair = self._pair_key(kind, ip, identifier)
         address = _digest(f"{kind}\0{ip}")
         blocked = False
         with self.connection() as conn:
@@ -220,8 +243,8 @@ class AccountStore:
 
     def login(self, identifier, password, cookie, ip=""):
         self._require_session(cookie)
-        identifier = _identifier(identifier)
-        self._throttle("login", str(ip)[:200], identifier[:254])
+        identifier, ip = _identifier(identifier), str(ip)[:200]
+        self._throttle("login", ip, identifier[:254])
         valid_input = isinstance(password, str) and 0 < len(password) <= PASSWORD_MAX_LENGTH and 0 < len(identifier) <= 254
         with self.connection() as conn:
             if identifier == self.owner_identifier and self.owner_enabled:
@@ -232,6 +255,9 @@ class AccountStore:
         matched = _password_matches(password if valid_input else "invalid-input", row["password_hash"] if row else self._dummy_hash)
         if not valid_input or not row or not matched:
             raise AccountError(401, _LOGIN_ERROR)
+        # Only failed guesses accumulate for this address and identity.
+        with self.connection() as conn:
+            conn.execute("DELETE FROM auth_attempts WHERE key=?", (self._pair_key("login", ip, identifier[:254]),))
         return self._new_session(row["id"], cookie)
 
     def register(self, name, email, password, cookie, ip=""):
@@ -255,6 +281,21 @@ class AccountStore:
         except sqlite3.IntegrityError:
             raise AccountError(409, _REGISTER_ERROR) from None
         return self._new_session(user_id, cookie)
+
+
+def client_address(request):
+    """The client IP used for throttling.
+
+    Behind Railway the edge sets X-Real-IP; X-Forwarded-For can carry a value
+    chosen by the client, so it is never used here.
+    """
+    header = os.environ.get("FILO_CLIENT_IP_HEADER", "").strip()
+    if header:
+        try:
+            return str(ipaddress.ip_address(request.headers.get(header, "").strip()))
+        except ValueError:
+            pass
+    return request.client.host if request.client else "unknown"
 
 
 class LoginInput(BaseModel):
@@ -320,7 +361,7 @@ def create_account_router(store):
     def login(payload: LoginInput, request: Request):
         try:
             check_csrf(request)
-            cookie, current = store.login(payload.email, payload.password, request.cookies.get(SESSION_COOKIE), request.client.host if request.client else "unknown")
+            cookie, current = store.login(payload.email, payload.password, request.cookies.get(SESSION_COOKIE), client_address(request))
             return response_session(request, cookie, current)
         except AccountError as exc:
             return failure(exc)
@@ -332,7 +373,7 @@ def create_account_router(store):
             current = store.resolve_session(request.cookies.get(SESSION_COOKIE))
             if current and current["authenticated"]:
                 raise AccountError(409, "Hai già effettuato l'accesso. Esci prima di creare un altro account.")
-            cookie, current = store.register(payload.name, payload.email, payload.password, request.cookies.get(SESSION_COOKIE), request.client.host if request.client else "unknown")
+            cookie, current = store.register(payload.name, payload.email, payload.password, request.cookies.get(SESSION_COOKIE), client_address(request))
             return response_session(request, cookie, current)
         except AccountError as exc:
             return failure(exc)
