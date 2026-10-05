@@ -5,6 +5,7 @@ Registration never grants ownership of the original workspace.
 """
 from contextlib import contextmanager
 import hashlib
+import html
 import ipaddress
 import logging
 import os
@@ -17,9 +18,11 @@ import time
 from urllib.parse import urlsplit
 import uuid
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, BackgroundTasks, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from .mailer import mail_configured, send_safely
 
 
 logger = logging.getLogger(__name__)
@@ -35,6 +38,13 @@ _EMAIL = re.compile(r"[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9.
 # of logins cannot exhaust a small instance's memory.
 _HASHING = threading.BoundedSemaphore(4)
 _LOGIN_ERROR = "Email o password non corrette."
+RESET_TTL = 3600
+# (window in seconds, attempts per address and identity, attempts per address)
+THROTTLE_LIMITS = {
+    "login": (600, 8, 60), "register": (3600, 5, 12),
+    "reset-request": (3600, 3, 12), "reset-confirm": (3600, 10, 30), "reauth": (600, 8, 60),
+}
+_PASSWORD_LENGTH = f"La password deve contenere da {PASSWORD_MIN_LENGTH} a {PASSWORD_MAX_LENGTH} caratteri."
 _REGISTER_ERROR = "Registrazione non riuscita. Se hai già un account, accedi."
 
 
@@ -112,6 +122,14 @@ class AccountStore:
                     expires_at REAL NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS auth_attempt_expiry ON auth_attempts(expires_at);
+                CREATE TABLE IF NOT EXISTS password_resets (
+                    token_hash TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    created_at REAL NOT NULL,
+                    expires_at REAL NOT NULL,
+                    used_at REAL
+                );
+                CREATE INDEX IF NOT EXISTS password_reset_user ON password_resets(user_id);
             """)
             if self.owner_enabled:
                 owner = conn.execute("SELECT email,password_hash FROM users WHERE id=?", (OWNER_ID,)).fetchone()
@@ -219,7 +237,7 @@ class AccountStore:
         now = time.time()
         # Hash identifiers/IPs to avoid storing submitted addresses for failed
         # attempts. Both pair and IP limits prevent easy username spraying.
-        duration, pair_limit, ip_limit = (600, 8, 60) if kind == "login" else (3600, 5, 12)
+        duration, pair_limit, ip_limit = THROTTLE_LIMITS[kind]
         pair = self._pair_key(kind, ip, identifier)
         address = _digest(f"{kind}\0{ip}")
         blocked = False
@@ -282,6 +300,83 @@ class AccountStore:
             raise AccountError(409, _REGISTER_ERROR) from None
         return self._new_session(user_id, cookie)
 
+    # Recovery, password change and deletion apply to registered members only:
+    # the owner keeps its deployment password (FILO_ACCESS_PASSWORD).
+
+    def request_password_reset(self, email, cookie, ip=""):
+        """Return (user, token) for a member, or None; callers answer identically."""
+        self._require_session(cookie)
+        email = _identifier(email)
+        self._throttle("reset-request", str(ip)[:200], email[:254])
+        if not email or len(email) > 254:
+            return None
+        now = time.time()
+        token = secrets.token_urlsafe(32)
+        with self.connection() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            conn.execute("DELETE FROM password_resets WHERE expires_at<=? OR used_at IS NOT NULL", (now,))
+            row = conn.execute("SELECT id,email,name FROM users WHERE email=? COLLATE NOCASE AND role='member'", (email,)).fetchone()
+            if not row:
+                return None
+            # Only the newest link works: a forwarded older email becomes useless.
+            conn.execute("DELETE FROM password_resets WHERE user_id=?", (row["id"],))
+            conn.execute("INSERT INTO password_resets VALUES (?,?,?,?,NULL)", (_digest(token), row["id"], now, now + RESET_TTL))
+        return {"id": row["id"], "email": row["email"], "name": row["name"]}, token
+
+    def reset_password(self, token, password, cookie, ip=""):
+        self._require_session(cookie)
+        self._throttle("reset-confirm", str(ip)[:200], "")
+        if not isinstance(password, str) or not PASSWORD_MIN_LENGTH <= len(password) <= PASSWORD_MAX_LENGTH:
+            raise AccountError(422, _PASSWORD_LENGTH)
+        invalid = AccountError(400, "Il link non è valido o è scaduto. Chiedi un nuovo link per reimpostare la password.")
+        if not isinstance(token, str) or not _TOKEN.fullmatch(token):
+            raise invalid
+        password_hash = _password_hash(password)
+        now = time.time()
+        with self.connection() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute("""SELECT r.user_id FROM password_resets r JOIN users u ON u.id=r.user_id
+                WHERE r.token_hash=? AND r.used_at IS NULL AND r.expires_at>? AND u.role='member'""", (_digest(token), now)).fetchone()
+            if not row:
+                raise invalid
+            conn.execute("UPDATE users SET password_hash=? WHERE id=?", (password_hash, row["user_id"]))
+            conn.execute("DELETE FROM password_resets WHERE user_id=?", (row["user_id"],))
+            # Whoever knew the old password is signed out everywhere.
+            conn.execute("DELETE FROM account_sessions WHERE user_id=?", (row["user_id"],))
+        return self._new_session(row["user_id"], cookie)
+
+    def _reauthenticate(self, user_id, password, ip):
+        self._throttle("reauth", str(ip)[:200], user_id)
+        with self.connection() as conn:
+            row = conn.execute("SELECT password_hash,role FROM users WHERE id=?", (user_id,)).fetchone()
+        if not row or row["role"] != "member":
+            raise AccountError(409, "La password del gestore si cambia dalla variabile FILO_ACCESS_PASSWORD del servizio Railway.")
+        valid = isinstance(password, str) and 0 < len(password) <= PASSWORD_MAX_LENGTH
+        if not _password_matches(password if valid else "invalid-input", row["password_hash"]) or not valid:
+            raise AccountError(401, "La password attuale non è corretta.")
+
+    def change_password(self, user_id, current, new, cookie, ip=""):
+        self._reauthenticate(user_id, current, ip)
+        if not isinstance(new, str) or not PASSWORD_MIN_LENGTH <= len(new) <= PASSWORD_MAX_LENGTH:
+            raise AccountError(422, _PASSWORD_LENGTH)
+        if new == current:
+            raise AccountError(422, "Scegli una password diversa da quella attuale.")
+        password_hash = _password_hash(new)
+        current_hash = _digest(cookie) if isinstance(cookie, str) else ""
+        with self.connection() as conn:
+            conn.execute("UPDATE users SET password_hash=? WHERE id=?", (password_hash, user_id))
+            # Other browsers are signed out; this one stays signed in.
+            conn.execute("DELETE FROM account_sessions WHERE user_id=? AND token_hash<>?", (user_id, current_hash))
+            conn.execute("DELETE FROM password_resets WHERE user_id=?", (user_id,))
+
+    def confirm_deletion(self, user_id, password, ip=""):
+        self._reauthenticate(user_id, password, ip)
+
+    def delete_member(self, user_id):
+        """Remove the member, their sessions and reset links (cascade)."""
+        with self.connection() as conn:
+            return conn.execute("DELETE FROM users WHERE id=? AND role='member'", (user_id,)).rowcount == 1
+
 
 def client_address(request):
     """The client IP used for throttling.
@@ -319,14 +414,53 @@ class RegistrationInput(BaseModel):
     password: str = Field(min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH)
 
 
+class PasswordForgotInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    email: str = Field(min_length=1, max_length=254)
+
+
+class PasswordResetInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    token: str = Field(min_length=43, max_length=43)
+    password: str = Field(min_length=1, max_length=PASSWORD_MAX_LENGTH)
+
+
+def session_response(request, cookie, session, extra=None):
+    response = JSONResponse({**session, **(extra or {})})
+    response.headers["Cache-Control"] = "no-store"
+    response.set_cookie(SESSION_COOKIE, cookie, max_age=SESSION_TTL if session["authenticated"] else GUEST_TTL, path="/", httponly=True, secure=request.url.scheme == "https", samesite="lax")
+    return response
+
+
+def public_origin(request):
+    """Origin for links sent by email: configured, never taken from the Host header."""
+    configured = os.environ.get("FILO_PUBLIC_URL", "").strip().rstrip("/")
+    if configured:
+        return configured
+    domain = os.environ.get("RAILWAY_PUBLIC_DOMAIN", "").strip().rstrip("/")
+    if domain:
+        return "https://" + domain
+    return str(request.base_url).rstrip("/")
+
+
+def reset_email(user, link):
+    name = user["name"].strip() or "ciao"
+    text = (f"Ciao {name},\n\n"
+            f"abbiamo ricevuto una richiesta per reimpostare la password del tuo account Spazelia ({user['email']}).\n\n"
+            f"Per scegliere una nuova password apri questo link entro 60 minuti:\n{link}\n\n"
+            "Se non hai chiesto tu il cambio, ignora questa email: la password attuale resta valida.\n\n"
+            "Il team di Spazelia\n")
+    safe_name, safe_link, safe_email = html.escape(name), html.escape(link, quote=True), html.escape(user["email"])
+    body = (f'<p>Ciao {safe_name},</p><p>abbiamo ricevuto una richiesta per reimpostare la password del tuo account Spazelia ({safe_email}).</p>'
+            f'<p><a href="{safe_link}" style="display:inline-block;padding:12px 18px;border-radius:10px;background:#b44922;color:#ffffff;text-decoration:none;font-weight:600">Scegli una nuova password</a></p>'
+            f'<p>Il link vale 60 minuti. Se il pulsante non funziona, copia questo indirizzo nel browser:<br>{safe_link}</p>'
+            '<p>Se non hai chiesto tu il cambio, ignora questa email: la password attuale resta valida.</p><p>Il team di Spazelia</p>')
+    return "Reimposta la password di Spazelia", text, body
+
+
 def create_account_router(store):
     router = APIRouter(prefix="/api/auth", tags=["accounts"])
-
-    def response_session(request, cookie, session):
-        response = JSONResponse(session)
-        response.headers["Cache-Control"] = "no-store"
-        response.set_cookie(SESSION_COOKIE, cookie, max_age=SESSION_TTL if session["authenticated"] else GUEST_TTL, path="/", httponly=True, secure=request.url.scheme == "https", samesite="lax")
-        return response
+    response_session = session_response
 
     def check_csrf(request):
         origin = request.headers.get("origin")
@@ -351,11 +485,37 @@ def create_account_router(store):
     def session(request: Request):
         cookie = request.cookies.get(SESSION_COOKIE)
         current = store.resolve_session(cookie)
+        features = {"password_reset_available": mail_configured()}
         if current:
             # Expiration is absolute, not extended by ordinary polling.
-            return JSONResponse(current, headers={"Cache-Control": "no-store"})
+            return JSONResponse({**current, **features}, headers={"Cache-Control": "no-store"})
         cookie, current = store.new_guest_session()
-        return response_session(request, cookie, current)
+        return response_session(request, cookie, current, features)
+
+    @router.post("/password/forgot")
+    def forgot_password(payload: PasswordForgotInput, request: Request, background: BackgroundTasks):
+        try:
+            check_csrf(request)
+            if not mail_configured():
+                raise AccountError(503, "Il recupero della password via email non è ancora attivo. Contatta l'assistenza di Spazelia.")
+            requested = store.request_password_reset(payload.email, request.cookies.get(SESSION_COOKIE), client_address(request))
+            if requested:
+                user, token = requested
+                subject, text, body = reset_email(user, f"{public_origin(request)}/reset-password?token={token}")
+                # Sent after the response, so its timing does not reveal whether the account exists.
+                background.add_task(send_safely, user["email"], subject, text, body, "spazelia-reset-" + _digest(token)[:32])
+            return JSONResponse({"message": "Se l'indirizzo appartiene a un account Spazelia, riceverai a breve un'email con il link per scegliere una nuova password. Il link vale 60 minuti."}, headers={"Cache-Control": "no-store"})
+        except AccountError as exc:
+            return failure(exc)
+
+    @router.post("/password/reset")
+    def reset_password(payload: PasswordResetInput, request: Request):
+        try:
+            check_csrf(request)
+            cookie, current = store.reset_password(payload.token, payload.password, request.cookies.get(SESSION_COOKIE), client_address(request))
+            return response_session(request, cookie, current, {"message": "Password aggiornata. Sei di nuovo nel tuo spazio."})
+        except AccountError as exc:
+            return failure(exc)
 
     @router.post("/login")
     def login(payload: LoginInput, request: Request):

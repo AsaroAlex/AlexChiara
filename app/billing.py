@@ -233,6 +233,12 @@ class BillingStore:
             row = conn.execute("SELECT event_created,status FROM subscriptions WHERE subscription_id=?", (subscription_id,)).fetchone()
         return dict(row) if row else None
 
+    def forget_user(self, user_id):
+        """Delete the account's billing rows; processed webhook ids hold no personal data."""
+        with self.connection() as conn:
+            for table in ("customers", "subscriptions", "checkout_attempts"):
+                conn.execute(f"DELETE FROM {table} WHERE user_id=?", (user_id,))
+
     def save_checkout(self, user_id, key, checkout_id, url, expires_at):
         with self.connection() as conn:
             conn.execute("UPDATE checkout_attempts SET checkout_id=?,url=?,expires_at=? WHERE user_id=? AND idempotency_key=?", (checkout_id, url, expires_at, user_id, key))
@@ -292,6 +298,26 @@ def _verify_signature(payload, header, secret, now=None):
         return False
     expected = hmac.new(secret.encode(), str(timestamp).encode() + b"." + payload, hashlib.sha256).hexdigest()
     return any(re.fullmatch(r"[a-fA-F0-9]{64}", item) and hmac.compare_digest(expected, item.lower()) for item in signatures)
+
+
+async def erase_customer(store, user_id):
+    """Before an account is deleted: cancel billing at Stripe, then forget it locally.
+
+    Deleting the Stripe customer immediately cancels its subscriptions; Stripe
+    keeps issued invoices for accounting. Without Stripe keys an active
+    subscription cannot be cancelled here, so deletion stops with a clear message.
+    """
+    record = store.customer_record(user_id)
+    if record:
+        config = _configuration()
+        if _configured(config):
+            try:
+                await _stripe_request("DELETE", "/customers/" + record["customer_id"], config)
+            except StripeResourceMissing:
+                pass  # Already deleted, or created with the other (test/live) key.
+        elif store.subscription_for_user(user_id)["status"] in LIVE_SUBSCRIPTION_STATES:
+            raise HTTPException(409, "Il tuo abbonamento risulta attivo e i pagamenti non sono raggiungibili in questo momento. Contatta l'assistenza di Spazelia per chiudere l'account.")
+    store.forget_user(user_id)
 
 
 def create_billing_router(store):

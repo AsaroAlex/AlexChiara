@@ -19,11 +19,13 @@
     <section class="auth-card" aria-labelledby="auth-title">
       <div class="auth-heading"><h2 id="auth-title">Accedi a Spazelia.</h2><p id="auth-description">La tua giornata ti aspetta.</p></div>
       <div id="auth-error" class="notice error" role="alert" hidden></div>
+      <div id="auth-success" class="notice success" role="status" hidden></div>
       <div id="auth-loading" class="notice quiet" role="status">Prepariamo l’accesso…</div>
       <form id="auth-form" hidden>
         <div id="auth-name-field" class="field" hidden><label for="auth-name">Il tuo nome</label><input id="auth-name" name="name" autocomplete="name" maxlength="120" placeholder="Come ti chiami?"></div>
-        <div class="field"><label id="auth-email-label" for="auth-email">Email o nome utente</label><input id="auth-email" name="email" type="text" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false" maxlength="254" placeholder="La tua email" required></div>
-        <div class="field"><label for="auth-password">Password</label><div class="password-field"><input id="auth-password" name="password" type="password" autocomplete="current-password" maxlength="128" required aria-describedby="auth-password-hint"><button id="password-toggle" type="button" class="password-toggle" aria-label="Mostra password" aria-pressed="false">Mostra</button></div><p id="auth-password-hint" class="field-hint">Usa le credenziali del tuo account Spazelia.</p></div>
+        <div id="auth-email-field" class="field"><label id="auth-email-label" for="auth-email">Email o nome utente</label><input id="auth-email" name="email" type="text" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false" maxlength="254" placeholder="La tua email" required></div>
+        <div id="auth-password-field" class="field"><label id="auth-password-label" for="auth-password">Password</label><div class="password-field"><input id="auth-password" name="password" type="password" autocomplete="current-password" maxlength="128" required aria-describedby="auth-password-hint"><button id="password-toggle" type="button" class="password-toggle" aria-label="Mostra password" aria-pressed="false">Mostra</button></div><p id="auth-password-hint" class="field-hint">Usa le credenziali del tuo account Spazelia.</p></div>
+        <p id="auth-forgot" class="forgot-link"><a id="auth-forgot-link" class="text-link" href="/forgot-password">Hai dimenticato la password?</a></p>
         <p id="auth-legacy-note" class="field-hint legacy-note">Hai già l’accesso iniziale? Usa il nome utente che hai ricevuto e la stessa password.</p>
         <p id="register-payment-note" class="registration-note" hidden>Creare l’account non attiva un pagamento. Potrai scegliere l’abbonamento dal tuo account.</p>
         <button id="auth-submit" class="button primary full-width" type="submit">Accedi <svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M6 6h12v12"/></svg></button>

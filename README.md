@@ -36,6 +36,18 @@ L'accesso usa un modulo nella pagina, senza popup HTTP Basic. La sessione persis
 
 L'account già esistente accede con il nome e la password configurati dal gestore in `FILO_ACCESS_USERNAME` e `FILO_ACCESS_PASSWORD`, mantenendo i dati precedenti. La creazione di un nuovo account non concede accesso a questo spazio.
 
+**Password dimenticata.** Dalla pagina di accesso, *Hai dimenticato la password?* porta a `/forgot-password`: l'utente indica l'email e riceve un link valido 60 minuti verso `/reset-password`. La risposta è identica per indirizzi esistenti e inesistenti, l'email parte dopo la risposta, solo l'ultimo link richiesto funziona e ogni link vale una volta. Salvare la nuova password chiude le sessioni su tutti i dispositivi ed entra nello spazio. Le richieste sono limitate per indirizzo e per email. L'account del gestore non si recupera via email: la sua password resta `FILO_ACCESS_PASSWORD`.
+
+**Cambio password ed eliminazione.** Nell'area `/account`, la sezione *Password* cambia la password dopo la verifica di quella attuale e disconnette gli altri dispositivi. *Elimina account* chiede la password e la parola `ELIMINA`; elimina in modo definitivo account, sessioni, link di recupero, l'intero spazio (attività, documenti, agenda, credenziali email cifrate, bozze e cronologia) e i dati di fatturazione locali. Se esiste un cliente Stripe, viene eliminato su Stripe, che disdice subito l'abbonamento senza rimborso del periodo in corso e conserva le fatture emesse. Se Stripe non risponde, nulla viene cancellato. L'account del gestore non si elimina da qui.
+
+**Invio delle email di servizio.** Il recupero password richiede `FILO_MAIL_FROM` (per esempio `Spazelia <noreply@tuodominio.it>`, con dominio verificato presso il fornitore) e uno di questi canali:
+
+- `FILO_RESEND_API_KEY`: [Resend](https://resend.com) via HTTPS, consigliato da Railway e l'unico utilizzabile sui piani Railway Free, Trial e Hobby, dove l'SMTP in uscita è disabilitato.
+- `FILO_SMTP_HOST`, con `FILO_SMTP_PORT` (587 predefinita), `FILO_SMTP_USERNAME`, `FILO_SMTP_PASSWORD` e `FILO_SMTP_SECURITY` (`starttls` predefinito oppure `ssl`): disponibile su Railway dal piano Pro. Senza TLS l'invio non parte.
+- `FILO_MAIL_OUTBOX_DIR`: solo per sviluppo e prove, salva i messaggi come file `.eml` in una cartella locale.
+
+Senza configurazione la pagina di recupero indica che il servizio non è ancora attivo. I link usano `FILO_PUBLIC_URL` oppure il dominio pubblico Railway, mai l'header `Host` della richiesta.
+
 L'area personale include il percorso di abbonamento Stripe Checkout e il portale di gestione. **Prezzo da definire: i pagamenti restano disattivati finché il gestore non configura Stripe.** Registrarsi non avvia un addebito; il server sceglie il prezzo e aggiorna lo stato solo tramite webhook firmati. Questa versione non applica un blocco delle funzioni in base all'abbonamento. Il collegamento e gli addebiti reali Stripe non sono stati collaudati. Vedi [configurazione dei pagamenti](docs/BILLING.md).
 
 ## Il tuo buongiorno, già in ordine
@@ -102,7 +114,7 @@ Il prodotto adotta **Spazelia**, con la promessa «La tua giornata, con più spa
 
 ## Ambito
 
-Questo è un MVP verificabile, disponibile anche su Railway con homepage pubblica e account separati. Include il percorso Stripe da configurare, ma non un prezzo attivo o un paywall. Non include invio email, sincronizzazione delle bozze Gmail o dei calendari esterni, telefonia, campagne, condivisione dello spazio fra colleghi o recupero password tramite email. Non impegna budget pubblicitario.
+Questo è un MVP verificabile, disponibile anche su Railway con homepage pubblica e account separati. Include il percorso Stripe da configurare, ma non un prezzo attivo o un paywall. Non include invio di email ai clienti, sincronizzazione delle bozze Gmail o dei calendari esterni, telefonia, campagne, condivisione dello spazio fra colleghi o verifica dell'indirizzo email alla registrazione. Le sole email inviate sono quelle di servizio per il recupero password. Non impegna budget pubblicitario.
 
 La prova browser facoltativa `node scripts/browser-smoke.cjs` richiede Playwright e Chromium, già presenti nell'ambiente cloud ma non necessari all'app. Usala contro un'istanza dimostrativa inizialmente inattiva con dati nuovi: modifica soltanto l'azienda fittizia e la sua configurazione. Per isolare la prova avvia il server con `ALEXCHIARA_DATA_DIR` in una cartella temporanea, `FILO_PORT=8001` e `FILO_ACCESS_PASSWORD=browser-test`; imposta anche `FILO_PORT=8001` per il comando del test. Il controllo accede tramite modulo e verifica configurazione guidata, risultati, revisione, preferenze, errori, recupero e chat. Una password di prova diversa si può indicare al test con `FILO_TEST_OWNER_PASSWORD`. Le prove API di `scripts/check.sh` isolano automaticamente i dati e includono il confine di autenticazione e l'isolamento fra account.
 
@@ -113,6 +125,8 @@ La prova `FILO_PORT=8014 node scripts/real-mode-smoke.cjs` verifica un’istanza
 La prova `node scripts/account-smoke.cjs` avvia autonomamente un server temporaneo isolato e verifica homepage, login, registrazione, persistenza della sessione dopo refresh, uscita, area personale e pagamenti non configurati. Le schermate sono controllate su desktop e telefono; nessun addebito o collegamento a provider reale viene effettuato.
 
 La prova completa degli avvisi usa un server fixture riproducibile: in un terminale avvia `.venv/bin/python scripts/watch_smoke_server.py`, nell’altro `FILO_PORT=8016 node scripts/watch-smoke.cjs`. Il server ascolta solo su localhost, disabilita worker e chiamate ai provider e usa un database temporaneo eliminato all’arresto. Verifica form, proposta in chat, conferma, arrivo osservato in cima alle priorità, link alla casella corretta e chiusura persistente.
+
+`node scripts/account-lifecycle-smoke.cjs` avvia un server isolato sulla porta 8046 con una cartella di posta locale e verifica recupero password dal link nell'email, link monouso rimosso dalla barra degli indirizzi, cambio password, eliminazione dell'account con conferma e note dell'account gestore, a 1440 e 390 pixel.
 
 `node scripts/release-ui-smoke.cjs` avvia un server isolato sulla porta 8044 e verifica le correzioni di rilascio dell’interfaccia: messaggi in italiano, pagina 404, icone pubbliche, link della homepage per chi ha già effettuato l’accesso, collegamento “Vai al contenuto”, icone dei pulsanti durante il salvataggio, finestre che restano aperte selezionando il testo e messaggio dopo un collegamento OAuth non riuscito.
 

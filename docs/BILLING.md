@@ -77,6 +77,13 @@ dati delle carte.
   e stati diversi, il server legge lo stato attuale da Stripe invece di fidarsi
   dell'ordine di consegna.
 
+Quando un utente elimina il proprio account, il server elimina il cliente Stripe
+associato (`DELETE /v1/customers/{id}`): Stripe disdice subito gli abbonamenti
+attivi, senza rimborso automatico, e conserva le fatture già emesse. Se Stripe
+non risponde l'eliminazione si interrompe senza cancellare nulla; se le chiavi
+non sono configurate e risulta un abbonamento attivo, l'utente viene invitato a
+contattare l'assistenza.
+
 Il parametro `billing=success` non significa che il pagamento sia riuscito.
 Solo le notifiche firmate aggiornano lo stato. Checkout completato e fatture
 comportano la lettura server dell'abbonamento effettivo: una fattura fallita

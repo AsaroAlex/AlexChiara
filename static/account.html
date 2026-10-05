@@ -31,6 +31,30 @@
         <p id="billing-progress" class="field-hint" role="status" aria-live="polite"></p>
         <div id="billing-error" class="notice error" role="alert" hidden></div>
       </section>
+      <section class="account-card security-card" aria-labelledby="security-title">
+        <h2 id="security-title">Password</h2>
+        <p id="security-owner-note" class="field-hint" hidden>La password del gestore si cambia dalla variabile FILO_ACCESS_PASSWORD del servizio Railway; per questo account non è disponibile il recupero via email.</p>
+        <form id="password-form" class="account-form" novalidate>
+          <div class="field"><label for="current-password">Password attuale</label><input id="current-password" name="current_password" type="password" autocomplete="current-password" maxlength="128" required></div>
+          <div class="field"><label for="new-password">Nuova password</label><div class="password-field"><input id="new-password" name="new_password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required aria-describedby="new-password-hint"><button id="new-password-toggle" type="button" class="password-toggle" aria-label="Mostra password" aria-pressed="false">Mostra</button></div><p id="new-password-hint" class="field-hint">Almeno 12 caratteri. Gli altri dispositivi dovranno accedere di nuovo.</p></div>
+          <div id="password-error" class="notice error" role="alert" hidden></div>
+          <div id="password-success" class="notice success" role="status" hidden></div>
+          <button id="password-submit" class="button secondary" type="submit">Aggiorna la password</button>
+        </form>
+      </section>
+      <section class="account-card danger-card" aria-labelledby="delete-title">
+        <h2 id="delete-title">Elimina account</h2>
+        <p id="delete-owner-note" class="field-hint" hidden>L’account del gestore custodisce lo spazio originale del servizio e non si può eliminare da qui.</p>
+        <div id="delete-section">
+          <p class="danger-copy">Elimina in modo definitivo il tuo account e tutti i dati del tuo spazio: attività, documenti, agenda, collegamenti email e bozze. Se hai un abbonamento, viene disdetto subito senza rimborso del periodo in corso. Le fatture già emesse restano a Stripe per gli obblighi contabili.</p>
+          <form id="delete-form" class="account-form" novalidate>
+            <div class="field"><label for="delete-password">La tua password</label><input id="delete-password" name="password" type="password" autocomplete="current-password" maxlength="128" required></div>
+            <div class="field"><label for="delete-confirmation">Scrivi ELIMINA per confermare</label><input id="delete-confirmation" name="confirmation" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="20" required></div>
+            <div id="delete-error" class="notice error" role="alert" hidden></div>
+            <button id="delete-submit" class="button danger" type="submit">Elimina definitivamente</button>
+          </form>
+        </div>
+      </section>
     </div>
   </main>
   <footer class="site-footer content-width"><a class="footer-brand" href="/" aria-label="Spazelia, homepage"><img src="/static/brand/spazelia-icon.svg" width="32" height="32" alt=""><span>Spazelia</span></a><p>La tua giornata, con più spazio.</p><a class="text-link" href="/">Torna al sito <svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M6 6h12v12"/></svg></a></footer>

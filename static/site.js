@@ -82,6 +82,14 @@
   }
 
   async function initLanding() {
+    if (new URLSearchParams(window.location.search).get('account') === 'deleted') {
+      const notice = document.createElement('div');
+      notice.className = 'notice success content-width deleted-notice';
+      notice.setAttribute('role', 'status');
+      notice.textContent = 'Il tuo account e i dati del tuo spazio sono stati eliminati. Grazie per aver usato Spazelia.';
+      document.querySelector('main')?.prepend(notice);
+      history.replaceState(null, '', '/');
+    }
     try {
       const data = await session();
       if (!data.authenticated) return;
@@ -100,13 +108,42 @@
     } catch (_) { /* The public homepage stays usable when account services are unavailable. */ }
   }
 
+  async function postWithFreshSession(endpoint, body) {
+    try {
+      return await request(endpoint, { method: 'POST', body });
+    } catch (error) {
+      // A form left open past the one-hour guest session gets a fresh
+      // session and CSRF token, then the same submission is retried once.
+      if (error.status !== 403) throw error;
+      const current = await session();
+      if (current.authenticated && !endpoint.startsWith('/api/auth/password/')) return { alreadySignedIn: true };
+      return request(endpoint, { method: 'POST', body });
+    }
+  }
+
+  function showSuccess(id, message) {
+    const element = byId(id);
+    element.textContent = message;
+    element.hidden = false;
+  }
+
+  function hideField(id, input) {
+    byId(id).hidden = true;
+    input.required = false;
+  }
+
   async function initAuth() {
-    const register = window.location.pathname === '/register';
+    const path = window.location.pathname;
+    const mode = path === '/register' ? 'register' : path === '/forgot-password' ? 'forgot' : path === '/reset-password' ? 'reset' : 'login';
+    const register = mode === 'register';
     const form = byId('auth-form');
     const submit = byId('auth-submit');
     const password = byId('auth-password');
     const email = byId('auth-email');
     const name = byId('auth-name');
+    // The reset token leaves the address bar at once: it never stays in history.
+    const resetToken = mode === 'reset' ? new URLSearchParams(window.location.search).get('token') : null;
+    if (mode === 'reset') history.replaceState(null, '', '/reset-password');
     if (register) {
       document.title = 'Crea il tuo account · Spazelia';
       byId('auth-title').textContent = 'Cominciamo da te.';
@@ -121,13 +158,43 @@
       byId('auth-password-hint').textContent = 'Almeno 12 caratteri. Scegli una password che non usi altrove.';
       byId('register-payment-note').hidden = false;
       byId('auth-legacy-note').hidden = true;
+      byId('auth-forgot').hidden = true;
       buttonLabel(submit, 'Crea il tuo account');
       byId('auth-switch-copy').textContent = 'Hai già un account?';
       byId('auth-switch-link').href = '/login';
       byId('auth-switch-link').textContent = 'Accedi';
+    } else if (mode === 'forgot') {
+      document.title = 'Recupera l’accesso · Spazelia';
+      byId('auth-title').textContent = 'Recupera l’accesso.';
+      byId('auth-description').textContent = 'Scrivi l’email del tuo account: ti mandiamo un link per scegliere una nuova password.';
+      byId('auth-email-label').textContent = 'Email';
+      email.type = 'email';
+      email.autocomplete = 'email';
+      hideField('auth-password-field', password);
+      byId('auth-legacy-note').textContent = 'L’account del gestore usa la password impostata nel servizio Railway: non si recupera via email.';
+      byId('auth-forgot').hidden = true;
+      buttonLabel(submit, 'Invia il link');
+      byId('auth-switch-copy').textContent = 'Ti è tornata in mente?';
+      byId('auth-switch-link').href = '/login';
+      byId('auth-switch-link').textContent = 'Accedi';
+    } else if (mode === 'reset') {
+      document.title = 'Nuova password · Spazelia';
+      byId('auth-title').textContent = 'Scegli una nuova password.';
+      byId('auth-description').textContent = 'Dopo il salvataggio entri nel tuo spazio; gli altri dispositivi dovranno accedere di nuovo.';
+      hideField('auth-email-field', email);
+      byId('auth-password-label').textContent = 'Nuova password';
+      password.autocomplete = 'new-password';
+      password.minLength = 12;
+      byId('auth-password-hint').textContent = 'Almeno 12 caratteri. Scegli una password che non usi altrove.';
+      byId('auth-legacy-note').hidden = true;
+      byId('auth-forgot').hidden = true;
+      buttonLabel(submit, 'Salva la nuova password');
+      byId('auth-switch-copy').textContent = 'Il link è scaduto?';
+      byId('auth-switch-link').href = '/forgot-password';
+      byId('auth-switch-link').textContent = 'Chiedine uno nuovo';
     }
     const destination = localDestination();
-    if (destination === '/account') byId('auth-switch-link').href += '?next=%2Faccount';
+    if (destination === '/account' && (mode === 'login' || register)) byId('auth-switch-link').href += '?next=%2Faccount';
     byId('password-toggle').addEventListener('click', () => {
       const visible = password.type === 'password';
       password.type = visible ? 'text' : 'password';
@@ -138,28 +205,43 @@
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       byId('auth-error').hidden = true;
+      byId('auth-success').hidden = true;
       if (register && !name.value.trim()) {
         // The browser accepts a name made only of spaces; the account would not.
         showError('auth-error', new Error(fieldMessages.name));
         name.focus();
         return;
       }
+      if (mode === 'forgot' && !email.value.trim()) {
+        showError('auth-error', new Error(fieldMessages.email));
+        email.focus();
+        return;
+      }
+      if ((mode === 'reset' || register) && password.value.length < 12) {
+        showError('auth-error', new Error(fieldMessages.password));
+        password.focus();
+        return;
+      }
       submit.disabled = true;
-      byId('auth-progress').textContent = register ? 'Creiamo il tuo account…' : 'Accesso in corso…';
+      byId('auth-progress').textContent = { register: 'Creiamo il tuo account…', forgot: 'Prepariamo il link…', reset: 'Salviamo la nuova password…' }[mode] || 'Accesso in corso…';
       try {
+        if (mode === 'forgot') {
+          const result = await postWithFreshSession('/api/auth/password/forgot', { email: email.value.trim() });
+          showSuccess('auth-success', result.message);
+          byId('auth-progress').textContent = '';
+          submit.disabled = false;
+          return;
+        }
+        if (mode === 'reset') {
+          await postWithFreshSession('/api/auth/password/reset', { token: resetToken, password: password.value });
+          password.value = '';
+          clearPendingWizard();
+          window.location.assign('/app');
+          return;
+        }
         const body = { email: email.value.trim(), password: password.value };
         if (register) body.name = name.value.trim();
-        const endpoint = register ? '/api/auth/register' : '/api/auth/login';
-        try {
-          await request(endpoint, { method: 'POST', body });
-        } catch (error) {
-          // A form left open past the one-hour guest session gets a fresh
-          // session and CSRF token, then the same submission is retried once.
-          if (error.status !== 403) throw error;
-          const current = await session();
-          if (current.authenticated) { window.location.assign(destination); return; }
-          await request(endpoint, { method: 'POST', body });
-        }
+        await postWithFreshSession(register ? '/api/auth/register' : '/api/auth/login', body);
         clearPendingWizard();
         password.value = '';
         window.location.assign(destination);
@@ -171,11 +253,19 @@
     });
     try {
       const data = await session();
-      if (data.authenticated) {
-        window.location.replace(destination);
+      if (data.authenticated && mode !== 'reset') {
+        window.location.replace(mode === 'forgot' ? '/account' : destination);
         return;
       }
       byId('auth-loading').hidden = true;
+      if (mode === 'reset' && !/^[A-Za-z0-9_-]{43}$/.test(resetToken || '')) {
+        showError('auth-error', new Error('Il link non è completo o non è valido. Chiedi un nuovo link per reimpostare la password.'));
+        return;
+      }
+      if (mode === 'forgot' && !data.password_reset_available) {
+        showError('auth-error', new Error('Il recupero della password via email non è ancora attivo. Contatta l’assistenza di Spazelia.'));
+        submit.disabled = true;
+      }
       form.hidden = false;
     } catch (error) {
       byId('auth-loading').hidden = true;
@@ -260,6 +350,63 @@
     }
   }
 
+  function initSecurity(user) {
+    if (user.role === 'owner') {
+      byId('password-form').hidden = true;
+      byId('security-owner-note').hidden = false;
+      byId('delete-section').hidden = true;
+      byId('delete-owner-note').hidden = false;
+      return;
+    }
+    const newPassword = byId('new-password');
+    byId('new-password-toggle').addEventListener('click', () => {
+      const visible = newPassword.type === 'password';
+      newPassword.type = visible ? 'text' : 'password';
+      byId('new-password-toggle').textContent = visible ? 'Nascondi' : 'Mostra';
+      byId('new-password-toggle').setAttribute('aria-label', visible ? 'Nascondi password' : 'Mostra password');
+      byId('new-password-toggle').setAttribute('aria-pressed', String(visible));
+    });
+    byId('password-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      byId('password-error').hidden = true;
+      byId('password-success').hidden = true;
+      const current = byId('current-password');
+      if (!current.value) { showError('password-error', new Error('Inserisci la password attuale.')); current.focus(); return; }
+      if (newPassword.value.length < 12) { showError('password-error', new Error(fieldMessages.password)); newPassword.focus(); return; }
+      byId('password-submit').disabled = true;
+      try {
+        const result = await request('/api/account/password', { method: 'POST', body: { current_password: current.value, new_password: newPassword.value } });
+        current.value = '';
+        newPassword.value = '';
+        showSuccess('password-success', result.message || 'Password aggiornata.');
+      } catch (error) {
+        if (error.status === 401 && error.message.startsWith('Accedi')) { goToLogin(); return; }
+        showError('password-error', error);
+      } finally {
+        byId('password-submit').disabled = false;
+      }
+    });
+    byId('delete-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      byId('delete-error').hidden = true;
+      const secret = byId('delete-password');
+      const confirmation = byId('delete-confirmation');
+      if (!secret.value) { showError('delete-error', new Error('Inserisci la tua password per confermare.')); secret.focus(); return; }
+      if (confirmation.value.trim().toUpperCase() !== 'ELIMINA') { showError('delete-error', new Error('Scrivi ELIMINA per confermare la cancellazione.')); confirmation.focus(); return; }
+      byId('delete-submit').disabled = true;
+      try {
+        await request('/api/account/delete', { method: 'POST', body: { password: secret.value, confirmation: confirmation.value.trim() } });
+        secret.value = '';
+        clearPendingWizard();
+        window.location.assign('/?account=deleted');
+      } catch (error) {
+        if (error.status === 401 && error.message.startsWith('Accedi')) { goToLogin(); return; }
+        showError('delete-error', error);
+        byId('delete-submit').disabled = false;
+      }
+    });
+  }
+
   async function initAccount() {
     byId('billing-refresh').addEventListener('click', loadBilling);
     byId('billing-checkout').addEventListener('click', () => openBilling('/api/billing/checkout', byId('billing-checkout'), 'Apriamo il checkout…'));
@@ -290,6 +437,7 @@
       byId('profile-email').textContent = user.email || '—';
       byId('profile-role').textContent = user.role === 'owner' ? 'Titolare dello spazio' : 'Account Spazelia';
       byId('profile-avatar').textContent = (user.name || user.email || 'S').trim().charAt(0).toUpperCase();
+      initSecurity(user);
       byId('account-loading').hidden = true;
       byId('account-content').hidden = false;
       byId('account-logout').disabled = false;
