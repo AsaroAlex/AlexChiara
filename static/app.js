@@ -103,7 +103,7 @@ function render(forceCompany = false) {
   $('#sidebar-company').textContent = company.name || 'Il tuo studio';
   $('#company-avatar').textContent = (company.name || 'Il tuo studio').split(/\s+/).filter(Boolean).slice(0, 2).map(x => x[0]).join('').toUpperCase();
   const hour = Number(new Intl.DateTimeFormat('it-IT', { timeZone: 'Europe/Rome', hour: 'numeric', hourCycle: 'h23' }).format(new Date()));
-  $('#greeting-label').textContent = `${hour < 13 ? 'BUONGIORNO' : hour < 19 ? 'BUON POMERIGGIO' : 'BUONASERA'}${company.name ? `, ${company.name.toLocaleUpperCase('it')}` : ', C’È FILO'}`;
+  $('#greeting-label').textContent = `${hour < 13 ? 'Buongiorno' : hour < 19 ? 'Buon pomeriggio' : 'Buonasera'}${company.name ? `, ${company.name}` : ', c’è Filo'}`;
   setPill('#overview-service-status', service.status);
   const expired = connection.status === 'expired';
   notice('#connection-alert', expired ? 'La connessione alla casella è scaduta. Ricollega Gmail per riprendere i controlli.' : '');
@@ -113,7 +113,7 @@ function render(forceCompany = false) {
   $('.form-intro').textContent = company.needs_setup ? 'Inserisci il nome della tua attività e la firma da usare nelle risposte.' : 'Mantieni aggiornati il profilo e la firma usati nelle bozze.';
   const isActive = service.status === 'active';
   const isPaused = service.status === 'paused';
-  $('#overview-service-description').textContent = isActive ? 'La tua segreteria è al lavoro: seleziona le email prioritarie e prepara bozze locali che potrai rivedere.' : isPaused ? 'Hai messo il servizio in pausa. Le esecuzioni programmate si fermano; attività e bozze restano a disposizione.' : 'Le email importanti, in evidenza. Le risposte, già abbozzate. Sempre sotto il tuo controllo.';
+  $('#overview-service-description').textContent = isActive ? 'La tua segreteria è al lavoro: seleziona le email prioritarie e prepara bozze locali che potrai rivedere.' : isPaused ? 'Hai messo il servizio in pausa. Le esecuzioni programmate si fermano; attività e bozze restano a disposizione.' : 'Scegli chi seguire. Filo ordina le richieste e prepara le bozze.';
   const facts = [];
   if (isActive || isPaused) {
     for (const [symbol, text] of [['clock', `${clockTime()} · Europe/Rome`], ['mail', `${service.priority_contacts?.length || 0} contatti prioritari`], ['link', connection.provider === 'gmail' ? 'Casella Gmail' : 'Casella demo']]) { const fact = el('span', 'service-fact', text); fact.prepend(icon(symbol)); facts.push(fact); }
@@ -122,7 +122,7 @@ function render(forceCompany = false) {
   const overviewActions = [];
   const catalogActions = [];
   if (service.status === 'inactive') {
-    overviewActions.push(actionButton('Configura il servizio', 'open-wizard', 'primary', 'arrow'));
+    overviewActions.push(actionButton('Configura il servizio', 'open-wizard', 'secondary', 'arrow'));
     catalogActions.push(actionButton('Configura il servizio', 'open-wizard', 'primary', 'arrow'));
   } else {
     overviewActions.push(actionButton(isPaused ? 'Riprendi il servizio' : 'Esegui ora', isPaused ? 'resume' : 'run', 'primary', isPaused ? 'play' : 'refresh'));
@@ -178,13 +178,14 @@ function renderMorning() {
   $('#briefing-freshness').textContent = briefing.last_checked_at ? `Ultimo controllo: ${prettyDate(briefing.last_checked_at)}` : briefing.stale ? 'Da aggiornare' : 'In attesa del primo controllo';
   $('#briefing-freshness').classList.toggle('stale', Boolean(briefing.stale));
   const counts = briefing.counts || {};
-  const stats = [[counts.pending ?? priorities.length, 'Risposte da rivedere'], [counts.high_priority ?? 0, 'Da guardare per prime'], [state.data.agenda?.items?.length || 0, 'Appuntamenti oggi']];
+  const checked = Boolean(briefing.last_checked_at);
+  const stats = [[checked ? counts.pending ?? priorities.length : '—', 'Risposte da rivedere'], [checked ? counts.high_priority ?? 0 : '—', 'Da guardare per prime'], [state.data.agenda?.items?.length || 0, 'Appuntamenti oggi']];
   replace('#briefing-stats', ...stats.map(([value, label]) => { const card = el('div', 'briefing-stat'); card.append(el('strong', '', value), el('small', '', label)); return card; }));
   const suggestion = real?.suggested_action;
   const suggestionNodes = [];
   if (suggestion) {
     const mark = el('span', 'icon-box peach'); mark.append(icon('spark'));
-    const copy = el('div', 'suggestion-copy'); copy.append(el('strong', '', 'Ti propongo questo.'), el('p', '', suggestion.reason || suggestion.label));
+    const copy = el('div', 'suggestion-copy'); copy.append(el('strong', '', 'Il prossimo passo'), el('p', '', suggestion.reason || suggestion.label));
     const action = suggestion.action === 'review-priority' ? 'review-priority' : ['open-wizard', 'run', 'resume', 'reconnect', 'edit-preferences'].includes(suggestion.action) ? suggestion.action : priorities.length ? 'review-priority' : 'run';
     const button = actionButton(suggestion.label || 'Comincia da qui', action, 'primary', 'arrow', { id: suggestion.draft_id || priorities[0]?.draft_id || '' });
     if (real?.status === 'checking') button.disabled = true;
@@ -201,7 +202,7 @@ function renderMorning() {
   if (signature === state.briefingSignature) return;
   state.briefingSignature = signature;
   if (!priorities.length) {
-    const empty = el('div', 'briefing-empty'); empty.append(icon('check'), el('h3', '', real?.legacy_pending_count ? 'Le bozze precedenti restano nello storico.' : real?.status === 'not_started' ? 'Il primo passo è collegare la posta.' : real?.status === 'checking' ? 'Filo sta preparando il riepilogo.' : 'Nessuna risposta da rivedere qui.'), el('p', '', real?.legacy_pending_count ? 'Un nuovo controllo verificherà quali richieste aspettano ancora una risposta. Puoi consultare le bozze precedenti nelle attività.' : real?.status === 'not_started' ? 'Collega Gmail e scegli i contatti da seguire. Qui compariranno le richieste vere, già ordinate.' : 'Il riepilogo riguarda i messaggi controllati: aggiornalo per verificare nuove richieste.'));
+    const empty = el('div', 'briefing-empty'); empty.append(icon(real?.status === 'not_started' ? 'mail' : real?.status === 'checking' ? 'clock' : 'check'), el('h3', '', real?.legacy_pending_count ? 'Le bozze precedenti restano nello storico.' : real?.status === 'not_started' ? 'Le tue priorità arriveranno qui.' : real?.status === 'checking' ? 'Filo sta preparando il riepilogo.' : 'Nessuna risposta da rivedere qui.'), el('p', '', real?.legacy_pending_count ? 'Un nuovo controllo verificherà quali richieste aspettano ancora una risposta. Puoi consultare le bozze precedenti nelle attività.' : real?.status === 'not_started' ? 'Richieste, contatti e bozze da rivedere, dopo il primo controllo.' : 'Il riepilogo riguarda i messaggi controllati: aggiornalo per verificare nuove richieste.'));
     if (real?.legacy_pending_count) { const link = el('a', 'text-link', 'Consulta le attività'); link.href = '#activity'; empty.append(link); }
     replace('#priority-list', empty);
   } else {
@@ -255,7 +256,7 @@ function renderWatches() {
   const signature = JSON.stringify(summary);
   if (signature === state.watchSignature) return;
   state.watchSignature = signature;
-  replace('#reply-watch-list', ...(summary.items || []).map(item => {
+  const watchCard = item => {
     const found = item.status === 'matched';
     const card = el('article', `reply-watch${found ? ' reply-watch--matched' : ''}`);
     card.dataset.watchId = item.id;
@@ -274,7 +275,9 @@ function renderWatches() {
     }
     actions.append(actionButton(found ? 'Segna come vista' : 'Chiudi avviso', 'dismiss-watch', 'ghost', undefined, { id: item.id }));
     card.append(text, actions); return card;
-  }));
+  };
+  replace('#reply-watch-list', ...(summary.items || []).filter(item => item.status === 'matched').map(watchCard));
+  replace('#reply-watch-waiting-list', ...(summary.items || []).filter(item => item.status !== 'matched').map(watchCard));
 }
 
 function gmailSetupGuide() {
@@ -295,7 +298,7 @@ function gmailSetupGuide() {
 function renderAgenda() {
   const agenda = state.agendaView || state.data.agenda;
   if (!agenda) return;
-  $('#agenda-source').textContent = 'Appuntamenti aggiunti da te · orari italiani. Il calendario esterno non è ancora collegato.';
+  $('#agenda-source').textContent = 'Orari italiani · appuntamenti aggiunti da te.';
   $('#agenda-export').href = `/api/agenda/export?date=${encodeURIComponent(agenda.date)}`;
   if (document.activeElement !== $('#agenda-view-date')) $('#agenda-view-date').value = agenda.date;
   if (!$('#agenda-event-date').value) $('#agenda-event-date').value = agenda.date;
@@ -303,7 +306,7 @@ function renderAgenda() {
   if (signature === state.agendaSignature) return;
   state.agendaSignature = signature;
   if (!agenda.items.length) {
-    const empty = el('div', 'agenda-empty'); empty.append(icon('calendar'), el('h3', '', 'La giornata aspetta i tuoi impegni.'), el('p', '', 'Aggiungi un incontro: lo troverai qui, in ordine di orario, e nel tuo ordine del giorno.'));
+    const empty = el('div', 'agenda-empty'); empty.append(icon('calendar'), el('h3', '', 'Nessun appuntamento aggiunto.'), el('p', '', 'Gli impegni che aggiungi compaiono qui, in ordine di orario.'));
     replace('#agenda-timeline', empty);
   } else {
     replace('#agenda-timeline', ...agenda.items.map(item => {

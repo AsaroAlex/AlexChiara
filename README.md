@@ -22,7 +22,7 @@ bash scripts/check.sh
 
 ## Il tuo buongiorno, già in ordine
 
-La panoramica usa una palette crema e arancione e mantiene «La tua giornata, con più spazio». Mostra le risposte da rivedere, il motivo della priorità, un estratto della richiesta e un prossimo passo concreto. Le urgenze esplicite precedono le richieste in attesa da almeno due giorni; le altre seguono l’ordine di arrivo. Le bozze sono leggibili, copiabili e segnabili come riviste nella stessa pagina. I controlli successivi non duplicano le conversazioni e non ripropongono una sorgente già rivista.
+La panoramica usa superfici bianche, grigi neutri, testo carbone e accenti mandarino e mantiene «La tua giornata, con più spazio». Mostra le risposte da rivedere, il motivo della priorità, un estratto della richiesta e un prossimo passo concreto. Le urgenze esplicite precedono le richieste in attesa da almeno due giorni; le altre seguono l’ordine di arrivo. Le bozze sono leggibili, copiabili e segnabili come riviste nella stessa pagina. I controlli successivi non duplicano le conversazioni e non ripropongono una sorgente già rivista.
 
 Il riepilogo usa solo i controlli salvati: apre il periodo dalle 18 della sera precedente oppure da venerdì sera durante il weekend e il lunedì, con orari italiani. Indica l’ultimo controllo e segnala quando va aggiornato; oltre un’ora gli ultimi arrivi non sono considerati verificati. I contatti senza messaggi sono indicati come tali soltanto quando la copertura lo prova. Gmail restituisce una selezione limitata di conversazioni in attesa: un’assenza resta «da verificare».
 
