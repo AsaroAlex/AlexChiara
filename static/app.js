@@ -57,6 +57,7 @@ function errorText(error) {
   }).join('; ');
   return error?.message || 'Non è stato possibile completare l’operazione. Riprova.';
 }
+function forgetPendingWizard() { try { sessionStorage.removeItem('filo-pending-wizard'); } catch (_) { /* Storage can be disabled. */ } }
 async function api(path, options = {}) {
   const headers = { Accept: 'application/json', ...(options.body !== undefined ? { 'Content-Type': 'application/json' } : {}), ...(options.headers || {}) };
   if (options.method && options.method !== 'GET' && state.data?.csrf_token) headers['X-CSRF-Token'] = state.data.csrf_token;
@@ -67,7 +68,7 @@ async function api(path, options = {}) {
   try { result = await response.json(); } catch (_) { result = {}; }
   if (response.status === 401) {
     clearImapSecret();
-    sessionStorage.removeItem('filo-pending-wizard');
+    forgetPendingWizard();
     location.replace('/login?next=/app');
     throw new Error('Accedi a Spazelia per continuare.');
   }
@@ -85,10 +86,12 @@ function toast(message, isError = false, undo = null) {
 }
 async function withBusy(button, operation) {
   if (button?.disabled) return;
-  const original = button?.textContent;
-  if (button) { button.disabled = true; button.setAttribute('aria-busy', 'true'); button.textContent = 'Un momento…'; }
+  // Keep icons and inner structure: restore the original nodes, not just the text.
+  const original = button ? Array.from(button.childNodes, node => node.cloneNode(true)) : [];
+  const iconOnly = button && !button.textContent.trim();
+  if (button) { button.disabled = true; button.setAttribute('aria-busy', 'true'); if (!iconOnly) button.textContent = 'Un momento…'; }
   try { return await operation(); }
-  finally { if (button?.isConnected) { button.disabled = false; button.removeAttribute('aria-busy'); button.textContent = original; } }
+  finally { if (button?.isConnected) { button.disabled = false; button.removeAttribute('aria-busy'); button.replaceChildren(...original); } }
 }
 function prettyDate(value, withTime = true) {
   if (!value) return 'Non ancora prevista';
@@ -101,8 +104,12 @@ function orderedRuns() { return [...(state.data?.runs || [])].sort((a, b) => new
 function openDialog(selector) { const dialog = $(selector); if (!dialog.open) { dialogFocus.set(dialog, document.activeElement); dialog.showModal(); } if (selector === '#wizard-dialog') { const heading = $('#wizard-title'); if (heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); } } }
 function closeDialog(selector) { if (selector === '#imap-dialog') clearImapSecret(); $(selector).close(); }
 
+let refreshGeneration = 0;
 async function refresh(forceCompany = false) {
+  const generation = ++refreshGeneration;
   const data = await api('/api/bootstrap');
+  // The 5-second poll, window focus and actions can overlap: keep the newest.
+  if (generation !== refreshGeneration) return;
   state.data = data;
   await Promise.all([refreshProviders(), refreshBusiness()]);
   if (state.agendaDate && state.agendaDate !== data.agenda?.date) {
@@ -115,8 +122,14 @@ async function refresh(forceCompany = false) {
   $('#load-error').hidden = true;
   $('#app-content').hidden = false;
 }
+const PAGE_TITLES = { overview: 'Panoramica', services: 'Servizi', activity: 'Attività', company: 'La tua azienda', connections: 'Collegamenti' };
+function showPage(page) {
+  // pushState changes the address without the hashchange scroll to the top.
+  if (location.hash.slice(1) !== page) history.pushState(null, '', `#${page}`);
+  setPage(page);
+}
 function setPage(page) {
-  const titles = { overview: 'Panoramica', services: 'Servizi', activity: 'Attività', company: 'La tua azienda', connections: 'Collegamenti' };
+  const titles = PAGE_TITLES;
   state.page = titles[page] ? page : 'overview';
   $$('.page-view').forEach(view => { view.hidden = view.id !== `page-${state.page}`; });
   $$('.nav-item').forEach(item => { const active = item.dataset.page === state.page; item.classList.toggle('active', active); if (active) item.setAttribute('aria-current', 'page'); else item.removeAttribute('aria-current'); });
@@ -489,7 +502,7 @@ async function handleBusinessAction(button) {
   }
   if (action === 'open-business') { await openBusinessModule(button.dataset.service || button.dataset.id); return; }
   if (action === 'business-open-catalog' || action === 'business-back') { state.businessService = null; state.businessRequest++; location.hash = 'services'; setPage('services'); renderBusiness(); $('#services-title').tabIndex = -1; $('#services-title').focus(); return; }
-  if (action === 'open-business-agenda') { location.hash = 'overview'; setPage('overview'); $('#agenda-title').scrollIntoView({ behavior: 'smooth', block: 'start' }); $('#agenda-view-date').focus({ preventScroll: true }); return; }
+  if (action === 'open-business-agenda') { showPage('overview'); $('#agenda-title').scrollIntoView({ behavior: 'smooth', block: 'start' }); $('#agenda-view-date').focus({ preventScroll: true }); return; }
   if (action === 'business-category') { state.businessCategory = button.dataset.category; state.businessLimit = 6; renderBusinessCatalog(); return; }
   if (action === 'business-clear-filters') { state.businessCategory = 'all'; state.businessSearch = ''; state.businessScope = 'all'; state.businessLimit = 6; $('#business-service-search').value = ''; $('#business-service-scope').value = 'all'; renderBusinessCatalog(); return; }
   if (action === 'business-more') { state.businessLimit += 6; renderBusinessCatalog(); return; }
@@ -677,7 +690,7 @@ function providerChooser() {
     const label = connected ? $('#wizard-dialog').open ? `Usa ${provider.label}` : 'Casella collegata · Preferenze' : !provider.configured ? state.data.user?.role === 'owner' ? `Prepara il collegamento ${provider.id === 'outlook' ? 'Microsoft' : provider.label}` : 'Scopri come collegarla' : `Collega ${provider.id === 'outlook' ? 'Outlook' : provider.id === 'imap' ? 'la casella' : provider.label}`;
     card.append(actionButton(label, connected ? 'use-mail-provider' : !provider.configured ? 'show-mail-setup' : 'connect-mail-provider', 'secondary', 'link', { provider: provider.id })); grid.append(card);
   }
-  if (!state.data.real_data_only) { const card = el('article', `provider-card${activeMailProvider() === 'demo' ? ' selected' : ''}`); card.append(el('span', 'provider-symbol', 'F'), el('h3', '', 'Casella demo'), el('p', '', 'Email di esempio, senza collegare la tua posta.'), actionButton('Usa la demo', 'connect-demo', 'secondary', 'link')); grid.append(card); }
+  if (!state.data.real_data_only) { const card = el('article', `provider-card${activeMailProvider() === 'demo' ? ' selected' : ''}`); const symbol = el('span', 'provider-symbol', 'D'); symbol.setAttribute('aria-hidden', 'true'); card.append(symbol, el('h3', '', 'Casella demo'), el('p', '', 'Email di esempio, senza collegare la tua posta.'), actionButton('Usa la demo', 'connect-demo', 'secondary', 'link')); grid.append(card); }
   return grid;
 }
 function renderMailConnections() {
@@ -698,7 +711,7 @@ function mailSetupGuide(id) {
   const link = el('a', 'text-link', google ? 'Apri Google Cloud' : 'Apri Microsoft Entra'); link.href = google ? 'https://console.cloud.google.com/apis/credentials' : 'https://entra.microsoft.com/'; link.target = '_blank'; link.rel = 'noopener noreferrer'; first.append(document.createTextNode(' '), link);
   const second = el('li', '', 'Aggiungi questo URI di reindirizzamento come applicazione web:'); const callback = el('code', '', provider.redirect_uri || `${location.origin}/api/${google ? 'gmail' : 'outlook'}/oauth/callback`); second.append(el('br'), callback);
   const third = el('li', '', google ? 'Nelle variabili Railway salva FILO_GOOGLE_CLIENT_ID e FILO_GOOGLE_CLIENT_SECRET. Imposta FILO_GOOGLE_REDIRECT_URI con l’URI qui sopra, poi distribuisci la modifica.' : 'Nelle variabili Railway salva FILO_MICROSOFT_CLIENT_ID e FILO_MICROSOFT_CLIENT_SECRET. Imposta FILO_MICROSOFT_REDIRECT_URI con l’URI qui sopra, poi distribuisci la modifica.');
-  const railway = el('a', 'text-link', 'Apri le variabili Railway'); railway.href = 'https://railway.com/project/23154853-8a90-4944-bac7-2315cd4f816f/service/9d3ce564-55cc-482e-ba8b-6e381cff9127/variables?environmentId=16183f90-7643-4954-9f1e-6efdb2fb16d3'; railway.target = '_blank'; railway.rel = 'noopener noreferrer'; third.append(document.createTextNode(' '), railway);
+  const railway = el('a', 'text-link', 'Apri le variabili Railway'); railway.href = 'https://railway.com/dashboard'; railway.target = '_blank'; railway.rel = 'noopener noreferrer'; third.append(document.createTextNode(' '), railway);
   steps.append(first, second, third); guide.append(steps, el('p', 'small-text', 'Il collegamento diventa disponibile dopo la configurazione. Nessuna casella risulta collegata fino alla tua autorizzazione.'), actionButton('Verifica configurazione', 'check-mail-setup', 'secondary', 'refresh', { provider: id })); return guide;
 }
 function clearImapSecret() { const input = $('#imap-password'); if (input) input.value = ''; }
@@ -715,7 +728,7 @@ async function connectMailProvider(id) {
   if (provider.kind === 'imap') { openImapConnection(id); return; }
   if (!provider.configured) { state.mailSetup = id; renderMailConnections(); if (state.wizard?.step === 2) { state.wizard.mailSetup = id; renderWizard(); } return; }
   const result = await api(`/api/${id}/oauth/start`, { method: 'POST', body: {} }); if (!result.authorization_url) throw new Error(`Il collegamento ${provider.label} non è ancora disponibile.`); const target = new URL(result.authorization_url, location.origin); const expectedHost = id === 'gmail' ? 'accounts.google.com' : 'login.microsoftonline.com'; if (target.protocol !== 'https:' || target.hostname !== expectedHost) throw new Error('Il collegamento ricevuto non è valido.');
-  if (state.wizard && $('#wizard-dialog').open) sessionStorage.setItem('filo-pending-wizard', JSON.stringify({ preferences: state.wizard.preferences, edit: state.wizard.edit, createdAt: Date.now() })); else sessionStorage.setItem('filo-pending-wizard', JSON.stringify({ reconnect: true, createdAt: Date.now() })); location.assign(target.href);
+  try { sessionStorage.setItem('filo-pending-wizard', JSON.stringify(state.wizard && $('#wizard-dialog').open ? { preferences: state.wizard.preferences, edit: state.wizard.edit, createdAt: Date.now() } : { reconnect: true, createdAt: Date.now() })); } catch (_) { /* The return still works; only the wizard step is not restored. */ } location.assign(target.href);
 }
 
 function renderAgenda() {
@@ -776,7 +789,10 @@ function startWizard(edit = false, reconnect = false, suggestedPreferences = nul
   const service = state.data.service;
   const contacts = service.priority_contacts?.length ? service.priority_contacts.map(x => ({ name: x.name, email: x.email })) : [{ name: '', email: '' }];
   state.wizard = { step: reconnect ? 2 : edit ? 3 : 1, edit, reconnect, preferences: { priority_contacts: contacts, hour: service.hour ?? 9, minute: service.minute ?? 0, timezone: 'Europe/Rome' }, preview: null, authorizedRead: false, authorizedDraft: false };
-  if (suggestedPreferences) state.wizard.preferences = { priority_contacts: suggestedPreferences.priority_contacts.map(contact => ({ name: contact.name, email: contact.email })), hour: suggestedPreferences.hour, minute: suggestedPreferences.minute, timezone: 'Europe/Rome' };
+  if (suggestedPreferences) {
+    const suggested = (suggestedPreferences.priority_contacts || []).map(contact => ({ name: contact.name, email: contact.email }));
+    state.wizard.preferences = { priority_contacts: suggested.length ? suggested : [{ name: '', email: '' }], hour: suggestedPreferences.hour ?? 9, minute: suggestedPreferences.minute ?? 0, timezone: 'Europe/Rome' };
+  }
   renderWizard(); openDialog('#wizard-dialog');
 }
 function field(labelText, type, id, value, props = {}) {
@@ -908,7 +924,7 @@ function renderRunDetail(run) {
   body.append(el('p', 'step-disclosure', 'Le bozze restano nella piattaforma. Registrare una revisione non invia email e non modifica la casella collegata.'));
 }
 
-async function handleAction(button) {
+async function handleAction(button, clickCount = 1) {
   const action = button.dataset.action;
   if (action === 'open-business' || action === 'open-business-agenda' || action.startsWith('business-')) { await handleBusinessAction(button); return; }
   if (action === 'review-priority') {
@@ -918,7 +934,10 @@ async function handleAction(button) {
   }
   if (action === 'copy-priority') {
     const item = currentBriefing()?.priorities?.find(item => item.draft_id === button.dataset.id);
-    if (item?.draft) { await navigator.clipboard.writeText(item.draft); toast('Bozza copiata. Puoi rivederla nella tua casella prima di inviarla.'); }
+    if (item?.draft) {
+      try { await navigator.clipboard.writeText(item.draft); toast('Bozza copiata. Puoi rivederla nella tua casella prima di inviarla.'); }
+      catch (_) { toast('Il browser non ha permesso la copia. Apri la bozza e copia il testo selezionandolo.', true); }
+    }
     return;
   }
   if (action === 'open-connections') { location.hash = 'connections'; return; }
@@ -940,12 +959,17 @@ async function handleAction(button) {
   if (action === 'open-demo-info') { openDialog('#info-dialog'); return; }
   if (action === 'open-chat') { location.hash = 'services'; setTimeout(() => { $('#chat-input').focus(); $('.chat-card').scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 0); return; }
   if (action === 'deactivate') { openDialog('#confirm-dialog'); return; }
-  if (action === 'wizard-company') { closeDialog('#wizard-dialog'); location.hash = 'company'; $('#company-name').focus(); return; }
+  if (action === 'wizard-company') { closeDialog('#wizard-dialog'); showPage('company'); window.scrollTo({ top: 0, behavior: 'auto' }); $('#company-name').focus(); return; }
   if (action === 'wizard-finish' || action === 'wizard-finish-reconnect') { closeDialog('#wizard-dialog'); location.hash = 'overview'; return; }
   if (action === 'add-contact') { if (state.wizard.preferences.priority_contacts.length < 4) { state.wizard.preferences.priority_contacts.push({ name: '', email: '' }); renderContactRows(); const input = $('#wizard-contacts .contact-row:last-child input'); input?.focus(); } return; }
   if (action === 'remove-contact') { if (state.wizard.preferences.priority_contacts.length > 1) { state.wizard.preferences.priority_contacts.splice(Number(button.dataset.index), 1); renderContactRows(); } return; }
-  if (action === 'wizard-back') { state.wizard.step--; renderWizard(); return; }
-  if (action === 'wizard-next') { if (state.wizard.step === 2 && state.data.connection.status !== 'connected') return; state.wizard.step++; renderWizard(); return; }
+  if (action === 'wizard-back' || action === 'wizard-next') {
+    // The footer is re-rendered under the pointer: the second click of a double click must not skip a step.
+    if (clickCount > 1) return;
+    if (action === 'wizard-back') { if (state.wizard.step > 1) state.wizard.step--; }
+    else { if (state.wizard.step === 2 && state.data.connection.status !== 'connected') return; state.wizard.step++; }
+    renderWizard(); return;
+  }
   const inWizard = $('#wizard-dialog').open;
   if (inWizard) notice('#wizard-error', '');
   await withBusy(button, async () => {
@@ -980,11 +1004,11 @@ async function handleAction(button) {
   });
 }
 
-document.addEventListener('click', event => { const button = event.target.closest('[data-action]'); if (button && !button.disabled) handleAction(button).catch(error => toast(error.message, true)); });
+document.addEventListener('click', event => { const button = event.target.closest('[data-action]'); if (button && !button.disabled) handleAction(button, event.detail).catch(error => toast(error.message, true)); });
 $('#business-search-button kbd').textContent = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘ K' : 'Ctrl K';
 document.addEventListener('keydown', event => {
   if (event.key === 'Escape' && $('#business-search-dialog').open) { event.preventDefault(); closeDialog('#business-search-dialog'); return; }
-  if (event.key.toLowerCase() !== 'k' || !(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey || event.repeat) return;
+  if (typeof event.key !== 'string' || event.key.toLowerCase() !== 'k' || !(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey || event.repeat) return;
   if (event.target.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"])') || $('dialog[open]') || !state.data) return;
   event.preventDefault(); openBusinessSearch();
 });
@@ -996,6 +1020,7 @@ $$('dialog').forEach(dialog => dialog.addEventListener('close', () => {
   if (dialog.id === 'business-repeat-dialog') businessRepeatingSource = null;
   const previous = dialogFocus.get(dialog); const current = $('dialog[open]');
   if (previous?.isConnected && (!current || current.contains(previous)) && previous.getClientRects().length) previous.focus({ preventScroll: true });
+  else if (!current) $('#main-content').focus({ preventScroll: true });
 }));
 document.addEventListener('input', event => {
   const target = event.target;
@@ -1113,8 +1138,19 @@ $('#chat-form').addEventListener('submit', async event => {
     finally { state.chatBusy = false; }
   });
 });
-window.addEventListener('hashchange', () => { setPage(location.hash.slice(1)); window.scrollTo({ top: 0, behavior: 'auto' }); });
-$$('dialog').forEach(dialog => dialog.addEventListener('click', event => { if (event.target === dialog) { const bounds = dialog.getBoundingClientRect(); if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) closeDialog(`#${dialog.id}`); } }));
+window.addEventListener('hashchange', () => {
+  // In-page anchors such as the "Vai al contenuto" skip link are not pages.
+  if (!PAGE_TITLES[location.hash.slice(1)]) return;
+  setPage(location.hash.slice(1)); window.scrollTo({ top: 0, behavior: 'auto' });
+});
+// A text selection that starts in a field and ends outside the dialog also
+// produces a click on the dialog: close only when the press began on the backdrop.
+function outsideDialog(dialog, event) { const bounds = dialog.getBoundingClientRect(); return event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom; }
+$$('dialog').forEach(dialog => {
+  let pressedOutside = false;
+  dialog.addEventListener('pointerdown', event => { pressedOutside = event.target === dialog && outsideDialog(dialog, event); });
+  dialog.addEventListener('click', event => { if (pressedOutside && event.target === dialog && outsideDialog(dialog, event)) closeDialog(`#${dialog.id}`); pressedOutside = false; });
+});
 window.addEventListener('focus', async () => {
   if (!state.data) return;
   try { await refresh(); if (state.wizard?.step === 2 && $('#wizard-dialog').open && !$('#imap-dialog').open) renderWizard(); } catch (_) {}
@@ -1129,7 +1165,7 @@ async function initialize() {
     if (returned && isRealMailbox() && state.data.connection.status === 'connected') {
       toast(`${mailProviderLabel()} collegata. Rivedi le preferenze e autorizza il servizio.`);
       let pending; try { pending = JSON.parse(sessionStorage.getItem('filo-pending-wizard')); } catch (_) {}
-      sessionStorage.removeItem('filo-pending-wizard');
+      forgetPendingWizard();
       if (pending && Date.now() - pending.createdAt < 3600000 && Array.isArray(pending.preferences?.priority_contacts)) { startWizard(Boolean(pending.edit), false, pending.preferences); state.wizard.step = 3; renderWizard(); }
       else if (pending?.reconnect) { location.hash = 'connections'; }
       history.replaceState(null, '', `${location.pathname}${location.hash}`);

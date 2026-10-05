@@ -29,7 +29,7 @@ Il prodotto si presenta come Spazelia. Il rebranding conserva le variabili `FILO
 - Il worker server controlla gli orari anche con pagina e chat chiuse. Gli slot quotidiani e i risultati hanno vincoli di unicità nel database. Le esecuzioni manuali sono registrate separatamente; i tentativi ripetuti lavorano sullo stesso identificativo.
 - I contatti e la configurazione aziendale sono validati. Il limite è quattro indirizzi distinti, un orario quotidiano e il fuso Europe/Rome oppure UTC. Le preferenze si possono cambiare senza riscrivere una richiesta in chat.
 - Le bozze sono prima pendenti, poi possono essere segnate come riviste. Questa approvazione non comporta un invio o una scrittura esterna.
-- Lo stato delle esecuzioni distingue attesa, esecuzione, attesa del nuovo tentativo, riuscita e fallimento. Gli errori riportano operazione, passaggio, risultato già completato e azione necessaria. I tentativi sono limitati a tre; una revoca dell'accesso non viene trattata come un guasto transitorio.
+- Lo stato delle esecuzioni distingue attesa, esecuzione, attesa del nuovo tentativo, riuscita e fallimento. Gli errori riportano operazione, passaggio, risultato già completato e azione necessaria. I controlli manuali e gli avvisi fanno al massimo tre tentativi; il controllo quotidiano, che ha un solo orario al giorno, riprova dopo 1, 5, 15, 30 e 60 minuti per coprire circa due ore di disservizio. Una revoca dell'accesso non viene trattata come un guasto transitorio. Ogni ora il worker elimina i controlli degli avvisi più vecchi di un giorno, senza bozze, i cui messaggi compaiono già in un controllo successivo: riepilogo, avvisi e suggerimenti leggono le stesse osservazioni.
 
 ## Riavvio e fermo
 

@@ -40,6 +40,15 @@ Il piano usa Spazelia come nome pubblico. Le variabili `FILO_*`, il dominio Rail
    l'annullamento dal portale. Attivare le chiavi live e il relativo prezzo e
    webhook solo dopo la verifica del listino e delle condizioni. Tenere gli
    ambienti test e produzione e i relativi dati separati.
+6. Impostare la versione API dell'endpoint webhook su `2024-06-20`, la stessa
+   usata dal server, così le notifiche riportano anche la fine del periodo.
+
+Il passaggio dalle chiavi di test (`sk_test_…`) a quelle live (`sk_live_…`)
+sullo stesso volume è previsto: clienti e abbonamenti sono marcati con la
+modalità che li ha creati, gli abbonamenti di prova non contano in produzione
+e al primo acquisto live viene creato un nuovo cliente Stripe. Se un cliente
+viene eliminato dal dashboard Stripe, il successivo Checkout ne crea uno nuovo
+una sola volta; il portale indica che non c'è ancora un abbonamento da gestire.
 
 Le chiavi segrete non vanno nel JavaScript, nei file statici, nei link, nei log
 o nel repository. Il codice usa l'API Stripe versione `2024-06-20` tramite
@@ -64,6 +73,9 @@ dati delle carte.
   minuti. La dimensione massima nel router è 512 KiB; vale anche l'eventuale
   limite più basso del middleware. Gli eventi sono deduplicati in modo
   transazionale e quelli più vecchi non sovrascrivono uno stato più recente.
+  Se due eventi dello stesso abbonamento hanno lo stesso secondo di creazione
+  e stati diversi, il server legge lo stato attuale da Stripe invece di fidarsi
+  dell'ordine di consegna.
 
 Il parametro `billing=success` non significa che il pagamento sia riuscito.
 Solo le notifiche firmate aggiornano lo stato. Checkout completato e fatture
@@ -76,5 +88,7 @@ una lettura Stripe fallita non viene riconosciuta, permettendo il retry.
 
 I test di `tests/test_billing.py` usano soltanto risposte Stripe simulate:
 assenza di configurazione, isolamento tra utenti, prezzi imposti dal server,
-riuso di Checkout, firme errate o scadute, duplicati, notifiche fuori ordine,
-annullamento, mancati pagamenti, persistenza e indisponibilità del provider.
+riuso di Checkout, firme errate o scadute, duplicati, notifiche fuori ordine
+o nello stesso secondo, annullamento, mancati pagamenti, persistenza,
+passaggio test/live, cliente eliminato, scadenza dei Checkout ritentati e
+indisponibilità del provider.

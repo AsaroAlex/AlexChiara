@@ -140,3 +140,27 @@ Il report usa il simbolo Spazelia e superfici bianche con testo carbone e aranci
 Il rebranding del prodotto passa `bash scripts/check.sh`: **649 test**, dipendenze compatibili e sintassi di entrambi gli script JavaScript valida. Passano `account-smoke.cjs`, `business-smoke.cjs`, `playbook-smoke.cjs`, `mail-providers-smoke.cjs` e `morning-smoke.cjs` su archivi locali isolati. Sono nuovamente verificati accesso e registrazione, sessioni dopo ricarica, isolamento degli account, 23 moduli, documenti scaricabili, checklist, ripetizioni e configurazione dei provider con risposte simulate.
 
 Le quattro pagine pubbliche/account sono controllate a 1440, 390 e 320 pixel; le cinque aree dell’app a 1440, 1200, 1000, 700, 390 e 320 pixel. Logo e favicon rispondono correttamente; titoli e testi operativi usano Spazelia, senza errori JavaScript o overflow. I cinque passaggi del wizard sono verificati anche fra 320 e 401 pixel: sui telefoni più stretti rimangono visibili tutti i numeri e il nome corrente, con gli altri nomi disponibili agli screen reader. Nessuna migrazione di dati o sessioni, acquisto di dominio, collegamento esterno o pagamento reale è stato eseguito dalle prove.
+
+## Revisione di rilascio — 5 ottobre 2026
+
+Revisione completa per il rilascio, con quattro controlli indipendenti (account e pagamenti, connettori email e pianificazione, moduli aziendali, interfaccia nel browser) e correzione di ogni difetto confermato. Ogni correzione ha un test che riproduce il caso; la prova `release-ui-smoke.cjs` fallisce sul codice precedente e passa su quello corretto.
+
+| Prova | Esito |
+| --- | --- |
+| Suite applicativa | `bash scripts/check.sh` passa con **791 test** (erano 649), su Python 3.11 e 3.12 (la versione di Railway) |
+| Dipendenze | FastAPI 0.142.2, Starlette 1.7.0, Uvicorn 0.54.0, cryptography 50.0.2, pytest 9.1.1. `pip-audit` su `requirements.lock`: nessuna vulnerabilità nota (prima: DoS con l’header Range sui file statici, ricostruzione dell’URL dall’header Host, OpenSSL incluso in cryptography) |
+| Prove browser | Passano le nove prove esistenti e la nuova `release-ui-smoke.cjs`, tutte su archivi temporanei e senza provider reali |
+| Avvio Railway simulato | `scripts/railway-start.sh` con header del proxy HTTPS: cookie `Secure`, host consentiti, accesso e spazio privato funzionanti |
+
+Difetti corretti, in sintesi:
+
+- **Confine pubblico**: header Host malformati rifiutati, decisioni di accesso sul percorso effettivamente instradato, `favicon.ico`, icona Apple, `robots.txt`, pagina 404 HTML, richieste HEAD, documentazione API degli spazi privati non più esposta.
+- **Account**: limite ai tentativi basato su `X-Real-IP` di Railway (prima `X-Forwarded-For`, falsificabile), accessi riusciti non conteggiati, hash scrypt concorrenti limitati, nessun blocco all’avvio se il nome utente del gestore coincide con un account, modulo di accesso funzionante anche dopo un’ora di inattività.
+- **Gmail**: le bozze non inviate, il cestino e lo spam non nascondono più la richiesta del cliente; allegati di testo non sostituiscono il corpo; set di caratteri dichiarato; errori di rete e risposte malformate gestiti senza errori 500; ritorno all’app con un messaggio quando il consenso è annullato.
+- **IMAP e Outlook**: intestazioni malformate non bloccano il controllo; dimensioni stimate (Exchange) accettate; rifiuti temporanei ritentati; password con accenti; consenso Microsoft non più forzato; posta inviata letta senza scaricare il testo di tutti i messaggi.
+- **Pianificazione**: il controllo quotidiano riprova per circa due ore; ricollegare la stessa casella conserva bozze riviste e avvisi; pulizia oraria dei controlli degli avvisi ripetuti; azioni del servizio in una sola transazione; avvio che apre solo gli spazi con lavoro programmato e isola uno spazio danneggiato.
+- **Pagamenti**: chiavi Stripe test e live separate, cliente eliminato ricreato, Checkout ritentato prima che la scadenza diventi troppo vicina, eventi nello stesso secondo risolti leggendo lo stato da Stripe.
+- **Moduli aziendali**: chat che riconosce le richieste comuni e le negazioni, importi senza “−0,00 €”, conversione della fattura più alta in incasso, ricerca senza distinzione di accenti e con importi italiani, caratteri invisibili rifiutati, verifica di partita IVA e codice fiscale, attività annullate non convertibili.
+- **Interfaccia**: selezionare testo in una finestra non la chiude più, i pulsanti mantengono le icone, il collegamento “Vai al contenuto” non cambia pagina, messaggi di validazione in italiano, link della homepage coerenti per chi ha già effettuato l’accesso, archiviazione del browser disattivata gestita.
+
+Limiti che restano: il collegamento a caselle reali Gmail, Outlook e IMAP e gli addebiti Stripe reali non sono stati collaudati con account veri; le prove usano risposte simulate. Il recupero della password via email, la verifica dell’indirizzo e la cancellazione dell’account non sono ancora disponibili.

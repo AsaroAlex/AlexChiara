@@ -20,10 +20,10 @@ Il pulsante Gmail apre il consenso Google nella stessa scheda. Prima occorre con
    https://filo-production-65a1.up.railway.app/api/gmail/oauth/callback
    ```
 
-6. In **filo → production → Variables** su [Railway](https://railway.com/project/23154853-8a90-4944-bac7-2315cd4f816f/service/9d3ce564-55cc-482e-ba8b-6e381cff9127?environmentId=16183f90-7643-4954-9f1e-6efdb2fb16d3), inserisci `FILO_GOOGLE_CLIENT_ID` e `FILO_GOOGLE_CLIENT_SECRET`. Imposta `FILO_GOOGLE_REDIRECT_URI` alla callback sopra e applica il deploy. Il segreto va nelle variabili del server, senza inserirlo in Git o in chat.
+6. In **filo → production → Variables** su [Railway](https://railway.com/project/23154853-8a90-4944-bac7-2315cd4f816f/service/9d3ce564-55cc-482e-ba8b-6e381cff9127?environmentId=16183f90-7643-4954-9f1e-6efdb2fb16d3), inserisci `FILO_GOOGLE_CLIENT_ID` e `FILO_GOOGLE_CLIENT_SECRET`. Imposta `FILO_GOOGLE_REDIRECT_URI` alla callback sopra e applica il deploy; se manca, Spazelia usa `FILO_PUBLIC_URL` oppure il dominio pubblico Railway. Il segreto va nelle variabili del server, senza inserirlo in Git o in chat.
 7. Torna a **Collegamenti → Gmail**, accedi alla casella autorizzata e concedi la lettura.
 
-`redirect_uri_mismatch` indica una callback differente. In modalità test, verifica che la casella sia tra gli utenti di test. I refresh token di app External in test possono scadere dopo sette giorni. Per offrire il collegamento al pubblico, completa il percorso di produzione e la verifica richiesta da Google per l'ambito Gmail ristretto. Vedi [la guida Gmail dettagliata](GMAIL.md).
+Se l'utente annulla il consenso o Google rifiuta il collegamento, la pagina torna su **Collegamenti** con il motivo, senza salvare credenziali. `redirect_uri_mismatch` indica una callback differente. In modalità test, verifica che la casella sia tra gli utenti di test. I refresh token di app External in test possono scadere dopo sette giorni. Per offrire il collegamento al pubblico, completa il percorso di produzione e la verifica richiesta da Google per l'ambito Gmail ristretto. Vedi [la guida Gmail dettagliata](GMAIL.md).
 
 ## Outlook e Microsoft 365: configurazione iniziale del gestore
 
@@ -46,7 +46,7 @@ Il pulsante Gmail apre il consenso Google nella stessa scheda. Prima occorre con
    FILO_MICROSOFT_REDIRECT_URI=https://filo-production-65a1.up.railway.app/api/outlook/oauth/callback
    ```
 
-7. Torna a **Collegamenti → Outlook e Microsoft 365** e completa il consenso nella stessa scheda.
+7. Torna a **Collegamenti → Outlook e Microsoft 365** e completa il consenso nella stessa scheda. Spazelia chiede a Microsoft di scegliere l'account senza forzare ogni volta la schermata di consenso: Microsoft la mostra quando serve, e nelle organizzazioni in cui solo l'amministratore può approvare le app il collegamento funziona dopo l'approvazione.
 
 `User.Read` identifica l'indirizzo della casella; `Mail.Read` legge la posta. Riferimenti: [registrare un'app](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app), [consenso e ambiti](https://learn.microsoft.com/en-us/entra/identity-platform/scopes-oidc), [elenco messaggi](https://learn.microsoft.com/en-us/graph/api/user-list-messages).
 
@@ -64,13 +64,13 @@ Seleziona il provider, inserisci indirizzo email e password per app quando richi
 
 Gmail e Outlook utilizzano i propri pulsanti OAuth. Il preset Aruba riguarda la posta ordinaria; per una PEC usa il modulo personalizzato con il server corretto indicato dal fornitore. Eventuali costi dell'opzione IMAP dipendono dal proprio contratto.
 
-Spazelia apre le cartelle in sola lettura e usa `BODY.PEEK`, senza segnare le email come lette. Controlla la posta inviata quando disponibile per riconoscere risposte già osservate; la copertura rimane incompleta. Scarica messaggi MIME limitati a 512 KiB, esclude gli allegati dall'analisi e salta messaggi troppo grandi. Server privati, locali o privi di TLS non vengono accettati.
+Spazelia apre le cartelle in sola lettura e usa `BODY.PEEK`, senza segnare le email come lette. Le password con lettere accentate sono inviate con SASL PLAIN quando il server lo supporta. I rifiuti temporanei del server (occupato o troppe connessioni) vengono ritentati senza chiedere una nuova password; un messaggio con intestazioni malformate viene saltato senza fermare il controllo. Controlla la posta inviata quando disponibile per riconoscere risposte già osservate; la copertura rimane incompleta. Con Outlook la posta inviata viene elencata senza scaricarne il testo: Spazelia apre solo le risposte ai contatti prioritari. Scarica messaggi MIME limitati a 512 KiB, esclude gli allegati dall'analisi e salta messaggi troppo grandi. Server privati, locali o privi di TLS non vengono accettati.
 
 Riferimenti: [iCloud IMAP](https://support.apple.com/102525), [password Apple per app](https://support.apple.com/102654), [Yahoo IMAP](https://help.yahoo.com/kb/SLN4075.html), [assistenza Aruba](https://guide.hosting.aruba.it/), [assistenza Libero](https://aiuto.libero.it/).
 
 ## Dopo il collegamento
 
-Compila il profilo della tua attività, scegli da uno a quattro contatti prioritari e l'orario del controllo. L'attivazione autorizza lettura e preparazione di bozze. Con un avviso odierno in attesa, il servizio attivo verifica nuovi arrivi ogni cinque minuti anche senza browser aperto; pausa e scollegamento fermano i controlli.
+Compila il profilo della tua attività, scegli da uno a quattro contatti prioritari e l'orario del controllo. L'attivazione autorizza lettura e preparazione di bozze. Con un avviso odierno in attesa, il servizio attivo verifica nuovi arrivi ogni cinque minuti anche senza browser aperto; pausa e scollegamento fermano i controlli. Rinnovare il consenso della stessa casella conserva bozze già riviste e avvisi; una casella diversa riparte da zero. Gmail ignora le bozze non inviate, il cestino e lo spam presenti nelle conversazioni.
 
 **Scollega** elimina localmente le credenziali di tutti i provider e ferma il servizio. Per revocare anche presso il fornitore, rimuovi Spazelia dalle app collegate oppure revoca la password per app nelle impostazioni della casella.
 
