@@ -2,7 +2,7 @@
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-const state = { data: null, gmail: null, page: 'overview', companyDirty: false, companyInitialized: false, loading: false, wizard: null, currentRun: null, chatBusy: false, chatPreferences: null, watchSuggestion: null, watchSignature: null, briefingSignature: null, agendaSignature: null, agendaDate: null, agendaView: null };
+const state = { data: null, gmail: null, providers: [], mailSetup: null, mailChange: null, imapProvider: null, page: 'overview', companyDirty: false, companyInitialized: false, loading: false, wizard: null, currentRun: null, chatBusy: false, chatPreferences: null, watchSuggestion: null, watchSignature: null, briefingSignature: null, agendaSignature: null, agendaDate: null, agendaView: null };
 let toastTimer;
 let lastFocused;
 
@@ -50,6 +50,7 @@ async function api(path, options = {}) {
   let result;
   try { result = await response.json(); } catch (_) { result = {}; }
   if (response.status === 401) {
+    clearImapSecret();
     sessionStorage.removeItem('filo-pending-wizard');
     location.replace('/login?next=/app');
     throw new Error('Accedi a Filo per continuare.');
@@ -80,11 +81,12 @@ function prettyDate(value, withTime = true) {
 function clockTime(service = state.data?.service) { return service ? `${String(service.hour ?? 9).padStart(2, '0')}:${String(service.minute ?? 0).padStart(2, '0')}` : '09:00'; }
 function orderedRuns() { return [...(state.data?.runs || [])].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); }
 function openDialog(selector) { lastFocused = document.activeElement; const dialog = $(selector); if (!dialog.open) dialog.showModal(); if (selector === '#wizard-dialog') { const heading = $('#wizard-title'); if (heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); } } }
-function closeDialog(selector) { $(selector).close(); if (lastFocused?.isConnected) lastFocused.focus(); }
+function closeDialog(selector) { if (selector === '#imap-dialog') clearImapSecret(); $(selector).close(); if (lastFocused?.isConnected) lastFocused.focus(); }
 
 async function refresh(forceCompany = false) {
   const data = await api('/api/bootstrap');
   state.data = data;
+  await refreshProviders();
   if (state.agendaDate && state.agendaDate !== data.agenda?.date) {
     const day = state.agendaDate;
     const agenda = await api(`/api/agenda?date=${encodeURIComponent(day)}`);
@@ -96,7 +98,7 @@ async function refresh(forceCompany = false) {
   $('#app-content').hidden = false;
 }
 function setPage(page) {
-  const titles = { overview: 'Panoramica', services: 'Servizi', activity: 'Attività', company: 'La tua azienda' };
+  const titles = { overview: 'Panoramica', services: 'Servizi', activity: 'Attività', company: 'La tua azienda', connections: 'Collegamenti' };
   state.page = titles[page] ? page : 'overview';
   $$('.page-view').forEach(view => { view.hidden = view.id !== `page-${state.page}`; });
   $$('.nav-item').forEach(item => { const active = item.dataset.page === state.page; item.classList.toggle('active', active); if (active) item.setAttribute('aria-current', 'page'); else item.removeAttribute('aria-current'); });
@@ -111,7 +113,7 @@ function render(forceCompany = false) {
   $('#greeting-label').textContent = `${hour < 13 ? 'Buongiorno' : hour < 19 ? 'Buon pomeriggio' : 'Buonasera'}${company.name ? `, ${company.name}` : ', c’è Filo'}`;
   setPill('#overview-service-status', service.status);
   const expired = connection.status === 'expired';
-  notice('#connection-alert', expired ? 'La connessione alla casella è scaduta. Ricollega Gmail per riprendere i controlli.' : '');
+  notice('#connection-alert', expired ? 'La connessione alla casella è scaduta. Ricollega la casella per riprendere i controlli.' : '');
   $('.demo-banner').hidden = Boolean(state.data.real_data_only) || connection.provider !== 'demo';
   $('.demo-controls').hidden = Boolean(state.data.real_data_only);
   $('.form-intro').textContent = company.needs_setup ? 'Inserisci il nome della tua attività e la firma da usare nelle risposte.' : 'Mantieni aggiornati il profilo e la firma usati nelle bozze.';
@@ -120,7 +122,7 @@ function render(forceCompany = false) {
   $('#overview-service-description').textContent = isActive ? 'La tua segreteria è al lavoro: seleziona le email prioritarie e prepara bozze locali che potrai rivedere.' : isPaused ? 'Hai messo il servizio in pausa. Le esecuzioni programmate si fermano; attività e bozze restano a disposizione.' : 'Scegli chi seguire. Filo ordina le richieste e prepara le bozze.';
   const facts = [];
   if (isActive || isPaused) {
-    for (const [symbol, text] of [['clock', `${clockTime()} · Europe/Rome`], ['mail', `${service.priority_contacts?.length || 0} contatti prioritari`], ['link', connection.provider === 'gmail' ? 'Casella Gmail' : 'Casella demo']]) { const fact = el('span', 'service-fact', text); fact.prepend(icon(symbol)); facts.push(fact); }
+    for (const [symbol, text] of [['clock', `${clockTime()} · Europe/Rome`], ['mail', `${service.priority_contacts?.length || 0} contatti prioritari`], ['link', `Casella ${mailProviderLabel()}`]]) { const fact = el('span', 'service-fact', text); fact.prepend(icon(symbol)); facts.push(fact); }
   }
   replace('#overview-service-facts', ...facts);
   const overviewActions = [];
@@ -151,13 +153,11 @@ function render(forceCompany = false) {
     for (const field of ['name', 'sector', 'description', 'signature']) $(`#company-${field}`).value = company[field] || '';
     state.companyInitialized = true; state.companyDirty = false;
   }
-  const connectionNodes = [statusPill(connection.status || 'disconnected'), el('p', '', connection.label || (connection.provider === 'demo' ? 'Casella demo con email di esempio.' : 'Nessuna casella collegata. Configurala durante l’attivazione.'))];
-  if (connection.provider === 'gmail') {
-    connectionNodes.push(el('p', '', 'Google autorizza la lettura della casella; Filo controlla solo i clienti scelti. Non può inviare email.'));
-    connectionNodes.push(el('p', '', 'Controlla gli ultimi 7 giorni: fino a 20 conversazioni e una selezione di 25 messaggi. Gli allegati non vengono letti.'));
-    connectionNodes.push(actionButton('Scollega Gmail', 'disconnect-gmail', 'secondary'));
-  }
+  const connectionNodes = [statusPill(connection.status || 'disconnected'), el('p', '', connection.label || (connection.provider === 'demo' ? 'Casella demo con email di esempio.' : 'Nessuna casella collegata. Scegli il tuo provider nei Collegamenti.'))];
+  if (isRealMailbox()) connectionNodes.push(el('p', '', `${mailProviderLabel()} · Lettura della posta e bozze locali, senza invio.`));
+  connectionNodes.push(actionButton(isRealMailbox() ? 'Gestisci la casella' : 'Collega la tua posta', 'open-connections', 'secondary', 'link'));
   replace('#company-connection', ...connectionNodes);
+  renderMailConnections();
   $('#demo-scenario-status').textContent = expired ? 'Connessione demo scaduta: il servizio richiede un ripristino.' : state.data.demo_failure === 'expired' ? 'La prossima esecuzione demo simulerà una connessione scaduta.' : state.data.demo_failure === 'temporary' ? 'La prossima esecuzione demo simulerà un errore temporaneo.' : '';
   $$('[data-action^="simulate-"]').forEach(button => { button.disabled = connection.provider !== 'demo'; });
   renderMorning();
@@ -244,7 +244,7 @@ function renderMorning() {
 function renderWatches() {
   const summary = state.data.watches || { items: [] };
   const contacts = state.data.service.priority_contacts || [];
-  const available = state.data.connection.provider === 'gmail' && state.data.connection.status === 'connected' && contacts.length;
+  const available = isRealMailbox() && state.data.connection.status === 'connected' && contacts.length;
   $('#reply-watch-form-panel').hidden = !available;
   const contactSelect = $('#watch-contact');
   const selected = contactSelect.value;
@@ -266,16 +266,12 @@ function renderWatches() {
     card.dataset.watchId = item.id;
     const text = el('div');
     text.append(el('strong', '', found ? `${item.name} ha scritto · da guardare subito` : `${item.name} · ${prettyDate(`${item.day}T12:00:00Z`, false)}`));
-    const detail = found ? `È arrivata un’email ${prettyDate(item.match.received_at)}. Aprila per verificare la risposta che aspettavi.` : item.status === 'expired' ? 'Il giorno è concluso. Non abbiamo un riscontro verificato: il controllo copre una selezione di messaggi.' : item.contact_active === false ? 'Il contatto non è più seguito. Riaggiungilo nelle preferenze o chiudi l’avviso.' : !summary.monitoring_active ? 'Avviso salvato. Attiva o riprendi la segreteria per controllare Gmail.' : summary.next_check_at ? `Risposta da seguire. Prossimo controllo: ${prettyDate(summary.next_check_at)}.` : 'Risposta da seguire. Controllo in corso.';
+    const detail = found ? `È arrivata un’email ${prettyDate(item.match.received_at)}. Aprila per verificare la risposta che aspettavi.` : item.status === 'expired' ? 'Il giorno è concluso. Non abbiamo un riscontro verificato: il controllo copre una selezione di messaggi.' : item.contact_active === false ? 'Il contatto non è più seguito. Riaggiungilo nelle preferenze o chiudi l’avviso.' : !summary.monitoring_active ? 'Avviso salvato. Attiva o riprendi la segreteria per controllare la casella.' : summary.next_check_at ? `Risposta da seguire. Prossimo controllo: ${prettyDate(summary.next_check_at)}.` : 'Risposta da seguire. Controllo in corso.';
     text.append(el('p', 'small-text', detail));
     const actions = el('div', 'watch-actions');
     if (found) {
-      const link = el('a', 'button secondary', 'Apri Gmail');
-      const account = state.data.connection.label || '';
-      const url = new URL('https://mail.google.com/mail/');
-      if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(account)) url.searchParams.set('authuser', account);
-      url.hash = `all/${encodeURIComponent(item.match.thread_id || item.match.source_id)}`;
-      link.href = url.href; link.target = '_blank'; link.rel = 'noopener noreferrer'; actions.append(link);
+      const href = mailboxMessageURL(item.match);
+      if (href) { const link = el('a', 'button secondary', `Apri ${mailProviderLabel()}`); link.href = href; link.target = '_blank'; link.rel = 'noopener noreferrer'; actions.append(link); }
     }
     actions.append(actionButton(found ? 'Segna come vista' : 'Chiudi avviso', 'dismiss-watch', 'ghost', undefined, { id: item.id }));
     card.append(text, actions); return card;
@@ -284,23 +280,81 @@ function renderWatches() {
   replace('#reply-watch-waiting-list', ...(summary.items || []).filter(item => item.status !== 'matched').map(watchCard));
 }
 
-function gmailSetupGuide() {
-  const guide = el('div', 'boundary-note');
-  guide.style.display = 'block';
-  if (state.data.user && state.data.user.role !== 'owner') {
-    guide.append(el('h3', '', 'Il collegamento Gmail è in preparazione.'), el('p', '', 'Quando sarà disponibile, potrai autorizzare la lettura della tua casella qui. Intanto puoi organizzare l’agenda e completare il profilo della tua attività.'), actionButton('Verifica disponibilità', 'check-gmail-setup', 'secondary', 'refresh'));
-    return guide;
+const MAIL_PRESETS = [
+  { id: 'gmail', label: 'Gmail', kind: 'oauth', symbol: 'G', configured: false },
+  { id: 'outlook', label: 'Outlook / Microsoft 365', kind: 'oauth', symbol: 'O', configured: false },
+  { id: 'icloud', label: 'iCloud Mail', kind: 'imap', symbol: 'i', configured: true, host: 'imap.mail.me.com', setup_note: 'Crea una password specifica per app nel tuo Apple Account, poi inseriscila qui.', help: 'https://support.apple.com/it-it/102654' },
+  { id: 'yahoo', label: 'Yahoo Mail', kind: 'imap', symbol: 'Y', configured: true, host: 'imap.mail.yahoo.com', setup_note: 'Usa una password per app Yahoo, creata nelle impostazioni di sicurezza del tuo account.', help: 'https://help.yahoo.com/kb/SLN15241.html' },
+  { id: 'aruba', label: 'Aruba', kind: 'imap', symbol: 'A', configured: true, host: 'imaps.aruba.it', setup_note: 'Collega una casella email Aruba standard. Le caselle PEC e i servizi Exchange usano impostazioni diverse.' },
+  { id: 'libero', label: 'Libero Mail', kind: 'imap', symbol: 'L', configured: true, host: 'imapmail.libero.it', setup_note: 'Inserisci le credenziali della tua casella Libero. Se usi la verifica in due passaggi, crea una password per app.' },
+  { id: 'imap', label: 'Altra casella IMAP', kind: 'imap', symbol: '@', configured: true, setup_note: 'Chiedi al tuo provider il server IMAP e verifica che l’accesso IMAP sia abilitato. La connessione usa TLS sulla porta 993.' }
+];
+function activeMailProvider() { const connection = state.data?.connection || {}; return connection.provider === 'imap' ? connection.mail_provider || 'imap' : connection.provider; }
+function mailProvider(id) { const preset = MAIL_PRESETS.find(item => item.id === id); const current = state.providers.find(item => item.id === id); return { ...preset, ...current }; }
+function mailProviderLabel() { const id = activeMailProvider(); return id === 'demo' ? 'demo' : mailProvider(id).label || 'email'; }
+function isRealMailbox() { return ['gmail', 'outlook', 'imap'].includes(state.data?.connection?.provider); }
+async function refreshProviders() {
+  try { const result = await api('/api/mail/providers'); state.providers = Array.isArray(result.providers) ? result.providers.map(item => ({ ...MAIL_PRESETS.find(preset => preset.id === item.id), ...item })) : []; }
+  catch (_) { if (!state.providers.length) state.providers = MAIL_PRESETS.map(item => ({ ...item, configured: item.kind === 'imap' || item.id === 'gmail' && Boolean(state.gmail?.configured) })); }
+}
+function mailboxMessageURL(match) {
+  const id = activeMailProvider();
+  if (id === 'gmail') { const url = new URL('https://mail.google.com/mail/'); const email = state.data.connection.label || ''; if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) url.searchParams.set('authuser', email); url.hash = `all/${encodeURIComponent(match.thread_id || match.source_id || '')}`; return url.href; }
+  const links = { outlook: 'https://outlook.office.com/mail/', icloud: 'https://www.icloud.com/mail/', yahoo: 'https://mail.yahoo.com/', aruba: 'https://webmail.aruba.it/', libero: 'https://mail.libero.it/' };
+  return links[id] || null;
+}
+function providerChooser() {
+  const grid = el('div', 'provider-grid mail-provider-grid');
+  const items = state.providers.length ? state.providers : MAIL_PRESETS;
+  for (const provider of items) {
+    const connected = activeMailProvider() === provider.id && state.data.connection.status === 'connected';
+    const card = el('article', `provider-card${connected ? ' selected' : ''}`); const symbol = el('span', 'provider-symbol', provider.symbol || provider.label?.[0] || '@'); symbol.setAttribute('aria-hidden', 'true'); card.append(symbol, el('h3', '', provider.label));
+    const description = provider.kind === 'oauth' ? provider.id === 'gmail' ? 'Autorizza con il tuo account Google.' : 'Per account personali e aziendali Microsoft.' : provider.id === 'imap' ? 'Per la posta del tuo studio e altri provider.' : provider.id === 'icloud' || provider.id === 'yahoo' ? 'Con una password dedicata alle app.' : 'Con le credenziali della tua casella.';
+    card.append(el('p', '', description));
+    if (connected) card.append(statusPill('connected'));
+    else if (!provider.configured) card.append(el('span', 'status-pill neutral', 'Configurazione necessaria'));
+    const label = connected ? $('#wizard-dialog').open ? `Usa ${provider.label}` : 'Casella collegata · Preferenze' : !provider.configured ? state.data.user?.role === 'owner' ? `Prepara il collegamento ${provider.id === 'outlook' ? 'Microsoft' : provider.label}` : 'Scopri come collegarla' : `Collega ${provider.id === 'outlook' ? 'Outlook' : provider.id === 'imap' ? 'la casella' : provider.label}`;
+    card.append(actionButton(label, connected ? 'use-mail-provider' : !provider.configured ? 'show-mail-setup' : 'connect-mail-provider', 'secondary', 'link', { provider: provider.id })); grid.append(card);
   }
-  guide.append(el('h3', '', 'Una sola configurazione, poi collega la tua casella.'));
-  const steps = el('ol');
-  const first = el('li', '', 'In Google Cloud abilita Gmail API, configura il consenso e aggiungi la tua email tra gli utenti di test. Crea un client OAuth di tipo Applicazione web.');
-  const link = el('a', 'text-link', 'Apri Google Cloud'); link.href = 'https://console.cloud.google.com/apis/credentials'; link.target = '_blank'; link.rel = 'noopener noreferrer'; first.append(document.createTextNode(' '), link);
-  const second = el('li', '', 'Inserisci questo URI di reindirizzamento autorizzato:');
-  const callback = el('code', '', state.gmail?.redirect_uri || `${location.origin}/api/gmail/oauth/callback`); callback.style.overflowWrap = 'anywhere'; second.append(el('br'), callback);
-  const third = el('li', '', 'Nelle variabili del servizio Railway salva FILO_GOOGLE_CLIENT_ID e FILO_GOOGLE_CLIENT_SECRET, poi distribuisci la modifica.');
+  if (!state.data.real_data_only) { const card = el('article', `provider-card${activeMailProvider() === 'demo' ? ' selected' : ''}`); card.append(el('span', 'provider-symbol', 'F'), el('h3', '', 'Casella demo'), el('p', '', 'Email di esempio, senza collegare la tua posta.'), actionButton('Usa la demo', 'connect-demo', 'secondary', 'link')); grid.append(card); }
+  return grid;
+}
+function renderMailConnections() {
+  const connection = state.data.connection; const connected = isRealMailbox(); const copy = el('div', 'mailbox-copy');
+  copy.append(statusPill(connection.status || 'disconnected'), el('p', 'mailbox-address', connected ? connection.label || mailProviderLabel() : connection.provider === 'demo' ? 'Casella demo' : 'Nessuna casella collegata'), el('p', 'small-text', connected ? `${mailProviderLabel()} · I controlli seguono i contatti che scegli.` : 'Scegli il provider qui sotto. Puoi organizzare l’agenda anche prima di collegare la posta.'));
+  const actions = el('div', 'card-actions');
+  if (connected) { actions.append(actionButton(connection.status === 'expired' ? 'Ricollega' : state.data.service.status === 'inactive' ? 'Attiva la segreteria' : 'Preferenze del servizio', connection.status === 'expired' ? 'reconnect' : state.data.service.status === 'inactive' ? 'open-wizard' : 'edit-preferences', 'primary', 'arrow'), actionButton('Scollega la casella', 'disconnect-mail', 'ghost')); }
+  copy.append(actions); replace('#mailbox-connection', copy);
+  const signature = JSON.stringify({ providers: state.providers, connection, role: state.data.user?.role, wizard: $('#wizard-dialog').open });
+  if (signature !== state.providerSignature) { replace('#mail-provider-list', ...providerChooser().children); state.providerSignature = signature; }
+  $('#mail-provider-setup').hidden = !state.mailSetup; const setupSignature = JSON.stringify([state.mailSetup, state.providers, state.data.user?.role]); if (state.mailSetup && setupSignature !== state.mailSetupSignature) { replace('#mail-provider-setup', mailSetupGuide(state.mailSetup)); state.mailSetupSignature = setupSignature; }
+}
+function mailSetupGuide(id) {
+  const provider = mailProvider(id); const guide = el('div', 'boundary-note mail-setup-guide');
+  if (state.data.user && state.data.user.role !== 'owner') { guide.append(el('h3', '', `Il collegamento ${provider.label} è in preparazione.`), el('p', '', 'L’amministratore deve completare l’autorizzazione del sito. Intanto puoi scegliere una casella IMAP, organizzare l’agenda e completare il profilo della tua attività.'), actionButton('Verifica disponibilità', 'check-mail-setup', 'secondary', 'refresh', { provider: id })); return guide; }
+  const google = id === 'gmail'; guide.append(el('h3', '', `Prepara ${provider.label}. Una sola volta.`)); const steps = el('ol');
+  const first = el('li', '', google ? 'In Google Cloud abilita Gmail API e configura il consenso con il solo permesso https://www.googleapis.com/auth/gmail.readonly. Aggiungi la tua email tra gli utenti di test e crea un client OAuth di tipo Applicazione web.' : 'In Microsoft Entra registra un’app con account aziendali e personali Microsoft. Aggiungi i permessi delegati Microsoft Graph Mail.Read e User.Read, con offline_access per mantenere l’accesso, poi crea un segreto client.');
+  const link = el('a', 'text-link', google ? 'Apri Google Cloud' : 'Apri Microsoft Entra'); link.href = google ? 'https://console.cloud.google.com/apis/credentials' : 'https://entra.microsoft.com/'; link.target = '_blank'; link.rel = 'noopener noreferrer'; first.append(document.createTextNode(' '), link);
+  const second = el('li', '', 'Aggiungi questo URI di reindirizzamento come applicazione web:'); const callback = el('code', '', provider.redirect_uri || `${location.origin}/api/${google ? 'gmail' : 'outlook'}/oauth/callback`); second.append(el('br'), callback);
+  const third = el('li', '', google ? 'Nelle variabili Railway salva FILO_GOOGLE_CLIENT_ID e FILO_GOOGLE_CLIENT_SECRET. Imposta FILO_GOOGLE_REDIRECT_URI con l’URI qui sopra, poi distribuisci la modifica.' : 'Nelle variabili Railway salva FILO_MICROSOFT_CLIENT_ID e FILO_MICROSOFT_CLIENT_SECRET. Imposta FILO_MICROSOFT_REDIRECT_URI con l’URI qui sopra, poi distribuisci la modifica.');
   const railway = el('a', 'text-link', 'Apri le variabili Railway'); railway.href = 'https://railway.com/project/23154853-8a90-4944-bac7-2315cd4f816f/service/9d3ce564-55cc-482e-ba8b-6e381cff9127/variables?environmentId=16183f90-7643-4954-9f1e-6efdb2fb16d3'; railway.target = '_blank'; railway.rel = 'noopener noreferrer'; third.append(document.createTextNode(' '), railway);
-  steps.append(first, second, third); guide.append(steps, actionButton('Verifica configurazione', 'check-gmail-setup', 'secondary', 'refresh'));
-  return guide;
+  steps.append(first, second, third); guide.append(steps, el('p', 'small-text', 'Il collegamento diventa disponibile dopo la configurazione. Nessuna casella risulta collegata fino alla tua autorizzazione.'), actionButton('Verifica configurazione', 'check-mail-setup', 'secondary', 'refresh', { provider: id })); return guide;
+}
+function clearImapSecret() { const input = $('#imap-password'); if (input) input.value = ''; }
+function openImapConnection(id) {
+  const provider = mailProvider(id); state.imapProvider = id; $('#imap-form').reset(); clearImapSecret(); notice('#imap-error', ''); $('#imap-title').textContent = `Collega ${provider.label}.`; $('#imap-guidance').textContent = provider.setup_note || MAIL_PRESETS.find(item => item.id === id)?.setup_note || 'Inserisci le credenziali della casella.'; $('#imap-host-field').hidden = id !== 'imap'; $('#imap-host').required = id === 'imap'; $('#imap-host').value = provider.host || ''; $('#imap-email').value = isRealMailbox() ? state.data.connection.label || '' : ''; $('#imap-advanced').open = false;
+  const help = provider.help || MAIL_PRESETS.find(item => item.id === id)?.help; $('#imap-help-link').hidden = !help; if (help) $('#imap-help-link').href = help;
+  openDialog('#imap-dialog'); $('#imap-email').focus();
+}
+function confirmMailChange(provider = null) {
+  state.mailChange = { provider }; $('#mail-confirm-title').textContent = provider ? 'Cambiare casella?' : 'Scollegare la casella?'; $('#mail-confirm-description').textContent = provider ? `Stai passando da ${mailProviderLabel()} a ${mailProvider(provider).label}. Dopo il collegamento, i controlli della vecchia casella si fermano. Dovrai rivedere i contatti e autorizzare di nuovo la segreteria. Lo storico resta consultabile.` : 'I controlli automatici si fermano e le credenziali vengono rimosse da Filo. Lo storico resta consultabile. Potrai collegare di nuovo la casella e autorizzare il servizio.'; $('#mail-confirm-button').textContent = provider ? 'Continua' : 'Scollega la casella'; openDialog('#mail-confirm-dialog');
+}
+async function connectMailProvider(id) {
+  const provider = mailProvider(id);
+  if (provider.kind === 'imap') { openImapConnection(id); return; }
+  if (!provider.configured) { state.mailSetup = id; renderMailConnections(); if (state.wizard?.step === 2) { state.wizard.mailSetup = id; renderWizard(); } return; }
+  const result = await api(`/api/${id}/oauth/start`, { method: 'POST', body: {} }); if (!result.authorization_url) throw new Error(`Il collegamento ${provider.label} non è ancora disponibile.`); const target = new URL(result.authorization_url, location.origin); const expectedHost = id === 'gmail' ? 'accounts.google.com' : 'login.microsoftonline.com'; if (target.protocol !== 'https:' || target.hostname !== expectedHost) throw new Error('Il collegamento ricevuto non è valido.');
+  if (state.wizard && $('#wizard-dialog').open) sessionStorage.setItem('filo-pending-wizard', JSON.stringify({ preferences: state.wizard.preferences, edit: state.wizard.edit, createdAt: Date.now() })); else sessionStorage.setItem('filo-pending-wizard', JSON.stringify({ reconnect: true, createdAt: Date.now() })); location.assign(target.href);
 }
 
 function renderAgenda() {
@@ -381,25 +435,12 @@ function renderWizard() {
     title('Una segreteria, alle tue condizioni.', 'Un compito preciso: leggere le email dei contatti prioritari e preparare bozze locali. Tu mantieni l’ultima parola.');
     const choice = el('div', 'step-choice'); const mark = el('span', 'icon-box teal'); mark.append(icon('mail')); const copy = el('div'); copy.append(el('h3', '', 'Segreteria email'), el('p', '', 'Priorità, risposte abbozzate e un giro ogni giorno.')); choice.append(mark, copy, icon('check')); body.append(choice);
     body.append(el('p', 'step-disclosure', 'Le bozze restano in Filo. Questo servizio non invia messaggi e non crea bozze nella casella del provider.'));
-    if (state.data.ai?.enabled && state.data.ai?.configured) body.append(el('p', 'step-disclosure', 'Questo ambiente usa un servizio AI esterno solo sulle email dimostrative, durante le esecuzioni attivate. L’anteprima e le email Gmail usano regole locali.'));
+    if (state.data.ai?.enabled && state.data.ai?.configured) body.append(el('p', 'step-disclosure', 'Questo ambiente usa un servizio AI esterno solo sulle email dimostrative, durante le esecuzioni attivate. L’anteprima e le email reali usano regole locali.'));
     footer.append(actionButton('Iniziamo', 'wizard-next', 'primary', 'arrow'));
   } else if (wizard.step === 2) {
-    title('Collega Gmail.', 'La tua posta, con i contatti che scegli tu. Google ti chiederà il consenso alla lettura.');
-    const grid = el('div', 'provider-grid');
-    const demo = el('div', `provider-card ${state.data.connection.provider === 'demo' && state.data.connection.status === 'connected' ? 'selected' : ''}`);
-    const demoMark = el('span', 'icon-box teal'); demoMark.append(icon('mail')); demo.append(demoMark, el('h3', '', 'Casella demo'), el('p', '', 'Email fittizie per esplorare priorità, bozze e storico. Nessun accesso alla tua casella reale.'));
-    if (state.data.connection.provider === 'demo' && state.data.connection.status === 'connected') demo.append(statusPill('connected'));
-    demo.append(actionButton(state.data.connection.provider === 'demo' && state.data.connection.status === 'connected' ? 'Usa la casella demo' : 'Collega la demo', 'connect-demo', 'secondary', 'link'));
-    const gmail = el('div', `provider-card ${state.data.connection.provider === 'gmail' && state.data.connection.status === 'connected' ? 'selected' : ''}`);
-    gmail.append(el('span', 'provider-symbol', 'G'), el('h3', '', 'Gmail'), el('p', '', 'Google autorizza la lettura della casella; Filo controlla solo i clienti scelti. Non può inviare email.'));
-    gmail.append(el('p', 'helper-text', 'Ultimi 7 giorni · fino a 20 conversazioni · selezione di 25 messaggi. Allegati esclusi.'));
-    const gmailReady = Boolean(state.gmail?.configured);
-    const gmailConnected = state.data.connection.provider === 'gmail' && state.data.connection.status === 'connected';
-    if (gmailConnected) gmail.append(statusPill('connected'));
-    else if (!gmailReady) gmail.append(el('span', 'status-pill neutral', 'Configurazione necessaria'));
-    const gmailButton = actionButton(gmailConnected ? 'Usa Gmail' : 'Collega Gmail', 'connect-gmail', 'secondary', 'link'); gmailButton.dataset.action = gmailReady || gmailConnected ? 'connect-gmail' : 'show-gmail-setup'; gmailButton.textContent = gmailReady || gmailConnected ? (gmailConnected ? 'Usa Gmail' : 'Collega Gmail') : 'Prepara il collegamento Gmail'; gmail.append(gmailButton); if (!state.data.real_data_only) grid.append(demo); grid.append(gmail); body.append(grid);
-    body.append(el('p', 'step-disclosure', gmailReady ? 'Le bozze restano in Filo, da controllare prima di usarle.' : 'Manca la configurazione Google del sito. Apri la guida per completarla e poi collega la tua casella.'));
-    if (wizard.gmailSetup) body.append(gmailSetupGuide());
+    title('Collega la tua posta.', 'Scegli il provider. Una casella, i contatti che contano per te.');
+    body.append(providerChooser(), el('p', 'step-disclosure', 'Filo legge la posta e prepara bozze locali. I controlli automatici partono dopo il tuo consenso.'));
+    if (wizard.mailSetup) body.append(mailSetupGuide(wizard.mailSetup));
     if (wizard.reconnect) { const next = actionButton('Torna alla panoramica', 'wizard-finish-reconnect', 'primary', 'arrow'); next.disabled = state.data.connection.status !== 'connected'; footer.append(next); }
     else { const next = actionButton('Continua', 'wizard-next', 'primary', 'arrow'); next.disabled = state.data.connection.status !== 'connected'; footer.append(next); }
   } else if (wizard.step === 3) {
@@ -412,7 +453,7 @@ function renderWizard() {
     const schedule = el('div', 'schedule-fields'); const time = field('Orario quotidiano', 'time', 'wizard-time', `${String(wizard.preferences.hour).padStart(2, '0')}:${String(wizard.preferences.minute).padStart(2, '0')}`, { required: true }); const zone = field('Fuso orario', 'text', 'wizard-timezone', 'Europe/Rome', { readOnly: true }); schedule.append(time, zone); body.append(schedule, el('p', 'helper-text', 'Ogni giorno, anche nel fine settimana. L’orario segue automaticamente l’ora legale italiana. Puoi mettere il servizio in pausa in qualsiasi momento.'));
     footer.append(actionButton('Guarda l’anteprima', 'wizard-preview', 'primary', 'arrow'));
   } else if (wizard.step === 4) {
-    title('Ecco cosa preparerebbe Filo.', state.data.connection.provider === 'gmail' ? 'Un’anteprima sulle email reali dei contatti scelti. Le bozze restano nella piattaforma: nessuna email viene inviata.' : 'Un’anteprima con email di esempio. È una simulazione deterministica senza AI reale; l’attivazione parte solo con il tuo consenso.');
+    title('Ecco cosa preparerebbe Filo.', isRealMailbox() ? 'Un’anteprima sulle email reali dei contatti scelti. Le bozze restano nella piattaforma: nessuna email viene inviata.' : 'Un’anteprima con email di esempio. È una simulazione deterministica senza AI reale; l’attivazione parte solo con il tuo consenso.');
     body.append(el('div', 'preview-intro', typeof wizard.preview?.summary === 'string' ? wizard.preview.summary : `${wizard.preview?.items?.length || 0} email selezionate per i contatti scelti.`));
     const items = wizard.preview?.items || [];
     if (items.length) items.forEach(item => body.append(renderDraft(item, false)));
@@ -422,10 +463,10 @@ function renderWizard() {
   } else if (wizard.step === 5) {
     title('Il via libera è tuo.', 'Il servizio partirà soltanto dopo questi consensi espliciti. Potrai metterlo in pausa o disattivarlo quando vuoi.');
     body.append(mandateSummary());
-    const read = el('label', 'checkbox-row'); const readInput = el('input'); readInput.type = 'checkbox'; readInput.id = 'authorize-read'; readInput.checked = wizard.authorizedRead; read.append(readInput, el('span', '', state.data.connection.provider === 'gmail' ? 'Autorizzo Filo a leggere le email dei contatti prioritari. Google concede accesso alla lettura della casella; il servizio limita le ricerche ai contatti scelti.' : 'Autorizzo Filo a leggere le email dei contatti prioritari nella casella demo.'));
+    const read = el('label', 'checkbox-row'); const readInput = el('input'); readInput.type = 'checkbox'; readInput.id = 'authorize-read'; readInput.checked = wizard.authorizedRead; read.append(readInput, el('span', '', isRealMailbox() ? 'Autorizzo Filo a leggere le email dei contatti prioritari nella casella collegata. Il servizio limita le ricerche ai contatti scelti.' : 'Autorizzo Filo a leggere le email dei contatti prioritari nella casella demo.'));
     const draft = el('label', 'checkbox-row'); const draftInput = el('input'); draftInput.type = 'checkbox'; draftInput.id = 'authorize-draft'; draftInput.checked = wizard.authorizedDraft; draft.append(draftInput, el('span', '', 'Autorizzo la preparazione di bozze locali in Filo, che dovrò rivedere prima di usare.'));
     body.append(read, draft);
-    if (state.data.connection.provider === 'demo' && state.data.ai?.enabled && state.data.ai?.configured) body.append(el('p', 'step-disclosure', 'Nelle esecuzioni demo autorizzate, il servizio AI esterno configurato può elaborare le email fittizie. Nessun contenuto Gmail viene condiviso.'));
+    if (state.data.connection.provider === 'demo' && state.data.ai?.enabled && state.data.ai?.configured) body.append(el('p', 'step-disclosure', 'Nelle esecuzioni demo autorizzate, il servizio AI esterno configurato può elaborare le email fittizie. Nessun contenuto delle caselle reali viene condiviso.'));
     const noSend = el('div', 'no-send'); noSend.append(icon('shield'), document.createTextNode('Nessuna autorizzazione all’invio. Filo non invia email.')); body.append(noSend);
     const activate = actionButton('Autorizza e attiva il servizio', 'wizard-activate', 'primary', 'check'); activate.id = 'activate-button'; activate.disabled = !wizard.authorizedRead || !wizard.authorizedDraft; footer.append(activate);
   } else if (wizard.step === 6) {
@@ -463,7 +504,7 @@ function capturePreferences() {
 function mandateSummary() {
   const summary = el('div', 'mandate-summary');
   const preferences = state.wizard.preferences;
-  const values = [['Servizio', 'Segreteria email'], ['Casella', state.data.connection.provider === 'gmail' ? 'Gmail · email reali' : 'Demo · dati fittizi'], ['Ogni giorno', `${String(preferences.hour).padStart(2, '0')}:${String(preferences.minute).padStart(2, '0')} · Europe/Rome`], ['Priorità', `${preferences.priority_contacts.length} contatti scelti`], ['Permessi', 'Lettura e bozze locali · nessun invio']];
+  const values = [['Servizio', 'Segreteria email'], ['Casella', isRealMailbox() ? `${mailProviderLabel()} · email reali` : 'Demo · dati fittizi'], ['Ogni giorno', `${String(preferences.hour).padStart(2, '0')}:${String(preferences.minute).padStart(2, '0')} · Europe/Rome`], ['Priorità', `${preferences.priority_contacts.length} contatti scelti`], ['Permessi', 'Lettura e bozze locali · nessun invio']];
   values.forEach(([key, value]) => { const row = el('div', 'mandate-summary-row'); row.append(el('span', '', key), el('strong', '', value)); summary.append(row); });
   return summary;
 }
@@ -518,7 +559,13 @@ async function handleAction(button) {
     if (item?.draft) { await navigator.clipboard.writeText(item.draft); toast('Bozza copiata. Puoi rivederla nella tua casella prima di inviarla.'); }
     return;
   }
-  if (action === 'show-gmail-setup') { state.wizard.gmailSetup = true; renderWizard(); return; }
+  if (action === 'open-connections') { location.hash = 'connections'; return; }
+  if (action === 'show-mail-setup' || action === 'show-gmail-setup') { const id = button.dataset.provider || 'gmail'; state.mailSetup = id; renderMailConnections(); if (state.wizard?.step === 2 && $('#wizard-dialog').open) { state.wizard.mailSetup = id; renderWizard(); } else $('#mail-provider-setup').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); return; }
+  if (action === 'close-imap') { closeDialog('#imap-dialog'); return; }
+  if (action === 'close-mail-confirm') { state.mailChange = null; closeDialog('#mail-confirm-dialog'); return; }
+  if (action === 'use-mail-provider') { if ($('#wizard-dialog').open && state.wizard) { state.wizard.step = 3; renderWizard(); } else startWizard(state.data.service.status !== 'inactive'); return; }
+  if (action === 'disconnect-mail' || action === 'disconnect-gmail') { confirmMailChange(); return; }
+  if (action === 'connect-mail-provider' || action === 'connect-gmail') { const id = button.dataset.provider || 'gmail'; if (isRealMailbox() && activeMailProvider() !== id) { confirmMailChange(id); return; } }
   if (action === 'open-wizard') { startWizard(); return; }
   if (action === 'open-chat-wizard') { startWizard(false, false, state.chatPreferences); return; }
   if (action === 'edit-chat-preferences') { startWizard(true, false, state.chatPreferences); return; }
@@ -541,14 +588,12 @@ async function handleAction(button) {
   if (inWizard) notice('#wizard-error', '');
   await withBusy(button, async () => {
     try {
-      if (action === 'check-gmail-setup') { state.gmail = await api('/api/gmail/status'); renderWizard(); toast(state.gmail.configured ? 'Configurazione pronta. Ora puoi collegare Gmail.' : state.data.user && state.data.user.role !== 'owner' ? 'Il collegamento Gmail è ancora in preparazione.' : 'Mancano ancora le credenziali Google nelle variabili del sito.'); }
+      if (action === 'check-mail-setup' || action === 'check-gmail-setup') { const id = button.dataset.provider || 'gmail'; await refreshProviders(); renderMailConnections(); if (state.wizard?.step === 2 && inWizard) renderWizard(); toast(mailProvider(id).configured ? `Configurazione pronta. Ora puoi collegare ${mailProvider(id).label}.` : `Il collegamento ${mailProvider(id).label} richiede ancora la configurazione del sito.`); }
+      else if (action === 'confirm-mail-change') { const change = state.mailChange; state.mailChange = null; closeDialog('#mail-confirm-dialog'); if (change?.provider) await connectMailProvider(change.provider); else if (change) { await api('/api/mail/disconnect', { method: 'POST', body: {} }); await refresh(); toast('Casella scollegata. I controlli automatici sono fermi.'); } }
+      else if (action === 'connect-mail-provider' || action === 'connect-gmail') await connectMailProvider(button.dataset.provider || 'gmail');
       else if (action === 'confirm-watch') { if (!state.watchSuggestion) return; await api('/api/watches', { method: 'POST', body: state.watchSuggestion }); state.watchSuggestion = null; $('#chat-suggestion').hidden = true; await refresh(); toast('Avviso salvato. Lo troverai tra le cose da fare.'); }
       else if (action === 'dismiss-watch') { await api(`/api/watches/${encodeURIComponent(button.dataset.id)}`, { method: 'DELETE' }); await refresh(); toast('Promemoria chiuso.'); }
       else if (action === 'connect-demo') { await api('/api/connection/demo', { method: 'POST', body: {} }); await refresh(); renderWizard(); }
-      else if (action === 'connect-gmail') {
-        if (state.data.connection.provider === 'gmail' && state.data.connection.status === 'connected') { state.wizard.step = 3; renderWizard(); }
-        else { const result = await api('/api/gmail/oauth/start', { method: 'POST', body: {} }); if (!result.authorization_url) throw new Error('Il collegamento Gmail non è ancora disponibile.'); const target = new URL(result.authorization_url, location.origin); if (target.protocol !== 'https:') throw new Error('Il collegamento ricevuto non è valido.'); sessionStorage.setItem('filo-pending-wizard', JSON.stringify({ preferences: state.wizard.preferences, edit: state.wizard.edit, createdAt: Date.now() })); location.assign(target.href); }
-      }
       else if (action === 'wizard-preview') {
         if (!capturePreferences()) return;
         state.wizard.preview = await api('/api/service/preview', { method: 'POST', body: state.wizard.preferences }); state.wizard.step = 4; renderWizard();
@@ -569,7 +614,6 @@ async function handleAction(button) {
       else if (action === 'approve-draft') { await api(`/api/drafts/${encodeURIComponent(button.dataset.id)}/approve`, { method: 'POST', body: {} }); await refresh(); if ($('#detail-dialog').open && state.currentRun) await openRun(state.currentRun.id); toast('Revisione registrata in Filo. Nessun messaggio inviato.'); }
       else if (action === 'delete-agenda-event') { await api(`/api/agenda/${encodeURIComponent(button.dataset.id)}`, { method: 'DELETE' }); await refresh(); toast('Appuntamento rimosso dall’agenda.'); }
       else if (action.startsWith('simulate-')) { const kind = action.replace('simulate-', ''); await api('/api/demo/failure', { method: 'POST', body: { kind } }); await refresh(); toast({ temporary: 'Imprevisto temporaneo preparato per la prossima esecuzione demo.', expired: 'Simulazione pronta: la connessione demo scadrà alla prossima esecuzione.', clear: 'Connessione demo ripristinata.' }[kind]); }
-      else if (action === 'disconnect-gmail') { await api('/api/gmail/disconnect', { method: 'POST', body: {} }); await refresh(); state.gmail = await api('/api/gmail/status'); toast('Gmail scollegato. Non verranno lette nuove email.'); }
     } catch (error) { if (inWizard) notice('#wizard-error', error.message); else toast(error.message, true); }
   });
 }
@@ -585,6 +629,20 @@ document.addEventListener('change', event => {
   if (event.target.id === 'authorize-read') state.wizard.authorizedRead = event.target.checked;
   if (event.target.id === 'authorize-draft') state.wizard.authorizedDraft = event.target.checked;
   if ($('#activate-button')) $('#activate-button').disabled = !state.wizard.authorizedRead || !state.wizard.authorizedDraft;
+});
+$('#imap-dialog').addEventListener('close', clearImapSecret);
+$('#imap-dialog').addEventListener('cancel', clearImapSecret);
+$('#imap-form').addEventListener('submit', async event => {
+  event.preventDefault(); const form = event.currentTarget; if (!form.reportValidity()) return;
+  const provider = state.imapProvider; const fields = new FormData(form); const body = { provider, email: String(fields.get('email') || '').trim(), password: String(fields.get('password') || '') };
+  if (provider === 'imap') body.host = String(fields.get('host') || '').trim();
+  const username = String(fields.get('username') || '').trim(); if (username) body.username = username;
+  clearImapSecret(); notice('#imap-error', '');
+  await withBusy($('button[type=submit]', form), async () => {
+    try { await api('/api/mail/imap/connect', { method: 'POST', body }); closeDialog('#imap-dialog'); await refresh(); if ($('#wizard-dialog').open && state.wizard) { state.wizard.step = 3; renderWizard(); } toast('Casella collegata. Rivedi i contatti e autorizza la segreteria per avviare i controlli.'); }
+    catch (error) { notice('#imap-error', error.message); $('#imap-password').focus(); }
+    finally { body.password = ''; fields.delete('password'); clearImapSecret(); }
+  });
 });
 $('#company-form').addEventListener('submit', async event => {
   event.preventDefault();
@@ -646,20 +704,21 @@ window.addEventListener('hashchange', () => { setPage(location.hash.slice(1)); w
 $$('dialog').forEach(dialog => dialog.addEventListener('click', event => { if (event.target === dialog) { const bounds = dialog.getBoundingClientRect(); if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) closeDialog(`#${dialog.id}`); } }));
 window.addEventListener('focus', async () => {
   if (!state.data) return;
-  try { await refresh(); if (state.wizard?.step === 2) { state.gmail = await api('/api/gmail/status'); renderWizard(); } } catch (_) {}
+  try { await refresh(); if (state.wizard?.step === 2 && $('#wizard-dialog').open && !$('#imap-dialog').open) renderWizard(); } catch (_) {}
 });
 async function initialize() {
   $('#today-label').textContent = new Intl.DateTimeFormat('it-IT', { timeZone: 'Europe/Rome', weekday: 'short', day: 'numeric', month: 'long' }).format(new Date());
   setPage(location.hash.slice(1));
   try {
     await refresh();
-    try { state.gmail = await api('/api/gmail/status'); } catch (_) { state.gmail = { configured: false }; }
-    if (new URLSearchParams(location.search).get('gmail') === 'connected' && state.data.connection.provider === 'gmail' && state.data.connection.status === 'connected') {
-      toast('Gmail collegato. Rivedi le preferenze e autorizza il servizio.');
-      let pending;
-      try { pending = JSON.parse(sessionStorage.getItem('filo-pending-wizard')); } catch (_) {}
+    const params = new URLSearchParams(location.search);
+    const returned = params.get('gmail') === 'connected' || params.get('outlook') === 'connected' || params.get('mail') === 'connected' || params.get('connected') === '1' && ['gmail', 'outlook'].includes(params.get('provider'));
+    if (returned && isRealMailbox() && state.data.connection.status === 'connected') {
+      toast(`${mailProviderLabel()} collegata. Rivedi le preferenze e autorizza il servizio.`);
+      let pending; try { pending = JSON.parse(sessionStorage.getItem('filo-pending-wizard')); } catch (_) {}
       sessionStorage.removeItem('filo-pending-wizard');
       if (pending && Date.now() - pending.createdAt < 3600000 && Array.isArray(pending.preferences?.priority_contacts)) { startWizard(Boolean(pending.edit), false, pending.preferences); state.wizard.step = 3; renderWizard(); }
+      else if (pending?.reconnect) { location.hash = 'connections'; }
       history.replaceState(null, '', `${location.pathname}${location.hash}`);
     }
   }

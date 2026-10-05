@@ -12,7 +12,7 @@ flowchart LR
     API --> DB[(SQLite separato per account)]
     WORKER[Scheduler nel processo server] --> DB
     WORKER --> SERVICE[Segreteria email]
-    SERVICE --> CONN[Connettore demo oppure Gmail readonly]
+    SERVICE --> CONN[Connettori demo, Gmail, Outlook e IMAP readonly]
     SERVICE --> AI[Analizzatore separato: regole demo o adapter cloud opzionale]
     SERVICE --> DB
     AUTH --> BILLING[Stripe Checkout e portale]
@@ -35,13 +35,13 @@ Le chiamate HTTP al provider hanno timeout; l'esecuzione applica anche un budget
 
 ## Dati e fornitori
 
-Gli archivi risiedono sul server, nella cartella `.runtime` ignorata da Git oppure nella cartella `ALEXCHIARA_DATA_DIR`. `accounts.sqlite3` conserva account, hash scrypt delle password, hash dei token di sessione e limiti dei tentativi; `billing.sqlite3` conserva identificativi Stripe e stato degli abbonamenti, senza dati delle carte. Lo spazio originale mantiene `alexchiara.sqlite3`; ogni nuovo account ha database e chiave Gmail separati in `workspaces/<id>/`.
+Gli archivi risiedono sul server, nella cartella `.runtime` ignorata da Git oppure nella cartella `ALEXCHIARA_DATA_DIR`. `accounts.sqlite3` conserva account, hash scrypt delle password, hash dei token di sessione e limiti dei tentativi; `billing.sqlite3` conserva identificativi Stripe e stato degli abbonamenti, senza dati delle carte. Lo spazio originale mantiene `alexchiara.sqlite3`; ogni nuovo account ha database e chiave delle credenziali separati in `workspaces/<id>/`.
 
-I token Gmail sono cifrati con Fernet e una chiave locale separata, non sono mai inviati al frontend. Il database delle email/bozze è protetto dai permessi di filesystem ma non è cifrato integralmente. Conservare la chiave accanto al database non protegge da un amministratore della stessa macchina: serve un secret manager per una distribuzione reale.
+I token Gmail/Outlook e le credenziali IMAP sono cifrati con Fernet e una chiave locale separata, non sono mai inviati al frontend. Il database delle email/bozze è protetto dai permessi di filesystem ma non è cifrato integralmente. Conservare la chiave accanto al database non protegge da un amministratore della stessa macchina: serve un secret manager per una distribuzione reale.
 
 Gli input dei provider restano dati esterni. HTML e allegati non vengono eseguiti. Il modello non riceve tool né autorizzazioni di azione; il mandato viene applicato dalla logica applicativa. La validazione limita campi, contatti, orari e risultati riferiti ai messaggi letti. Il frontend inserisce il testo esterno come testo, non come HTML.
 
-In assenza di un fornitore AI configurato il risultato usa regole deterministiche e template dichiarati. Non è una valutazione di qualità AI. L'adapter cloud opzionale serve a sperimentare soltanto sui dati dimostrativi; Gmail reale non invia contenuti al modello in questa versione. Prima di elaborare dati reali con un modello esterno servono condizioni contrattuali, trattamento dei dati, consenso operativo e verifica della qualità sul segmento scelto.
+In assenza di un fornitore AI configurato il risultato usa regole deterministiche e template dichiarati. Non è una valutazione di qualità AI. L'adapter cloud opzionale serve a sperimentare soltanto sui dati dimostrativi; La posta reale non invia contenuti al modello in questa versione. Prima di elaborare dati reali con un modello esterno servono condizioni contrattuali, trattamento dei dati, consenso operativo e verifica della qualità sul segmento scelto.
 
 ## Accesso
 
@@ -49,7 +49,7 @@ In assenza di un fornitore AI configurato il risultato usa regole deterministich
 
 Le sessioni persistenti scadono dopo sette giorni, usano cookie HttpOnly, SameSite=Lax e Secure su HTTPS e vengono revocate all'uscita. Login e registrazione ruotano sessione e CSRF; le mutazioni, incluse quelle di autenticazione, richiedono CSRF valido e origine consentita. Il server controlla gli host e limita dimensione delle richieste e tentativi di accesso. Gli errori di validazione dell'autenticazione non ripetono la password inviata. Il log degli accessi è disabilitato per non registrare codici OAuth.
 
-La sessione sceglie lo spazio sul server tramite l'identificativo dell'account, senza fidarsi di un identificativo fornito dal browser. `create_workspace_app` è la fabbrica interna dei servizi per un singolo archivio: i test di dominio la usano direttamente; l'avvio pubblico deve usare `create_app`. Ogni spazio mantiene DB, consenso Google e scheduler separati. Un lock protegge la creazione concorrente degli spazi; il processo riavvia i loro controlli autorizzati e li ferma alla chiusura.
+La sessione sceglie lo spazio sul server tramite l'identificativo dell'account, senza fidarsi di un identificativo fornito dal browser. `create_workspace_app` è la fabbrica interna dei servizi per un singolo archivio: i test di dominio la usano direttamente; l'avvio pubblico deve usare `create_app`. Ogni spazio mantiene DB, credenziali email e scheduler separati. Un lock protegge la creazione concorrente degli spazi; il processo riavvia i loro controlli autorizzati e li ferma alla chiusura.
 
 Le credenziali `FILO_ACCESS_USERNAME` e `FILO_ACCESS_PASSWORD` accedono mediante il modulo all'account `owner`, che conserva l'archivio originale. Le registrazioni ricevono uno spazio vuoto distinto, senza dati fittizi o accesso allo spazio esistente. Non sono disponibili condivisione fra colleghi, inviti o gestione di ruoli aziendali.
 
@@ -75,4 +75,10 @@ L’agenda manuale salva gli orari in UTC e li presenta in Europe/Rome. Le rotte
 
 Gli avvisi persistono in `watch_requests`, vincolati alla casella e revisione Gmail corrente. La chat propone un contatto noto senza salvarlo o attivare mandati; la conferma usa la rotta protetta `/api/watches`. Il riscontro richiede un messaggio in ingresso dello stesso contatto, osservato dopo la creazione, arrivato nel giorno italiano richiesto e dopo la creazione. Nessun messaggio assente viene dato per verificato. Gli avvisi trovati precedono le priorità normali, poi si possono chiudere.
 
-Un avviso odierno in attesa abilita controlli Gmail ogni cinque minuti, solo con servizio e mandato già attivi. Inflight, cooldown e slot con casella/revisione evitano controlli watch duplicati; un controllo quotidiano o manuale recente ritarda il successivo watch. Match, pausa, revoca e scadenza fermano il monitoraggio. I getter restano letture pure del database; la pagina si aggiorna ogni cinque secondi.
+Un avviso odierno in attesa abilita controlli della posta collegata ogni cinque minuti, solo con servizio e mandato già attivi. Inflight, cooldown e slot con casella/revisione evitano controlli watch duplicati; un controllo quotidiano o manuale recente ritarda il successivo watch. Match, pausa, revoca e scadenza fermano il monitoraggio. I getter restano letture pure del database; la pagina si aggiorna ogni cinque secondi.
+
+## Provider email
+
+`app/mail_providers.py` espone il catalogo e lo scollegamento locale. `app/outlook.py` gestisce PKCE e Microsoft Graph con permessi delegati Mail.Read/User.Read e offline_access. `app/imap_mail.py` verifica TLS993, rifiuta indirizzi privati e fissa la connessione all’indirizzo DNS verificato, mantenendo SNI e verifica del certificato per il nome originale. Le letture usano EXAMINE e BODY.PEEK, con limiti prima di allocare i literal. Gli allegati dei messaggi MIME limitati vengono esclusi dall’analisi.
+
+Per compatibilità la revisione globale della casella si conserva nel campo `gmail_revision` e la chiave Fernet nel file `gmail.key`. Un cambio riuscito cancella gli accessi precedenti, invalida i consensi pendenti e il mandato, e ferma le esecuzioni in coda. Lo scope degli snapshot comprende provider, revisione e indirizzo. Aggiornamento del risultato e ultimo controllo avvengono nella stessa transazione, evitando di ripristinare un mandato rimosso. Anteprime e controlli scartano il risultato se la connessione cambia durante la lettura.

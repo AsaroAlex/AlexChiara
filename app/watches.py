@@ -19,7 +19,7 @@ from .briefing import mailbox_scope
 
 ROME = ZoneInfo("Europe/Rome")
 UTC = timezone.utc
-REAL_PROVIDERS = {"gmail", "imported"}
+REAL_PROVIDERS = {"gmail", "outlook", "imap", "imported"}
 NOTICE = "L'avviso apparirà qui nell'app al prossimo controllo autorizzato: non invio email o notifiche esterne."
 EMAIL_PATTERN = r"[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?\.[A-Za-z]{2,63}"
 
@@ -180,15 +180,15 @@ def build_watch_summary(db, now=None):
                              and mandate.get("read") and mandate.get("draft") and not mandate.get("send"))
     from .service import next_slot
     next_check_at = next_slot(service, now) if monitoring_active else None
-    watching_today = provider == "gmail" and any(item["status"] == "waiting" and item["day"] == today
+    watching_today = provider in {"gmail", "outlook", "imap"} and any(item["status"] == "waiting" and item["day"] == today
                                                 and item["contact_active"] for item in items)
     if monitoring_active and watching_today:
         with db.connection() as conn:
             inflight = conn.execute("SELECT 1 FROM runs WHERE status IN ('queued','running','retry_wait') LIMIT 1").fetchone()
             recent = conn.execute("""
-                SELECT COALESCE(finished_at,started_at) AS checked_at FROM runs WHERE provider='gmail'
+                SELECT COALESCE(finished_at,started_at) AS checked_at FROM runs WHERE provider=?
                 AND COALESCE(finished_at,started_at) IS NOT NULL ORDER BY checked_at DESC,id DESC LIMIT 1
-            """).fetchone()
+            """, (provider,)).fetchone()
         checked = _stamp(recent["checked_at"]) if recent else None
         next_check_at = None if inflight else max(now, checked + timedelta(minutes=5) if checked else now).isoformat()
     return {"items": items, "matched": [item for item in items if item["status"] == "matched"],
@@ -197,10 +197,10 @@ def build_watch_summary(db, now=None):
 
 
 def needs_watch_poll(db, now=None):
-    """Whether today's unresolved Gmail reminder needs an authorized recheck."""
+    """Whether today's unresolved email reminder needs an authorized recheck."""
     now = _now(now)
     connection = db.get_connection() or {}
-    if connection.get("provider") != "gmail" or connection.get("status") != "connected":
+    if connection.get("provider") not in {"gmail", "outlook", "imap"} or connection.get("status") != "connected":
         return False
     summary = build_watch_summary(db, now)
     today = now.astimezone(ROME).date().isoformat()
@@ -234,7 +234,7 @@ def create_watches_router(db, *, clock=None):
             connection, service, provider, scope_key = _context(db)
             if (provider not in REAL_PROVIDERS or connection.get("provider") != provider
                     or connection.get("status") != "connected"):
-                raise HTTPException(status_code=409, detail="Collega Gmail prima di creare l'avviso.")
+                raise HTTPException(status_code=409, detail="Collega la tua casella prima di creare l'avviso.")
             contact = next((contact for contact in service.get("priority_contacts", [])
                             if _email(contact.get("email")) == payload.email), None)
             if contact is None:
@@ -295,7 +295,7 @@ def propose_watch(db, message, now=None):
         return None
     connection, service, provider, _ = _context(db)
     if provider not in REAL_PROVIDERS or connection.get("status") != "connected":
-        return {"reply": "Per seguire una risposta vera, collega Gmail e scegli i contatti prioritari. " + NOTICE}
+        return {"reply": "Per seguire una risposta vera, collega la tua casella e scegli i contatti prioritari. " + NOTICE}
     contacts = [contact for contact in service.get("priority_contacts", [])
                 if _valid_email(_email(contact.get("email")))]
     addresses = list(dict.fromkeys(_email(value) for value in re.findall(EMAIL_PATTERN, message)))

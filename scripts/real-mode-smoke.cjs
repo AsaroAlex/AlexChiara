@@ -50,7 +50,7 @@ const sampleText = /Studio Riva|Giulia Conti|Marco Bianchi|Sara Rossi|@example\.
       assert.equal(before.briefing_example, null);
       assert.doesNotMatch(await page.locator('body').innerText(), sampleText);
 
-      await page.getByRole('button', { name: 'Collega Gmail', exact: true }).first().click();
+      await page.getByRole('button', { name: 'Collega la posta', exact: true }).first().click();
       await page.waitForSelector('#wizard-dialog[open]');
       assert.equal(await page.locator('[data-action="connect-demo"]').count(), 0);
       await page.getByRole('button', { name: 'Prepara il collegamento Gmail', exact: true }).click();
@@ -65,10 +65,10 @@ const sampleText = /Studio Riva|Giulia Conti|Marco Bianchi|Sara Rossi|@example\.
       assert.equal(new URL(await google.getAttribute('href')).hostname, 'console.cloud.google.com');
       assert.equal(new URL(await railway.getAttribute('href')).hostname, 'railway.com');
       const checked = page.waitForResponse(response =>
-        response.url() === `${origin}/api/gmail/status` && response.request().method() === 'GET');
+        response.url() === `${origin}/api/mail/providers` && response.request().method() === 'GET');
       await guide.getByRole('button', { name: 'Verifica configurazione' }).click();
       assert.equal((await checked).status(), 200);
-      await page.waitForFunction(() => document.querySelector('#toast').textContent.includes('Mancano ancora'));
+      await page.waitForFunction(() => document.querySelector('#toast').textContent.includes('richiede ancora la configurazione'));
       const dimensions = await page.evaluate(() => {
         const dialog = document.querySelector('#wizard-dialog');
         return {

@@ -107,7 +107,7 @@ async function logout(page) {
   const runtime = await fs.mkdtemp(path.join(os.tmpdir(), 'filo-account-smoke-'));
   const env = { ...process.env };
   for (const key of Object.keys(env)) {
-    if (/^(STRIPE_|FILO_GOOGLE_|FILO_AI_|OPENAI_|FILO_PLAN_|FILO_PUBLIC_URL$)/.test(key)) delete env[key];
+    if (/^(STRIPE_|FILO_GOOGLE_|FILO_MICROSOFT_|FILO_AI_|OPENAI_|FILO_PLAN_|FILO_PUBLIC_URL$)/.test(key)) delete env[key];
   }
   Object.assign(env, {
     ALEXCHIARA_DATA_DIR: runtime,

@@ -1,4 +1,4 @@
-"""Read-only Gmail integration. Provider data can never change the service mandate."""
+"""Read-only email integration. Provider data never changes the service mandate."""
 from __future__ import annotations
 
 import base64
@@ -52,7 +52,7 @@ def _cipher(db):
     try:
         return Fernet(key_path.read_bytes())
     except (ValueError, OSError) as exc:
-        raise ConnectorError("Chiave locale delle credenziali non disponibile. Ripristina la chiave o ricollega Gmail.", "credenziali", False, True) from exc
+        raise ConnectorError("Chiave locale delle credenziali non disponibile. Ripristina la chiave o ricollega la casella.", "credenziali", False, True) from exc
 
 
 def _save_tokens(db, tokens, expected_revision=None):
@@ -60,7 +60,7 @@ def _save_tokens(db, tokens, expected_revision=None):
     with db.connection() as conn:
         conn.execute("BEGIN IMMEDIATE")
         if expected_revision is not None and _revision_in_transaction(conn) != expected_revision:
-            raise ConnectorError("Il collegamento Gmail è cambiato durante il controllo. Nessuna credenziale è stata ripristinata.", "collegamento", False)
+            raise ConnectorError("Il collegamento email è cambiato durante il controllo. Nessuna credenziale è stata ripristinata.", "collegamento", False)
         conn.execute("INSERT INTO kv(key,value) VALUES ('gmail_tokens',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (json.dumps(value),))
 
 
@@ -229,6 +229,12 @@ def load_messages(provider, contacts, db):
         return get_messages(contacts)
     if provider == "gmail":
         return _gmail_messages(db, contacts)
+    if provider == "outlook":
+        from .outlook import load_outlook_messages
+        return load_outlook_messages(db, contacts)
+    if provider == "imap":
+        from .imap_mail import load_imap_messages
+        return load_imap_messages(db, contacts)
     raise ConnectorError("Collega una casella prima di avviare il servizio.", "collegamento", False)
 
 
@@ -308,6 +314,8 @@ def create_router(db):
                     revision = _revision_in_transaction(conn)
                     if revision != pending["revision"]:
                         raise ConnectorError("Il collegamento è cambiato mentre Google rispondeva. Avvia un nuovo collegamento.", "collegamento", False)
+                    from .mail_providers import clear_mail_credentials
+                    clear_mail_credentials(conn)
                     _invalidate_in_transaction(conn, "La casella Gmail è stata collegata. Attiva nuovamente il servizio per autorizzare questa connessione.")
                     updates = {"gmail_tokens": encrypted, "gmail_revision": revision + 1,
                                "connection": {"provider": "gmail", "status": "connected", "label": profile.get("emailAddress", "Casella Gmail")}}
@@ -321,8 +329,13 @@ def create_router(db):
     def disconnect():
         with db.connection() as conn:
             conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute("SELECT value FROM kv WHERE key='connection'").fetchone()
+            current = json.loads(row["value"]) if row else {}
+            if current.get("provider") not in (None, "gmail", "demo"):
+                raise HTTPException(409, "Questa casella non è Gmail. Usa il collegamento attivo per scollegarla.")
             _invalidate_in_transaction(conn, "Gmail è stato scollegato. Il mandato ricorrente è stato rimosso.")
-            conn.execute("DELETE FROM kv WHERE key LIKE 'oauth:%'")
+            from .mail_providers import clear_mail_credentials
+            clear_mail_credentials(conn)
             updates = {"gmail_tokens": None, "gmail_revision": _revision_in_transaction(conn) + 1,
                        "connection": {"provider": "gmail", "status": "disconnected", "label": "Gmail scollegato"}}
             for key, value in updates.items():

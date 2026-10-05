@@ -14,9 +14,11 @@ from fastapi.staticfiles import StaticFiles
 
 from . import ai
 from .agenda import agenda_summary, create_agenda_router
+from .briefing import mailbox_scope
 from .real_data import real_data_only, visible_service, workspace_data
 from .watches import build_watch_summary, create_watches_router, propose_watch
 from .connectors import ConnectorError, create_router, load_messages
+from .mail_providers import REAL_MAIL_PROVIDERS, clear_mail_credentials, create_mail_router
 from .db import Database, iso_now
 from .models import Action, Activation, ChatInput, CompanyInput, DemoFailure, Preferences
 from .service import Scheduler
@@ -92,6 +94,11 @@ def create_workspace_app(data_dir=None, start_worker=True):
     async def connector_error(request, exc):
         return JSONResponse({"detail": str(exc), "error_step": exc.step, "retryable": exc.retryable}, status_code=409)
 
+    @app.exception_handler(RequestValidationError)
+    async def workspace_validation_error(request, exc):
+        errors = [{"loc": error["loc"], "msg": error["msg"], "type": error["type"]} for error in exc.errors()]
+        return JSONResponse({"detail": errors}, status_code=422)
+
     @app.get("/api/health")
     def health():
         return {"status": "ok", "scheduler": "running" if scheduler._thread and scheduler._thread.is_alive() else "disabled", "persistence": "sqlite", "can_send": False}
@@ -114,9 +121,9 @@ def create_workspace_app(data_dir=None, start_worker=True):
             "agenda": agenda_summary(db),
             "limitations": [
                 "Ogni account ha uno spazio separato: il server deve restare attivo per i controlli programmati.",
-                "Gmail legge solo i messaggi con consenso OAuth e non può inviare email.",
+                "La posta collegata viene letta senza inviare email o modificare la casella.",
                 "Le bozze richiedono revisione umana: approvarle le segna come verificate, senza inviarle.",
-                "Le bozze Gmail usano regole locali e richiedono revisione umana.",
+                "Le bozze usano regole locali e richiedono revisione umana.",
                 "L'agenda contiene solo gli appuntamenti aggiunti da te. Calendario collegato e social sono in programma.",
             ],
         }
@@ -163,7 +170,7 @@ def create_workspace_app(data_dir=None, start_worker=True):
     @app.post("/api/connection/demo")
     def connect_demo():
         if real_data_only():
-            raise HTTPException(403, "Questo spazio usa soltanto email reali. Collega Gmail.")
+            raise HTTPException(403, "Questo spazio usa soltanto email reali. Collega la tua casella.")
         connection = {"provider": "demo", "status": "connected", "label": "Posta dimostrativa — Studio Riva"}
         with db.connection() as conn:
             conn.execute("BEGIN IMMEDIATE")
@@ -174,7 +181,8 @@ def create_workspace_app(data_dir=None, start_worker=True):
                 conn.execute("UPDATE kv SET value=? WHERE key='service'", (json.dumps(service, ensure_ascii=False),))
                 conn.execute("UPDATE runs SET status='failed',error='La casella collegata è cambiata. Attiva un nuovo mandato.',error_step='mandato',retryable=0,next_attempt_at=NULL,finished_at=? WHERE status IN ('queued','retry_wait')", (iso_now(),))
             updates = {"connection": connection, "demo_failure": None}
-            if previous.get("provider") == "gmail":
+            if previous.get("provider") in REAL_MAIL_PROVIDERS:
+                clear_mail_credentials(conn)
                 updates.update(gmail_tokens=None, gmail_oauth_pending=None, gmail_revision=db.get_setting("gmail_revision", 0) + 1)
             for key, value in updates.items():
                 conn.execute("INSERT INTO kv(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (key, json.dumps(value, ensure_ascii=False)))
@@ -184,17 +192,21 @@ def create_workspace_app(data_dir=None, start_worker=True):
     @app.post("/api/service/preview")
     def preview(payload: Preferences):
         connection = db.get_connection()
-        if real_data_only() and connection.get("provider") != "gmail":
-            raise HTTPException(409, "Collega Gmail per controllare le email reali.")
+        if real_data_only() and connection.get("provider") not in REAL_MAIL_PROVIDERS:
+            raise HTTPException(409, "Collega la tua casella per controllare le email reali.")
         if real_data_only() and db.get_setting("company").get("demo"):
             raise HTTPException(409, "Compila il nome del tuo studio nella pagina La tua azienda prima del primo controllo.")
         if connection["status"] != "connected":
-            raise HTTPException(409, "Collega la posta dimostrativa o Gmail prima dell'anteprima.")
+            raise HTTPException(409, "Collega una casella prima dell'anteprima.")
         preferences = payload.model_dump()
+        scope = mailbox_scope(db, connection["provider"])
         messages = scheduler._bounded(lambda: load_messages(connection["provider"], preferences["priority_contacts"], db))
         # Preview is always local. External processing starts only in a configured,
         # explicitly activated demo service and never receives Gmail data.
         result = ai.analyze_messages(messages, db.get_setting("company"), preferences["priority_contacts"])
+        current = db.get_connection()
+        if current.get("status") != "connected" or current.get("provider") != connection["provider"] or mailbox_scope(db, connection["provider"]) != scope:
+            raise HTTPException(409, "La casella è cambiata durante l'anteprima. Riprova con la connessione attuale.")
         return {**result, "demo": connection["provider"] == "demo", "provider": connection["provider"]}
 
     @app.put("/api/service/preferences")
@@ -221,8 +233,8 @@ def create_workspace_app(data_dir=None, start_worker=True):
         with db.connection() as conn:
             conn.execute("BEGIN IMMEDIATE")
             connection = db.get_connection()
-            if connection["status"] != "connected" or (real_data_only() and connection.get("provider") != "gmail"):
-                raise HTTPException(409, "Collega Gmail prima di attivare il servizio.")
+            if connection["status"] != "connected" or (real_data_only() and connection.get("provider") not in REAL_MAIL_PROVIDERS):
+                raise HTTPException(409, "Collega la tua casella prima di attivare il servizio.")
             service = db.get_setting("service")
             old_contacts = {contact["email"].lower() for contact in service["priority_contacts"]}
             new_contacts = {contact.email for contact in payload.priority_contacts}
@@ -251,7 +263,7 @@ def create_workspace_app(data_dir=None, start_worker=True):
             if service["status"] != "paused":
                 raise HTTPException(409, "Il servizio deve essere in pausa per riprenderlo.")
             connection = db.get_connection()
-            if connection["status"] != "connected" or connection["provider"] != service["provider"] or (real_data_only() and connection.get("provider") != "gmail"):
+            if connection["status"] != "connected" or connection["provider"] != service["provider"] or (real_data_only() and connection.get("provider") not in REAL_MAIL_PROVIDERS):
                 raise HTTPException(409, "Ricollega la casella autorizzata prima di riprendere il servizio.")
             service.update(status="active", activated_at=iso_now())
         elif action == "deactivate":
@@ -307,6 +319,11 @@ def create_workspace_app(data_dir=None, start_worker=True):
         return {"draft": db.draft(draft_id), "message": "Bozza verificata. Nessuna email è stata inviata."}
 
     app.include_router(create_router(db))
+    from .outlook import create_outlook_router
+    from .imap_mail import create_imap_router
+    app.include_router(create_outlook_router(db))
+    app.include_router(create_imap_router(db))
+    app.include_router(create_mail_router(db))
     static = Path(__file__).resolve().parent.parent / "static"
     if static.is_dir():
         app.mount("/static", StaticFiles(directory=static), name="static")

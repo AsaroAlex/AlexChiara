@@ -4,6 +4,7 @@ import os
 from .briefing import briefing_period, build_briefing
 from .db import DEFAULT_CONTACTS
 from .service import public_service
+from .mail_providers import REAL_MAIL_PROVIDERS
 
 
 def real_data_only():
@@ -33,12 +34,12 @@ def workspace_data(db):
     if company.get("demo"):
         company = {"name": "", "sector": "", "description": "", "signature": "", "demo": False, "needs_setup": True}
     if connection.get("provider") == "demo":
-        connection = {"provider": None, "status": "disconnected", "label": "Collega la tua casella Gmail"}
+        connection = {"provider": None, "status": "disconnected", "label": "Collega la tua casella email"}
     runs = [run for run in runs if not run["demo"]]
     with db.connection() as conn:
         real_runs = {row["id"] for row in conn.execute("SELECT id FROM runs WHERE demo=0")}
     approvals = [draft for draft in approvals if draft["run_id"] in real_runs]
-    if connection.get("provider") == "gmail":
+    if connection.get("provider") in REAL_MAIL_PROVIDERS:
         briefing = build_briefing(db, service=service)
     else:
         briefing = {
@@ -46,7 +47,7 @@ def workspace_data(db):
             "stale": False, "summary": "Il riepilogo arriverà dopo il primo controllo della tua posta.",
             "priorities": [], "contacts": [],
             "counts": {"pending": 0, "high_priority": 0, "contacts_wrote": 0, "contacts_unverified": 0},
-            "suggested_action": {"label": "Collega Gmail", "action": "reconnect", "reason": "Collega la tua casella per vedere le richieste vere, in ordine di priorità."},
+            "suggested_action": {"label": "Collega la posta", "action": "reconnect", "reason": "Collega la tua casella per vedere le richieste vere, in ordine di priorità."},
             "coverage_note": "Nessuna casella è stata letta.", "coverage_complete": False,
         }
     return company, service, connection, runs, approvals, briefing

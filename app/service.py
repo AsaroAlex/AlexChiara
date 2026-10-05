@@ -16,6 +16,7 @@ from zoneinfo import ZoneInfo
 from . import ai
 from .briefing import capture_snapshot, mailbox_scope, persist_snapshot
 from .connectors import ConnectorError, load_messages
+from .mail_providers import REAL_MAIL_PROVIDERS
 from .db import iso_now
 
 logger = logging.getLogger(__name__)
@@ -115,18 +116,18 @@ class Scheduler:
                     return self.db.run(existing["id"])
             if trigger == "watch":
                 from .watches import needs_watch_poll
-                if service.get("provider") != "gmail" or not needs_watch_poll(self.db, observed_at):
+                if service.get("provider") not in REAL_MAIL_PROVIDERS or not needs_watch_poll(self.db, observed_at):
                     return None
                 # Bind deduplication to the mailbox still authorized inside
                 # this transaction, even if it changed after scheduling.
-                scope = hashlib.sha256(mailbox_scope(self.db, "gmail").encode()).hexdigest()[:24]
+                scope = hashlib.sha256(mailbox_scope(self.db, service["provider"]).encode()).hexdigest()[:24]
                 bucket = int(observed_at.timestamp()) // int(WATCH_INTERVAL.total_seconds())
                 slot_key = f"priority-email:watch:{scope}:{bucket}"
                 recent = conn.execute("""
                     SELECT id,COALESCE(finished_at,started_at) AS observed_at
-                    FROM runs WHERE provider='gmail' AND started_at IS NOT NULL
+                    FROM runs WHERE provider=? AND started_at IS NOT NULL
                     ORDER BY julianday(COALESCE(finished_at,started_at)) DESC LIMIT 1
-                """).fetchone()
+                """, (service["provider"],)).fetchone()
                 if recent and observed_at - utc(recent["observed_at"]) < WATCH_INTERVAL:
                     return self.db.run(recent["id"])
             conn.execute("INSERT OR IGNORE INTO runs(id,slot_key,trigger,provider,status,created_at,demo,preferences,company) VALUES (?,?,?,?,'queued',?,?,?,?)", (
@@ -139,10 +140,10 @@ class Scheduler:
 
     def _guard(self, provider, preferences=None, company=None):
         if _real_data_only() and provider == "demo":
-            raise ConnectorError("La posta dimostrativa non è disponibile: collega Gmail per usare dati reali.", "collegamento", False)
+            raise ConnectorError("La posta dimostrativa non è disponibile: collega la tua casella per usare dati reali.", "collegamento", False)
         if _real_data_only():
             if self.db.get_setting("company", {}).get("demo"):
-                raise ConnectorError("Configura il profilo reale della tua attività prima di controllare Gmail e preparare bozze.", "profilo", False)
+                raise ConnectorError("Configura il profilo reale della tua attività prima di controllare la posta e preparare bozze.", "profilo", False)
             if company is not None and company.get("demo"):
                 raise ConnectorError("Questo controllo usa ancora un profilo dimostrativo. Avvia un nuovo controllo con il profilo reale.", "profilo", False)
         service = self.db.get_setting("service")
@@ -200,16 +201,16 @@ class Scheduler:
 
     def _schedule_watch_due(self, now):
         service = self.db.get_setting("service")
-        if service.get("provider") != "gmail":
+        if service.get("provider") not in REAL_MAIL_PROVIDERS:
             return
         try:
-            self._guard("gmail")
+            self._guard(service["provider"])
         except ConnectorError:
             return
         from .watches import needs_watch_poll
         if not needs_watch_poll(self.db, now):
             return
-        scope = hashlib.sha256(mailbox_scope(self.db, "gmail").encode()).hexdigest()[:24]
+        scope = hashlib.sha256(mailbox_scope(self.db, service["provider"]).encode()).hexdigest()[:24]
         bucket = int(now.timestamp()) // int(WATCH_INTERVAL.total_seconds())
         key = f"priority-email:watch:{scope}:{bucket}"
         self.enqueue("watch", key, now)
@@ -254,6 +255,13 @@ class Scheduler:
         raise value
 
     def _execute(self, run, now):
+        scope_key = mailbox_scope(self.db, run["provider"])
+
+        def guard_current(preferences, company):
+            self._guard(run["provider"], preferences, company)
+            if mailbox_scope(self.db, run["provider"]) != scope_key:
+                raise ConnectorError("La casella è cambiata durante il controllo. Avvia un nuovo controllo per la connessione attuale.", "collegamento", False)
+
         try:
             preferences = json.loads(run["preferences"])
             company = json.loads(run["company"])
@@ -269,11 +277,10 @@ class Scheduler:
             if failure == "expired":
                 self.db.set_connection("demo", "expired")
                 raise ConnectorError("Autorizzazione dimostrativa scaduta. Ripristina la connessione per continuare.", "autorizzazione", False, True)
-            scope_key = mailbox_scope(self.db, run["provider"])
             def read_and_analyze():
-                self._guard(run["provider"], preferences, company)
+                guard_current(preferences, company)
                 messages = load_messages(run["provider"], preferences["priority_contacts"], self.db)
-                self._guard(run["provider"], preferences, company)
+                guard_current(preferences, company)
                 # Provider content never crosses the permission boundary above.
                 analyze = getattr(ai, "analyze", None)
                 if analyze:
@@ -284,11 +291,11 @@ class Scheduler:
                 sources = {str(ai._field(message, "id")): message for message in messages}
                 return result, snapshot, sources
             result, snapshot, sources = self._bounded(read_and_analyze)
-            self._guard(run["provider"], preferences, company)
+            guard_current(preferences, company)
             finished = now.isoformat()
             with self.db.connection() as conn:
                 conn.execute("BEGIN IMMEDIATE")
-                self._guard(run["provider"], preferences, company)
+                guard_current(preferences, company)
                 for item in result["items"]:
                     source = sources.get(item["source_id"], {})
                     observation = next((message for message in snapshot["messages"] if message["id"] == item["source_id"]), {})
@@ -298,13 +305,17 @@ class Scheduler:
                 persist_snapshot(conn, run["id"], snapshot)
                 conn.execute("UPDATE runs SET status='succeeded',finished_at=?,summary=?,error=NULL,error_step=NULL,retryable=0,next_attempt_at=NULL,analysis_mode=? WHERE id=?", (finished, result["summary"], result.get("analysis_mode", "deterministic"), run["id"]))
                 self._log_in_transaction(conn, "run_succeeded", run["id"], {"items": len(result["items"]), "analysis_mode": result.get("analysis_mode", "deterministic")})
-            service = self.db.get_setting("service")
-            service["last_run_at"] = finished
-            self.db.set_setting("service", service)
+                service = json.loads(conn.execute("SELECT value FROM kv WHERE key='service'").fetchone()["value"])
+                service["last_run_at"] = finished
+                conn.execute("UPDATE kv SET value=? WHERE key='service'", (json.dumps(service),))
         except ConnectorError as exc:
             if exc.expired:
-                current = self.db.get_connection()
-                self.db.set_connection(run["provider"], "expired", current.get("label"))
+                with self.db.connection() as conn:
+                    conn.execute("BEGIN IMMEDIATE")
+                    current = self.db.get_connection()
+                    if current.get("provider") == run["provider"] and mailbox_scope(self.db, run["provider"]) == scope_key:
+                        current["status"] = "expired"
+                        conn.execute("UPDATE kv SET value=? WHERE key='connection'", (json.dumps(current),))
             self._fail(run, now, str(exc), exc.step, exc.retryable)
         except Exception:
             logger.exception("Read-only analysis failed for run %s", run["id"])

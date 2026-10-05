@@ -22,7 +22,7 @@ bash scripts/check.sh
 
 ## Account e abbonamento
 
-L'accesso usa un modulo nella pagina, senza popup HTTP Basic. La sessione persistente usa un cookie HttpOnly, SameSite=Lax e Secure su HTTPS; l'uscita la revoca sul server. Le password degli account registrati sono salvate con scrypt e le mutazioni richiedono un token CSRF. La registrazione crea un nuovo spazio vuoto: azienda, Gmail, contatti, agenda e bozze sono separati dagli altri account.
+L'accesso usa un modulo nella pagina, senza popup HTTP Basic. La sessione persistente usa un cookie HttpOnly, SameSite=Lax e Secure su HTTPS; l'uscita la revoca sul server. Le password degli account registrati sono salvate con scrypt e le mutazioni richiedono un token CSRF. La registrazione crea un nuovo spazio vuoto: azienda, posta, contatti, agenda e bozze sono separati dagli altri account.
 
 L'account già esistente accede con il nome e la password configurati dal gestore in `FILO_ACCESS_USERNAME` e `FILO_ACCESS_PASSWORD`, mantenendo i dati precedenti. La creazione di un nuovo account non concede accesso a questo spazio.
 
@@ -32,13 +32,19 @@ L'area personale include il percorso di abbonamento Stripe Checkout e il portale
 
 La panoramica usa superfici bianche, grigi neutri, testo carbone e accenti mandarino e mantiene «La tua giornata, con più spazio». Mostra le risposte da rivedere, il motivo della priorità, un estratto della richiesta e un prossimo passo concreto. Le urgenze esplicite precedono le richieste in attesa da almeno due giorni; le altre seguono l’ordine di arrivo. Le bozze sono leggibili, copiabili e segnabili come riviste nella stessa pagina. I controlli successivi non duplicano le conversazioni e non ripropongono una sorgente già rivista.
 
-Il riepilogo usa solo i controlli salvati: apre il periodo dalle 18 della sera precedente oppure da venerdì sera durante il weekend e il lunedì, con orari italiani. Indica l’ultimo controllo e segnala quando va aggiornato; oltre un’ora gli ultimi arrivi non sono considerati verificati. I contatti senza messaggi sono indicati come tali soltanto quando la copertura lo prova. Gmail restituisce una selezione limitata di conversazioni in attesa: un’assenza resta «da verificare».
+Il riepilogo usa solo i controlli salvati: apre il periodo dalle 18 della sera precedente oppure da venerdì sera durante il weekend e il lunedì, con orari italiani. Indica l’ultimo controllo e segnala quando va aggiornato; oltre un’ora gli ultimi arrivi non sono considerati verificati. I contatti senza messaggi sono indicati come tali soltanto quando la copertura lo prova. I connettori restituiscono una selezione limitata di messaggi recenti: un’assenza resta «da verificare».
 
 Prima del primo controllo la pagina è vuota, senza richieste o appuntamenti inventati. Su Railway `FILO_REAL_DATA_ONLY=1` nasconde i dati dimostrativi conservati e blocca le esecuzioni demo. La pagina propone il passo utile: configurare la posta, ricollegarla, riprendere il servizio, aggiornare il riepilogo o verificare la prima risposta.
 
 L’agenda contiene gli appuntamenti aggiunti dall’utente, persistenti e ordinati per orario in Europe/Rome. Puoi consultare un’altra giornata e scaricare un file `.txt` con appuntamenti e note. Il calendario esterno non è collegato e non vengono inventati impegni.
 
-Gli avvisi “oggi/domani se risponde questo contatto dimmelo subito” si possono proporre in chat e salvare, oppure aggiungere direttamente nella panoramica. Richiedono un contatto prioritario già configurato e Gmail collegata. Mentre il servizio autorizzato è attivo, un avviso in attesa per oggi abilita un controllo ogni cinque minuti; quando viene osservato un messaggio arrivato dopo la creazione dell’avviso, la segnalazione compare prima delle altre priorità. Nessuna notifica esterna viene inviata. Pausa e disattivazione fermano anche questi controlli.
+Gli avvisi “oggi/domani se risponde questo contatto dimmelo subito” si possono proporre in chat e salvare, oppure aggiungere direttamente nella panoramica. Richiedono un contatto prioritario già configurato e una casella collegata. Mentre il servizio autorizzato è attivo, un avviso in attesa per oggi abilita un controllo ogni cinque minuti; quando viene osservato un messaggio arrivato dopo la creazione dell’avviso, la segnalazione compare prima delle altre priorità. Nessuna notifica esterna viene inviata. Pausa e disattivazione fermano anche questi controlli.
+
+## Collegamenti email
+
+La sezione **Collegamenti** offre Gmail, Outlook/Microsoft 365, iCloud, Yahoo, Aruba, Libero e un server IMAP personalizzato. Gmail e Outlook utilizzano consenso OAuth nella stessa scheda; richiedono la configurazione iniziale delle app Google e Microsoft da parte del gestore. Gli altri provider usano IMAP con TLS sulla porta 993 e password per app quando richiesta. Una sola casella per account; una sostituzione riuscita ferma il mandato precedente. Le credenziali sono cifrate e separate per utente. Tutti i provider supportano i controlli quotidiani e gli avvisi odierni ogni cinque minuti con mandato attivo.
+
+Consulta [la guida di configurazione dei provider](docs/EMAIL.md). Le prove sono simulate: nessuna casella reale è stata collegata durante lo sviluppo. Su Railway le app OAuth Google e Microsoft restano da configurare.
 
 ## Percorso dimostrativo locale
 

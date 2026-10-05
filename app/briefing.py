@@ -60,9 +60,11 @@ def briefing_period(now=None):
 
 def mailbox_scope(db, provider):
     """Do not mix a former Gmail mailbox's checks with its replacement."""
-    if provider == "gmail":
+    if provider in {"gmail", "outlook", "imap"}:
         connection = db.get_connection()
-        return "gmail:" + str(db.get_setting("gmail_revision", 0)) + ":" + str(connection.get("label", ""))
+        # The persisted gmail_revision is the shared mailbox revision, retaining
+        # the existing Gmail scope format so its saved checks survive migration.
+        return provider + ":" + str(db.get_setting("gmail_revision", 0)) + ":" + str(connection.get("label", ""))
     return str(provider or "disconnected")
 
 
@@ -323,7 +325,7 @@ def build_briefing(db, now=None, *, service=None):
             "legacy_pending_count": legacy_pending_count,
             "coverage_complete": bool(latest and latest["coverage_complete"]),
             "coverage_note": ("Casella dimostrativa: tutti i messaggi fittizi sono inclusi." if provider == "demo"
-                              else "Gmail: controllo limitato alle conversazioni recenti. L'assenza di messaggi non è verificata." if provider == "gmail"
+                              else "Posta: controllo limitato ai messaggi recenti. L'assenza di messaggi non è verificata." if provider in {"gmail", "outlook", "imap"}
                               else "Collega una casella per verificare i contatti."),
             "latest_error": run["error"] if failed else None}
 
