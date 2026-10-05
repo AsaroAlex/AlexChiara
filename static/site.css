@@ -145,7 +145,7 @@ input:focus { border-color: var(--ink); outline: 2px solid var(--ink); outline-o
 .account-form { display: grid; gap: 0; }
 .account-form .button { justify-self: start; }
 .danger-card { border-color: #f1d7d8; }
-.danger-copy { font-size: 14px; }
+.danger-copy { font-size: 14px; margin: 0 0 18px; }
 .deleted-notice { margin-top: 24px; }
 .button.danger { background: var(--error); color: white; border-color: var(--error); }
 .button.danger:hover { background: #8f1b20; border-color: #8f1b20; }
