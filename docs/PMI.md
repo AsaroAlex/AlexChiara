@@ -7,9 +7,9 @@ La pagina **Servizi** offre 23 moduli aziendali locali, oltre alla segreteria em
 | Area | Servizi |
 | --- | --- |
 | Clienti e vendite | Clienti e opportunità, preventivi, assistenza clienti |
-| Amministrazione | Bozze fattura, incassi e solleciti, spese, scadenze, documenti, contratti e rinnovi, note spese |
+| Amministrazione | Bozze fattura, incassi e solleciti, spese, scadenze, contratti e rinnovi, note spese |
 | Fornitori e operazioni | Fornitori, acquisti e ordini, commesse, magazzino e riordini, spedizioni, qualità |
-| Organizzazione | Procedure e checklist, verbali delle riunioni, misurazione dei tempi |
+| Organizzazione | Documenti e checklist, procedure, verbali delle riunioni, misurazione dei tempi |
 | Persone | Ferie e permessi, formazione |
 | Comunicazione | Contenuti e social, newsletter |
 
@@ -17,7 +17,7 @@ I moduli usano schede con campi specifici. Puoi assegnare una scadenza, una prio
 
 Ogni modulo suggerisce da tre a cinque **Passaggi da seguire**, adatti al suo compito: per esempio verificare le condizioni del preventivo, raccogliere il giustificativo di una spesa o controllare il destinatario di una spedizione. Le caselle conservano ciò che hai segnato e il prossimo passaggio aperto compare anche nella panoramica. I passaggi sono conferme manuali: segnare un controllo non prova un’approvazione esterna e completare l’attività non spunta automaticamente le caselle.
 
-La ricerca **Cerca attività** trova titoli, referenti, note e dati delle schede in tutti i moduli aziendali; non cerca nella casella email. Si può aprire anche con `Ctrl/Cmd + K`. Le attività della panoramica possono essere completate direttamente e riaperte con il comando per annullare.
+La ricerca **Cerca attività** trova titoli, referenti, note e dati delle schede in tutti i moduli aziendali, senza distinguere maiuscole o lettere accentate; gli importi si cercano anche nel formato italiano (`1.250,50`). Non cerca nella casella email. Si può aprire anche con `Ctrl/Cmd + K`. Le attività della panoramica possono essere completate direttamente e riaperte con il comando per annullare.
 
 La panoramica mostra subito le attività scadute, quelle di oggi e quelle che richiedono attenzione, con il prossimo passo. Per il magazzino una quantità inferiore alla soglia annotata propone un controllo e un riordino: non aggiorna la giacenza e non invia ordini. Le date vengono valutate nel fuso italiano `Europe/Rome`.
 

@@ -11,7 +11,6 @@ conversations, rather than a complete inbox. Its missing contacts are always
 "not_verified"; observed outgoing replies can close an older suggestion.
 """
 from datetime import datetime, time, timedelta, timezone
-from email.utils import parseaddr
 import json
 import re
 from zoneinfo import ZoneInfo
@@ -38,7 +37,7 @@ def _stamp(value):
 
 
 def _email(value):
-    return parseaddr(str(value or ""))[1].strip().casefold()
+    return ai.sender_address(value).casefold()
 
 
 def briefing_period(now=None):
@@ -58,14 +57,34 @@ def briefing_period(now=None):
             "timezone": "Europe/Rome"}
 
 
+_REVISION_SCOPE = re.compile(r"(gmail|outlook|imap):[0-9]+:(.*)", re.S)
+
+
 def mailbox_scope(db, provider):
-    """Do not mix a former Gmail mailbox's checks with its replacement."""
+    """Do not mix a former mailbox's checks with its replacement.
+
+    The scope follows the connected account (its address label), not the
+    connection revision: renewing consent for the same mailbox keeps reviewed
+    suggestions and reminders, while a different account starts clean.
+    """
     if provider in {"gmail", "outlook", "imap"}:
         connection = db.get_connection()
-        # The persisted gmail_revision is the shared mailbox revision, retaining
-        # the existing Gmail scope format so its saved checks survive migration.
-        return provider + ":" + str(db.get_setting("gmail_revision", 0)) + ":" + str(connection.get("label", ""))
+        return provider + ":mailbox:" + str(connection.get("label", ""))
     return str(provider or "disconnected")
+
+
+def canonical_scope(key):
+    """Map a scope saved with a connection revision to the account scope."""
+    found = _REVISION_SCOPE.fullmatch(key) if isinstance(key, str) else None
+    return f"{found[1]}:mailbox:{found[2]}" if found else key
+
+
+def migrate_scope_keys(conn, table):
+    """Additive migration of saved scopes; table names come from this code only."""
+    assert table in {"briefing_snapshots", "watch_requests"}
+    for (key,) in conn.execute(f"SELECT DISTINCT scope_key FROM {table}").fetchall():
+        if canonical_scope(key) != key:
+            conn.execute(f"UPDATE {table} SET scope_key=? WHERE scope_key=?", (canonical_scope(key), key))
 
 
 def capture_snapshot(messages, contacts, provider, checked_at, scope_key):

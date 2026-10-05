@@ -139,7 +139,7 @@ def test_checklists_repetitions_cash_and_company_exports_are_private_for_members
     app, alice, _ = site
     yesterday, today, next_date = calendar_dates()
     alice_token = register(alice, "playbook-alice@example.test")
-    save_profile(alice, alice_token, "Emittente Alice privata", "12345678901")
+    save_profile(alice, alice_token, "Emittente Alice privata", "12345678903")
     alice_source = add_quote(alice, alice_token, "Preventivo Alice riservato", status="done", saved_minutes=9)
     alice_step = alice_source["playbook"]["steps"][0]["id"]
     response = mutate(alice, alice_token, "PATCH", BASE + "/" + alice_source["id"], {"steps": {alice_step: True}})
@@ -162,7 +162,7 @@ def test_checklists_repetitions_cash_and_company_exports_are_private_for_members
 
     with TestClient(app) as bob:
         bob_token = register(bob, "playbook-bob@example.test")
-        save_profile(bob, bob_token, "Emittente Bob privata", "98765432109")
+        save_profile(bob, bob_token, "Emittente Bob privata", "98765432103")
         bob_source = add_quote(bob, bob_token, "Preventivo Bob riservato")
         bob_child = repeat(bob, bob_token, bob_source, next_date, title="Prossima attività Bob")["item"]
         add_record(bob, bob_token, "receivables", "Incasso Bob", {
@@ -213,8 +213,8 @@ def test_checklists_repetitions_cash_and_company_exports_are_private_for_members
         assert retry["item"]["playbook"]["completed"] == 1
         assert workspace_counts(app, alice) == before
         for client, child, own_name, own_vat, foreign_name, foreign_vat in (
-            (alice, alice_child, "Emittente Alice privata", "12345678901", "Emittente Bob privata", "98765432109"),
-            (bob, bob_child, "Emittente Bob privata", "98765432109", "Emittente Alice privata", "12345678901"),
+            (alice, alice_child, "Emittente Alice privata", "12345678903", "Emittente Bob privata", "98765432103"),
+            (bob, bob_child, "Emittente Bob privata", "98765432103", "Emittente Alice privata", "12345678903"),
         ):
             exported = client.get(BASE + "/" + child["id"] + "/export")
             assert exported.status_code == 200, exported.text

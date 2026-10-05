@@ -27,9 +27,9 @@ def _select(field_id, label, options, *, required=False):
             "options": list(options)}
 
 
-def _money(field_id, label, *, required=False):
+def _money(field_id, label, *, required=False, maximum=1_000_000_000):
     return {"id": field_id, "label": label, "type": "money", "required": required,
-            "min": 0, "max": 1_000_000_000, "step": "0.01"}
+            "min": 0, "max": maximum, "step": "0.01"}
 
 
 def _number(field_id, label, *, required=False, minimum=0, maximum=1_000_000, step="0.01"):
@@ -136,7 +136,7 @@ SERVICE_CATALOG = (
         "clock", [
             _text("client", "Cliente o debitore", required=True),
             _text("reference", "Riferimento fattura o accordo", required=True),
-            _money("amount", "Importo da incassare in euro", required=True),
+            _money("amount", "Importo da incassare in euro", required=True, maximum=1_220_000_000),
             _date("expected_date", "Data di incasso prevista"),
             _area("payment_context", "Accordi e ultimo contatto", max_length=1500),
         ],

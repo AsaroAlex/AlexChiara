@@ -12,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 from email.errors import MessageError
 from email import policy
 from email.parser import BytesParser
-from email.utils import getaddresses, parseaddr, parsedate_to_datetime
+from email.utils import getaddresses, parsedate_to_datetime
 import hashlib
 import html
 import imaplib
@@ -28,6 +28,7 @@ from cryptography.fernet import InvalidToken
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field, SecretStr
 
+from .ai import sender_address
 from .connectors import ConnectorError, _cipher, _invalidate_in_transaction, _revision_in_transaction
 from .mail_providers import clear_mail_credentials
 
@@ -363,7 +364,7 @@ def _fetch_message(client, folder, uid, addresses, is_sent, cutoff, deadline):
     try:
         message = BytesParser(policy=policy.default).parsebytes(raw)
         sender = str(message.get("From", ""))[:1024]
-        from_client = parseaddr(sender)[1].lower() in addresses
+        from_client = sender_address(sender) in addresses
         recipients = {address.lower() for _, address in getaddresses([str(message.get("To", "")), str(message.get("Cc", ""))])}
         if is_sent:
             if not recipients.intersection(addresses):

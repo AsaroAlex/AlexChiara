@@ -1,6 +1,6 @@
 """SQLite persistence. Every write is transactional and survives browser closure."""
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import json
 from pathlib import Path
 import secrets
@@ -11,6 +11,7 @@ DEFAULT_CONTACTS = [
     {"name": "Marco Bianchi", "email": "marco.bianchi@example.com"},
     {"name": "Sara Rossi", "email": "sara.rossi@example.com"},
 ]
+SESSION_LIFETIME = timedelta(days=7)
 DEFAULT_COMPANY = {"name": "Studio Riva", "sector": "Studio di architettura", "description": "Studio fittizio per la dimostrazione. Progettiamo spazi residenziali e commerciali.", "signature": "Il team di Studio Riva", "demo": True}
 
 
@@ -100,6 +101,8 @@ class Database:
             }
             for key, value in defaults.items():
                 conn.execute("INSERT OR IGNORE INTO kv(key,value) VALUES (?,?)", (key, json.dumps(value, ensure_ascii=False)))
+            from .briefing import migrate_scope_keys
+            migrate_scope_keys(conn, "briefing_snapshots")
 
     def get_setting(self, key, default=None):
         with self.connection() as conn:
@@ -123,21 +126,26 @@ class Database:
         with self.connection() as conn:
             conn.execute("INSERT INTO actions(action,target_id,created_at,details) VALUES (?,?,?,?)", (action, target_id, iso_now(), json.dumps(details or {}, ensure_ascii=False)))
 
+    @staticmethod
+    def _session_cutoff():
+        # Stored timestamps are ISO strings, so compare with the same format.
+        return (datetime.now(timezone.utc) - SESSION_LIFETIME).isoformat()
+
     def session(self, session_id=None):
         with self.connection() as conn:
-            row = conn.execute("SELECT * FROM sessions WHERE id=?", (session_id,)).fetchone() if session_id else None
+            row = conn.execute("SELECT * FROM sessions WHERE id=? AND created_at>=?", (session_id, self._session_cutoff())).fetchone() if session_id else None
             if row:
                 return dict(row)
             session = {"id": secrets.token_urlsafe(32), "csrf": secrets.token_urlsafe(32), "created_at": iso_now()}
-            conn.execute("DELETE FROM sessions WHERE created_at < datetime('now','-7 days')")
+            conn.execute("DELETE FROM sessions WHERE created_at<?", (self._session_cutoff(),))
             conn.execute("INSERT INTO sessions(id,csrf,created_at) VALUES (:id,:csrf,:created_at)", session)
             return session
 
     def csrf_valid(self, session_id, csrf):
-        if not session_id or not csrf:
+        if not isinstance(session_id, str) or not isinstance(csrf, str) or not session_id or not csrf or not csrf.isascii():
             return False
         with self.connection() as conn:
-            row = conn.execute("SELECT csrf FROM sessions WHERE id=?", (session_id,)).fetchone()
+            row = conn.execute("SELECT csrf FROM sessions WHERE id=? AND created_at>=?", (session_id, self._session_cutoff())).fetchone()
         return bool(row and secrets.compare_digest(row["csrf"], csrf))
 
     def draft(self, draft_id):

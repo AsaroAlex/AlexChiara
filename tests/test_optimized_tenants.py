@@ -96,7 +96,7 @@ def test_conversion_boundary_requires_login_csrf_and_same_origin(site):
 def test_conversion_search_links_and_exports_stay_in_the_signed_in_account(site):
     app, alice = site
     alice_token = register(alice, "workflow-alice@example.test")
-    save_profile(alice, alice_token, "Emittente Alice", "12345678901")
+    save_profile(alice, alice_token, "Emittente Alice", "12345678903")
     source = add_quote(alice, alice_token, "Offerta Alice privata %_")
     invoice = convert(alice, alice_token, source, "invoices")
     receivable = convert(alice, alice_token, invoice, "receivables")
@@ -108,7 +108,7 @@ def test_conversion_search_links_and_exports_stay_in_the_signed_in_account(site)
 
     with TestClient(app) as bob:
         bob_token = register(bob, "workflow-bob@example.test")
-        save_profile(bob, bob_token, "Emittente Bob", "98765432109")
+        save_profile(bob, bob_token, "Emittente Bob", "98765432103")
         bob_source = add_quote(bob, bob_token, "Offerta Bob privata")
         bob_invoice = convert(bob, bob_token, bob_source, "invoices")
         for foreign in (source, invoice, receivable):
@@ -135,8 +135,8 @@ def test_conversion_search_links_and_exports_stay_in_the_signed_in_account(site)
         assert alice.get(BASE).json()["total"] == 3
         exported = alice.get(BASE + "/" + invoice["id"] + "/export")
         assert exported.status_code == 200
-        assert "Emittente Alice" in exported.text and "12345678901" in exported.text
-        assert "Emittente Bob" not in exported.text and "98765432109" not in exported.text
+        assert "Emittente Alice" in exported.text and "12345678903" in exported.text
+        assert "Emittente Bob" not in exported.text and "98765432103" not in exported.text
         assert "non è una fattura fiscale" in exported.text
         assert "Nessuna numerazione fiscale assegnata o trasmissione allo SDI" in exported.text
     with TestClient(app) as owner:
@@ -150,27 +150,27 @@ def test_conversion_search_links_and_exports_stay_in_the_signed_in_account(site)
 def test_exports_use_current_private_company_profile_and_omit_demo_identity(site):
     app, client = site
     token = register(client, "current-issuer@example.test")
-    save_profile(client, token, "Emittente iniziale", "12345678901")
+    save_profile(client, token, "Emittente iniziale", "12345678903")
     source = add_quote(client, token, "Offerta corrente")
     invoice = convert(client, token, source, "invoices")
     assert "Emittente iniziale" in invoice["document"]
-    save_profile(client, token, "Emittente aggiornato", "98765432109")
+    save_profile(client, token, "Emittente aggiornato", "98765432103")
     for item in (source, invoice):
         response = client.get(BASE + "/" + item["id"] + "/export")
         assert response.status_code == 200
-        assert "Emittente aggiornato" in response.text and "98765432109" in response.text
-        assert "Emittente iniziale" not in response.text and "12345678901" not in response.text
+        assert "Emittente aggiornato" in response.text and "98765432103" in response.text
+        assert "Emittente iniziale" not in response.text and "12345678903" not in response.text
 
     with TestClient(app) as owner:
         response = owner.post("/api/auth/login", json={"identifier": "filo", "password": OWNER_PASSWORD},
                               headers={"X-CSRF-Token": csrf(owner)})
         assert response.status_code == 200, response.text
         owner_token = response.json()["csrf_token"]
-        app.state.db.set_setting("company", {"name": "Azienda dimostrativa segreta", "legal_name": "Identità fittizia", "vat_number": "11111111111", "demo": True})
+        app.state.db.set_setting("company", {"name": "Azienda dimostrativa segreta", "legal_name": "Identità fittizia", "vat_number": "11111111115", "demo": True})
         demo_source = add_quote(owner, owner_token, "Offerta senza emittente demo")
         demo_invoice = convert(owner, owner_token, demo_source, "invoices")
         for item in (demo_source, demo_invoice):
             exported = owner.get(BASE + "/" + item["id"] + "/export").text
             assert "Azienda dimostrativa segreta" not in exported
-            assert "Identità fittizia" not in exported and "11111111111" not in exported
+            assert "Identità fittizia" not in exported and "11111111115" not in exported
             assert "Emittente aggiornato" not in exported

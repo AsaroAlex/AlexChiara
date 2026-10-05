@@ -287,3 +287,71 @@ def test_authenticated_user_must_log_out_before_registering_again(client):
     response = client.post("/api/auth/register", json={"name": "Chiara", "email": "chiara@example.com", "password": PASSWORD}, headers={"X-CSRF-Token": current["csrf_token"]})
     assert response.status_code == 409
     assert client.get("/api/auth/session").json()["user"]["id"] == OWNER_ID
+
+
+def test_successful_logins_do_not_exhaust_the_failed_attempt_budget(store):
+    signup(store)
+    for _ in range(12):
+        store.login("chiara@example.com", PASSWORD, guest(store), "10.0.0.1")
+    for _ in range(8):
+        with pytest.raises(AccountError) as exc:
+            store.login("chiara@example.com", "wrong-password-123", guest(store), "10.0.0.1")
+        assert exc.value.status_code == 401
+    with pytest.raises(AccountError) as exc:
+        store.login("chiara@example.com", PASSWORD, guest(store), "10.0.0.1")
+    assert exc.value.status_code == 429
+
+
+def test_throttle_uses_the_configured_proxy_header_not_forwarded_for(tmp_path, monkeypatch):
+    monkeypatch.setenv("FILO_CLIENT_IP_HEADER", "X-Real-IP")
+    store = AccountStore(tmp_path / "accounts.sqlite3", legacy_username="filo", legacy_password="deployment-secret")
+    app = FastAPI()
+    app.include_router(create_account_router(store))
+    with TestClient(app) as client:
+        def attempt(forwarded):
+            csrf = client.get("/api/auth/session").json()["csrf_token"]
+            return client.post("/api/auth/login", json={"email": "filo", "password": "not-the-secret"},
+                               headers={"X-CSRF-Token": csrf, "X-Real-IP": "203.0.113.9", "X-Forwarded-For": forwarded}).status_code
+        statuses = [attempt(f"198.51.100.{index}") for index in range(10)]
+    assert statuses[:8] == [401] * 8
+    assert statuses[8:] == [429, 429]
+
+
+def test_invalid_proxy_header_falls_back_to_the_socket_address(monkeypatch):
+    monkeypatch.setenv("FILO_CLIENT_IP_HEADER", "X-Real-IP")
+
+    class Request:
+        headers = {"X-Real-IP": "not-an-ip"}
+
+        class client:
+            host = "192.0.2.1"
+    assert accounts.client_address(Request()) == "192.0.2.1"
+    Request.headers = {"X-Real-IP": " 2001:db8::1 "}
+    assert accounts.client_address(Request()) == "2001:db8::1"
+    monkeypatch.delenv("FILO_CLIENT_IP_HEADER")
+    assert accounts.client_address(Request()) == "192.0.2.1"
+
+
+def test_owner_username_matching_a_member_disables_owner_login_without_crashing(tmp_path):
+    path = tmp_path / "accounts.sqlite3"
+    first = AccountStore(path, legacy_username="filo", legacy_password="deployment-secret")
+    _, member = first.register("Chiara", "chiara@example.com", PASSWORD, first.new_guest_session()[0], "127.0.0.1")
+    with first.connection() as conn:
+        conn.execute("DELETE FROM users WHERE id=?", (OWNER_ID,))
+    renamed = AccountStore(path, legacy_username="chiara@example.com", legacy_password="deployment-secret")
+    assert renamed.owner_enabled is False
+    _, session = renamed.login("chiara@example.com", PASSWORD, renamed.new_guest_session()[0])
+    assert session["user"]["id"] == member["user"]["id"]
+    with pytest.raises(AccountError):
+        renamed.login("chiara@example.com", "deployment-secret", renamed.new_guest_session()[0])
+
+
+def test_renamed_owner_keeps_the_workspace_and_releases_the_old_name(tmp_path):
+    path = tmp_path / "accounts.sqlite3"
+    AccountStore(path, legacy_username="filo", legacy_password="deployment-secret")
+    renamed = AccountStore(path, legacy_username="titolare", legacy_password="deployment-secret")
+    _, session = renamed.login("titolare", "deployment-secret", renamed.new_guest_session()[0])
+    assert session["user"]["id"] == OWNER_ID
+    assert session["user"]["email"] == "titolare"
+    with pytest.raises(AccountError):
+        renamed.login("filo", "deployment-secret", renamed.new_guest_session()[0])

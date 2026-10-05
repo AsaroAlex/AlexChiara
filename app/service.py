@@ -256,10 +256,13 @@ class Scheduler:
 
     def _execute(self, run, now):
         scope_key = mailbox_scope(self.db, run["provider"])
+        # Any reconnection, even of the same mailbox, replaces the credentials
+        # this run started with.
+        revision = self.db.get_setting("gmail_revision", 0)
 
         def guard_current(preferences, company):
             self._guard(run["provider"], preferences, company)
-            if mailbox_scope(self.db, run["provider"]) != scope_key:
+            if mailbox_scope(self.db, run["provider"]) != scope_key or self.db.get_setting("gmail_revision", 0) != revision:
                 raise ConnectorError("La casella è cambiata durante il controllo. Avvia un nuovo controllo per la connessione attuale.", "collegamento", False)
 
         try:
@@ -313,7 +316,7 @@ class Scheduler:
                 with self.db.connection() as conn:
                     conn.execute("BEGIN IMMEDIATE")
                     current = self.db.get_connection()
-                    if current.get("provider") == run["provider"] and mailbox_scope(self.db, run["provider"]) == scope_key:
+                    if current.get("provider") == run["provider"] and mailbox_scope(self.db, run["provider"]) == scope_key and self.db.get_setting("gmail_revision", 0) == revision:
                         current["status"] = "expired"
                         conn.execute("UPDATE kv SET value=? WHERE key='connection'", (json.dumps(current),))
             self._fail(run, now, str(exc), exc.step, exc.retryable)

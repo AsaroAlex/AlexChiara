@@ -1,5 +1,6 @@
 """A durable, manual agenda, independent of any external calendar account."""
 from datetime import date as calendar_date, datetime, time, timedelta, timezone
+import re
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
@@ -7,10 +8,13 @@ from fastapi import APIRouter, HTTPException, Path, Query
 from fastapi.responses import Response
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from .company import has_hidden_characters
+
 
 ROME = ZoneInfo("Europe/Rome")
 UTC = timezone.utc
 SOURCE = "Appuntamenti aggiunti da te"
+MAX_EVENTS = 5000
 
 
 class AgendaInput(BaseModel):
@@ -24,7 +28,8 @@ class AgendaInput(BaseModel):
     @field_validator("starts_at", "ends_at", mode="before")
     @classmethod
     def iso_datetime(cls, value):
-        if value is not None and not isinstance(value, str):
+        # Numeric strings would otherwise be read as Unix timestamps.
+        if value is not None and (not isinstance(value, str) or not re.match(r"\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}", value)):
             raise ValueError("Indica data e ora ISO con fuso orario.")
         return value
 
@@ -43,7 +48,7 @@ class AgendaInput(BaseModel):
     @classmethod
     def readable_text(cls, value, info):
         allowed = "\n\t" if info.field_name == "notes" else ""
-        if any((ord(char) < 32 and char not in allowed) or ord(char) == 127 for char in value):
+        if has_hidden_characters(value, allowed):
             raise ValueError("Il testo contiene caratteri non consentiti.")
         return value
 
@@ -161,6 +166,9 @@ def create_agenda_router(db):
     def add_event(payload: AgendaInput):
         event_id = uuid4().hex
         with db.connection() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            if conn.execute("SELECT COUNT(*) FROM agenda_events").fetchone()[0] >= MAX_EVENTS:
+                raise HTTPException(status_code=409, detail="Hai raggiunto il limite di appuntamenti salvati. Elimina quelli passati non più necessari.")
             conn.execute(
                 "INSERT INTO agenda_events(id,title,starts_at,ends_at,notes,created_at) VALUES (?,?,?,?,?,?)",
                 (event_id, payload.title, _utc_stamp(payload.starts_at),

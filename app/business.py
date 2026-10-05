@@ -6,7 +6,9 @@ Its database is supplied by the authenticated workspace, never by a client.
 from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 import json
+import re
 from typing import Any, Literal
+import unicodedata
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
@@ -16,7 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool, ValidationError, 
 
 from .business_catalog import get_service, list_services
 from .business_playbooks import get_playbook
-from .company import get_document_company
+from .company import get_document_company, has_hidden_characters
 
 
 ROME = ZoneInfo("Europe/Rome")
@@ -30,6 +32,7 @@ Priority = Literal["low", "normal", "high", "urgent"]
 StatusFilter = Literal["open", "todo", "in_progress", "waiting", "done", "cancelled"]
 MAX_RECORDS = 5000
 MONEY_LIMIT = Decimal("1000000000")
+CANCELLED_CONVERSION = "L’attività è annullata: riaprila prima di preparare il passo successivo."
 
 
 def _readable_text(value, *, multiline=False, maximum=2000):
@@ -38,10 +41,16 @@ def _readable_text(value, *, multiline=False, maximum=2000):
     value = value.strip()
     if len(value) > maximum:
         raise ValueError("Il testo è troppo lungo.")
-    allowed = "\n\t" if multiline else ""
-    if any((ord(char) < 32 and char not in allowed) or ord(char) == 127 for char in value):
+    if has_hidden_characters(value, "\n\t" if multiline else ""):
         raise ValueError("Il testo contiene caratteri non consentiti.")
     return value
+
+
+def _search_fold(value):
+    if value is None:
+        return ""
+    text = unicodedata.normalize("NFKD", str(value).casefold())
+    return "".join(char for char in text if not unicodedata.combining(char))
 
 
 def _calendar_date(value):
@@ -202,10 +211,17 @@ def _initialize(db):
             conn.execute("ALTER TABLE business_records ADD COLUMN steps TEXT NOT NULL DEFAULT '{}'")
 
 
-def _service(service_id, *, writable=False):
+RETIRED_SERVICE = {"name": "Modulo non più disponibile", "kind": "business", "fields": [],
+                   "next_action": "Consulta l’attività: il modulo non è più disponibile nel catalogo."}
+
+
+def _service(service_id, *, writable=False, known=False):
     service = get_service(service_id)
     if service is None:
-        raise ValueError("Servizio non riconosciuto.")
+        if writable or known:
+            raise ValueError("Servizio non riconosciuto.")
+        # A record saved by a module later removed from the catalog stays readable.
+        return {"id": service_id, **RETIRED_SERVICE}
     if writable and (service.get("kind", "business") != "business" or service.get("availability", "available") != "available"):
         raise ValueError("Questo servizio richiede un collegamento o usa una propria area di lavoro.")
     return service
@@ -222,6 +238,9 @@ def _decimal(value, field):
         raise ValueError(f'Indica un numero per «{field["label"]}».') from exc
     minimum = Decimal(str(field.get("min", 0)))
     maximum = Decimal(str(field.get("max", MONEY_LIMIT)))
+    if number.is_zero():
+        # "-0" is a valid zero, never a negative amount in a document.
+        number = number.copy_abs()
     if not number.is_finite() or number < minimum or number > maximum:
         raise ValueError(f'Il valore di «{field["label"]}» è fuori intervallo.')
     if number.as_tuple().exponent < (-2 if field.get("type") == "money" else -6):
@@ -276,7 +295,8 @@ def _validated_details(service, values):
 
 
 def _money_text(value):
-    whole, decimal = format(Decimal(str(value)).quantize(Decimal("0.01")), "f").split(".")
+    amount = Decimal(str(value)).quantize(Decimal("0.01"))
+    whole, decimal = format(amount.copy_abs() if amount.is_zero() else amount, "f").split(".")
     sign = "−" if whole.startswith("-") else ""
     digits = whole.lstrip("-")
     # Formatting independently of the server locale keeps documents Italian.
@@ -288,6 +308,7 @@ def _totals(item):
     details = item["details"]
     if item["service_id"] in ("quotes", "invoices") and "net_amount" in details and "vat_rate" in details:
         net = Decimal(details["net_amount"])
+        net = net.copy_abs() if net.is_zero() else net
         rate = Decimal(details["vat_rate"])
         vat = (net * rate / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         return {
@@ -719,7 +740,7 @@ def create_business_router(db):
         filters, values = [], []
         if service_id is not None:
             try:
-                _service(service_id)
+                _service(service_id, known=True)
             except ValueError as exc:
                 raise HTTPException(status_code=422, detail=str(exc)) from exc
             filters.append("service_id=?")
@@ -735,13 +756,21 @@ def create_business_router(db):
             except ValueError as exc:
                 raise HTTPException(status_code=422, detail=str(exc)) from exc
             if q:
-                literal = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-                term = "%" + literal + "%"
-                filters.append("(title LIKE ? ESCAPE '\\' OR contact LIKE ? ESCAPE '\\' OR notes LIKE ? ESCAPE '\\' OR EXISTS (SELECT 1 FROM json_each(business_records.details) detail WHERE CAST(detail.value AS TEXT) LIKE ? ESCAPE '\\'))")
-                values.extend([term] * 4)
+                # SQLite folds only ASCII case: compare accent- and case-folded text.
+                terms = [_search_fold(q)]
+                if re.fullmatch(r"[0-9]{1,3}(?:\.[0-9]{3})+(?:,[0-9]{1,2})?|[0-9]+,[0-9]{1,2}", q):
+                    # Italian "1.250,50" matches the stored amount "1250.50".
+                    terms.append(q.replace(".", "").replace(",", "."))
+                clauses = []
+                for term in terms:
+                    pattern = "%" + term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+                    clauses.append("spazelia_fold(title) LIKE ? ESCAPE '\\' OR spazelia_fold(contact) LIKE ? ESCAPE '\\' OR spazelia_fold(notes) LIKE ? ESCAPE '\\' OR EXISTS (SELECT 1 FROM json_each(business_records.details) detail WHERE spazelia_fold(detail.value) LIKE ? ESCAPE '\\')")
+                    values.extend([pattern] * 4)
+                filters.append("(" + " OR ".join(clauses) + ")")
         where = " WHERE " + " AND ".join(filters) if filters else ""
         company = get_document_company(db)
         with db.connection() as conn:
+            conn.create_function("spazelia_fold", 1, _search_fold, deterministic=True)
             conn.execute("BEGIN")
             total = conn.execute("SELECT COUNT(*) FROM business_records" + where, values).fetchone()[0]
             rows = conn.execute("SELECT * FROM business_records" + where + " ORDER BY updated_at DESC,id LIMIT ? OFFSET ?", [*values, limit, offset]).fetchall()
@@ -824,6 +853,8 @@ def create_business_router(db):
                 raise HTTPException(status_code=404, detail="Attività non trovata.")
             proposal = _conversion_proposal(row, target_service_id)
             existing_row = conn.execute("SELECT r.* FROM business_links l JOIN business_records r ON r.id=l.target_record_id WHERE l.source_record_id=? AND l.target_service_id=?", (record_id, target_service_id)).fetchone()
+            if not existing_row and row["status"] == "cancelled":
+                raise HTTPException(status_code=409, detail=CANCELLED_CONVERSION)
             existing = _item(existing_row, company=company, links=_record_links(conn, [existing_row["id"]])[existing_row["id"]]) if existing_row else None
         return {"proposal": proposal, "existing": existing, "source": _record_identity(row)}
 
@@ -841,6 +872,8 @@ def create_business_router(db):
             if existing:
                 item = _item(existing, company=company, links=_record_links(conn, [existing["id"]])[existing["id"]])
                 return {"item": item, "created": False, "source": _record_identity(row)}
+            if row["status"] == "cancelled":
+                raise HTTPException(status_code=409, detail=CANCELLED_CONVERSION)
             changes = payload.model_dump(exclude_unset=True, exclude={"target_service_id"})
             for key, value in changes.items():
                 if value is None and key not in ("contact", "notes", "due_date"):

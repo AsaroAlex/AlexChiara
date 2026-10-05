@@ -47,10 +47,20 @@ def _normalise(value: str) -> str:
     return "".join(char for char in decomposed if not unicodedata.combining(char))
 
 
+def sender_address(value):
+    """Lowercase address of a From header, also when the display name has an unquoted comma."""
+    value = str(value or "")
+    address = parseaddr(value)[1]
+    if not address or "@" not in address:
+        found = re.findall(r"<\s*([^<>\s@]+@[^<>\s@]+)\s*>", value) or re.findall(r"[^\s<>,;\"']+@[^\s<>,;\"']+", value)
+        address = found[-1] if found else ""
+    return address.strip().lower()
+
+
 def _email(value: Any) -> str:
     if isinstance(value, dict):
         value = value.get("email") or value.get("address") or ""
-    return parseaddr(_text(value, 500))[1].strip().casefold()
+    return sender_address(_text(value, 500)).casefold()
 
 
 def _signature(company: Any) -> str:
