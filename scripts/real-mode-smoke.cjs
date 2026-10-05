@@ -10,7 +10,7 @@ const sampleText = /Studio Riva|Giulia Conti|Marco Bianchi|Sara Rossi|@example\.
 
 (async () => {
   const browser = await chromium.launch({
-    executablePath: process.env.FILO_CHROMIUM_PATH || '/usr/bin/chromium',
+    executablePath: process.env.FILO_CHROMIUM_PATH || (require('node:fs').existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' : undefined),
     headless: true,
     args: ['--no-sandbox'],
   });

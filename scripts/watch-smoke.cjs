@@ -15,7 +15,7 @@ const origin = `http://127.0.0.1:${process.env.FILO_PORT || '8016'}`;
   assert.equal((await marker.json()).fixture, 'Filo Watch Smoke Fixture');
   assert.equal((await marker.json()).worker, 'disabled');
   const browser = await chromium.launch({
-    executablePath: process.env.FILO_CHROMIUM_PATH || '/usr/bin/chromium',
+    executablePath: process.env.FILO_CHROMIUM_PATH || (require('node:fs').existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' : undefined),
     headless: true,
     args: ['--no-sandbox'],
   });

@@ -28,6 +28,15 @@ from .models import Action, Activation, ChatInput, CompanyInput, DemoFailure, Pr
 from .service import Scheduler
 
 CATALOG = list_services()
+_HOST_HEADER = re.compile(r"(?:[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?|\[[0-9A-Fa-f:.]{2,45}\])(?::[0-9]{1,5})?")
+
+
+def _request_host(request):
+    """Return the lowercase host name only for a well-formed Host header."""
+    header = request.headers.get("host", "")
+    if not _HOST_HEADER.fullmatch(header):
+        return None
+    return urlsplit("//" + header).hostname
 
 
 def create_workspace_app(data_dir=None, start_worker=True):
@@ -45,7 +54,7 @@ def create_workspace_app(data_dir=None, start_worker=True):
         finally:
             scheduler.stop()
 
-    app = FastAPI(title="Spazelia — servizi per la tua attività", lifespan=lifespan)
+    app = FastAPI(title="Spazelia — servizi per la tua attività", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.db = db
     app.state.scheduler = scheduler
     app.state.runtime = runtime
@@ -58,7 +67,7 @@ def create_workspace_app(data_dir=None, start_worker=True):
     @app.middleware("http")
     async def local_session_boundary(request: Request, call_next):
         try:
-            host = urlsplit("//" + request.headers.get("host", "")).hostname
+            host = _request_host(request)
         except ValueError:
             host = None
         if not host or host.lower() not in allowed_hosts:
@@ -72,7 +81,7 @@ def create_workspace_app(data_dir=None, start_worker=True):
                 same_origin = False
             if not same_origin:
                 return JSONResponse({"detail": "Origine non autorizzata."}, status_code=403)
-        if request.method not in ("GET", "HEAD", "OPTIONS") and request.url.path.startswith("/api/"):
+        if request.method not in ("GET", "HEAD", "OPTIONS") and request.scope["path"].startswith("/api/"):
             if not getattr(request.state, "filo_session", None) and not db.csrf_valid(request.cookies.get("alexchiara_session"), request.headers.get("x-csrf-token")):
                 return JSONResponse({"detail": "Sessione non valida. Ricarica la pagina prima di continuare."}, status_code=403)
         if request.method not in ("GET", "HEAD", "OPTIONS"):
@@ -87,7 +96,7 @@ def create_workspace_app(data_dir=None, start_worker=True):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "same-origin"
-        if request.url.path.startswith("/api/"):
+        if request.scope["path"].startswith("/api/"):
             response.headers["Cache-Control"] = "no-store"
         return response
 
@@ -414,6 +423,17 @@ def create_app(data_dir=None, start_worker=True):
     allowed_hosts.update(host.strip().lower() for host in os.environ.get("ALEXCHIARA_ALLOWED_HOSTS", "").split(",") if host.strip())
     public_pages = {"/", "/login", "/register"}
     auth_paths = {"/api/auth/session", "/api/auth/login", "/api/auth/register", "/api/auth/logout"}
+    # Browsers and crawlers request these well-known files without a session.
+    public_files = {
+        "/favicon.ico": ("brand/favicon.ico", "image/x-icon"),
+        "/apple-touch-icon.png": ("brand/apple-touch-icon.png", "image/png"),
+        "/apple-touch-icon-precomposed.png": ("brand/apple-touch-icon.png", "image/png"),
+        "/robots.txt": ("robots.txt", "text/plain; charset=utf-8"),
+    }
+    private_pages = {"/app": "/app", "/app/": "/app", "/account": "/account", "/account/": "/account"}
+
+    def not_found_page(status_code=404):
+        return FileResponse(static / "404.html", status_code=status_code, media_type="text/html", headers={"Cache-Control": "no-store"})
 
     @app.exception_handler(RequestValidationError)
     async def validation_error(request, exc):
@@ -424,12 +444,13 @@ def create_app(data_dir=None, start_worker=True):
     @app.middleware("http")
     async def account_boundary(request: Request, call_next):
         try:
-            host = urlsplit("//" + request.headers.get("host", "")).hostname
+            host = _request_host(request)
         except ValueError:
             host = None
         if not host or host.lower() not in allowed_hosts:
             return JSONResponse({"detail": "Host non autorizzato."}, status_code=400)
-        path = request.url.path
+        # Authorize the path the router will dispatch, never one rebuilt from headers.
+        path = request.scope["path"]
         webhook = path == "/api/billing/webhook" and request.method == "POST"
         origin = request.headers.get("origin")
         if origin and not webhook:
@@ -444,10 +465,18 @@ def create_app(data_dir=None, start_worker=True):
         user = session.get("user") if session and session.get("authenticated") else None
         request.state.filo_session = session
         request.state.filo_user = user
-        is_public = path in public_pages or path in auth_paths or path.startswith("/static/") or webhook or (path == "/api/health" and request.method in ("GET", "HEAD"))
+        # Private data lives only behind /api/ and the two private pages; every
+        # other path is a public page, a static file or an HTML 404.
+        is_public = path in auth_paths or webhook or (path == "/api/health" and request.method in ("GET", "HEAD")) or (not path.startswith("/api/") and path not in private_pages)
         if not is_public and not user:
-            if path in ("/app", "/app/", "/account", "/account/") and request.method in ("GET", "HEAD"):
-                response = RedirectResponse("/login?next=" + ("/account" if path.startswith("/account") else "/app"), status_code=303)
+            if path in private_pages and request.method in ("GET", "HEAD"):
+                response = RedirectResponse("/login?next=" + private_pages[path], status_code=303)
+                response.headers["Cache-Control"] = "no-store"
+                return response
+            if path in ("/api/gmail/oauth/callback", "/api/outlook/oauth/callback") and request.method in ("GET", "HEAD"):
+                # A browser returning from the provider after its session ended
+                # gets the login page instead of a raw JSON error.
+                response = RedirectResponse("/login?next=/app", status_code=303)
                 response.headers["Cache-Control"] = "no-store"
                 return response
             return JSONResponse({"detail": "Accedi a Spazelia per continuare.", "login_url": "/login"}, status_code=401, headers={"Cache-Control": "no-store"})
@@ -474,24 +503,33 @@ def create_app(data_dir=None, start_worker=True):
     app.include_router(create_billing_router(billing))
     app.mount("/static", StaticFiles(directory=static), name="static")
 
-    @app.get("/")
+    page_methods = ["GET", "HEAD"]
+
+    @app.api_route("/", methods=page_methods)
     def home():
         return FileResponse(static / "landing.html")
 
-    @app.get("/login")
-    @app.get("/register")
+    @app.api_route("/login", methods=page_methods)
+    @app.api_route("/register", methods=page_methods)
     def auth_page():
         return FileResponse(static / "auth.html")
 
-    @app.get("/app")
-    @app.get("/app/")
+    @app.api_route("/app", methods=page_methods)
+    @app.api_route("/app/", methods=page_methods)
     def private_home():
         return FileResponse(static / "index.html")
 
-    @app.get("/account")
-    @app.get("/account/")
+    @app.api_route("/account", methods=page_methods)
+    @app.api_route("/account/", methods=page_methods)
     def account_page():
         return FileResponse(static / "account.html")
+
+    def public_file(request: Request):
+        name, media_type = public_files[request.scope["path"]]
+        return FileResponse(static / name, media_type=media_type, headers={"Cache-Control": "public, max-age=86400"})
+
+    for public_path in public_files:
+        app.add_api_route(public_path, public_file, methods=page_methods, include_in_schema=False)
 
     @app.get("/api/research/market-review")
     def market_review(request: Request):
@@ -502,12 +540,18 @@ def create_app(data_dir=None, start_worker=True):
             raise HTTPException(status_code=404, detail="La ricerca non è ancora disponibile.")
         return FileResponse(report, media_type="text/html", headers={"Cache-Control": "no-store"})
 
-    @app.get("/api/health")
+    @app.api_route("/api/health", methods=page_methods)
     def health():
         return {"status": "ok", "scheduler": "running" if running and start_worker else "disabled", "persistence": "sqlite", "can_send": False}
 
     class WorkspaceDispatcher:
         async def __call__(self, scope, receive, send):
+            if scope["type"] != "http":
+                return
+            if not scope["path"].startswith("/api/"):
+                # Workspaces expose only their API; unknown pages get the site 404.
+                await not_found_page()(scope, receive, send)
+                return
             user = scope.get("state", {}).get("filo_user")
             if not user:
                 await JSONResponse({"detail": "Accedi a Spazelia per continuare."}, status_code=401)(scope, receive, send)

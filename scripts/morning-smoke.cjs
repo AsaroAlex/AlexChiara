@@ -10,7 +10,7 @@ const fs = require('node:fs/promises');
   assert.equal((await anonymous.get('/api/agenda/export')).status(), 401);
   assert.equal((await anonymous.get('/api/health')).status(), 200);
   await anonymous.dispose();
-  const browser = await chromium.launch({ executablePath: process.env.FILO_CHROMIUM_PATH || '/usr/bin/chromium', headless: true, args: ['--no-sandbox'] });
+  const browser = await chromium.launch({ executablePath: process.env.FILO_CHROMIUM_PATH || (require('node:fs').existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' : undefined), headless: true, args: ['--no-sandbox'] });
   try {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'it-IT', timezoneId: 'America/Los_Angeles' });
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);

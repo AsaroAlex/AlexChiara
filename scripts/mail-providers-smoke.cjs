@@ -45,7 +45,7 @@ const presets = [
       await wait(100);
     }
     assert.ok(ready, `Server not ready: ${logs}`);
-    browser = await chromium.launch({ executablePath: process.env.FILO_CHROMIUM_PATH || '/usr/bin/chromium', headless: true, args: ['--no-sandbox'] });
+    browser = await chromium.launch({ executablePath: process.env.FILO_CHROMIUM_PATH || (require('node:fs').existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' : undefined), headless: true, args: ['--no-sandbox'] });
     const context = await browser.newContext({ viewport: { width: 1440, height: 1050 }, locale: 'it-IT' });
     const page = await context.newPage();
     let connection = { provider: null, status: 'disconnected', label: null };

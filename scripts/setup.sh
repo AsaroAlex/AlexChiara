@@ -5,5 +5,5 @@ python3 -c 'import sys; assert sys.version_info >= (3, 11), "Serve Python 3.11 o
 if [ ! -x .venv/bin/python ]; then
   python3 -m venv .venv
 fi
-.venv/bin/python -m pip install --disable-pip-version-check --cache-dir /workspace/.cache/filo-pip --requirement requirements.lock
+.venv/bin/python -m pip install --disable-pip-version-check --requirement requirements.lock
 .venv/bin/python -m pip check

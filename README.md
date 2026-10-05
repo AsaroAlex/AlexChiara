@@ -7,7 +7,7 @@ Applicazione in italiano per PMI e piccoli studi. **Segreteria email** controlla
 Ambiente verificato: Linux, Python 3.12.14. Non serve Node per eseguire il prodotto; Node serve solo al controllo sintattico del frontend. Non occorrono chiavi per la demo.
 
 ```bash
-cd /workspace/AlexChiara
+# dalla cartella del repository
 bash scripts/setup.sh
 bash scripts/start.sh
 ```
@@ -86,7 +86,7 @@ Spazelia è il nome pubblico del prodotto. Le variabili `FILO_*`, il nome tecnic
 
 ## Pubblicazione Railway
 
-`railway.toml` configura Railpack, le dipendenze bloccate, l'avvio su `0.0.0.0:$PORT`, un solo processo e il controllo `/api/health`. Seleziona Python 3.12 tramite `RAILPACK_PYTHON_VERSION=3.12` e collega un volume persistente a `/data` con `ALEXCHIARA_DATA_DIR=/data`. Mantieni una sola replica e disabilita la sospensione automatica: il processo gestisce i controlli programmati.
+`railway.toml` configura Railpack, le dipendenze bloccate, l'avvio su `0.0.0.0:$PORT`, un solo processo e il controllo `/api/health`. Il file `.python-version` seleziona Python 3.12 (la variabile `RAILPACK_PYTHON_VERSION=3.12`, se presente, indica la stessa versione) e collega un volume persistente a `/data` con `ALEXCHIARA_DATA_DIR=/data`. Mantieni una sola replica e disabilita la sospensione automatica: il processo gestisce i controlli programmati.
 
 Prima del deploy imposta nelle variabili Railway `FILO_ACCESS_PASSWORD` con una password robusta; `FILO_ACCESS_USERNAME` è facoltativo e vale `filo` per impostazione predefinita. L'avvio cloud si interrompe se manca la password dell'account esistente. Homepage, login, registrazione e risorse statiche sono pubblici; lo spazio personale e le sue API richiedono una sessione autenticata. Il controllo di salute restituisce solo lo stato tecnico e rimane accessibile a Railway. Cambiare la password del gestore e ridistribuire il servizio revoca le sue sessioni precedenti.
 

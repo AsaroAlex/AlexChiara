@@ -128,7 +128,17 @@
       try {
         const body = { email: email.value.trim(), password: password.value };
         if (register) body.name = name.value.trim();
-        await request(register ? '/api/auth/register' : '/api/auth/login', { method: 'POST', body });
+        const endpoint = register ? '/api/auth/register' : '/api/auth/login';
+        try {
+          await request(endpoint, { method: 'POST', body });
+        } catch (error) {
+          // A form left open past the one-hour guest session gets a fresh
+          // session and CSRF token, then the same submission is retried once.
+          if (error.status !== 403) throw error;
+          const current = await session();
+          if (current.authenticated) { window.location.assign(destination); return; }
+          await request(endpoint, { method: 'POST', body });
+        }
         clearPendingWizard();
         password.value = '';
         window.location.assign(destination);

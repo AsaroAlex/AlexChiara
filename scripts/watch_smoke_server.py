@@ -6,6 +6,7 @@ Then: FILO_PORT=8016 node scripts/watch-smoke.cjs
 from datetime import datetime, timedelta, timezone
 import os
 from pathlib import Path
+import signal
 import sys
 import tempfile
 from uuid import uuid4
@@ -72,6 +73,9 @@ def fixture_incoming():
 
 if __name__ == "__main__":
     print("Watch smoke fixture:", runtime, flush=True)
+    # Uvicorn re-raises SIGTERM after shutdown; exit normally so the temporary
+    # database is removed for both Ctrl+C and a plain kill.
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
     try:
         uvicorn.run(app, host="127.0.0.1", port=8016, log_level="warning")
     finally:
