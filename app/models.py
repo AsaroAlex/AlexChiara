@@ -3,6 +3,8 @@ import re
 from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from .company import COMPANY_FIELDS, normalize_company_field
+
 
 class Input(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
@@ -25,6 +27,22 @@ class CompanyInput(Input):
     sector: str = Field(default="", max_length=160)
     description: str = Field(default="", max_length=2000)
     signature: str = Field(default="", max_length=600)
+    legal_name: str = Field(default="", max_length=160)
+    vat_number: str = Field(default="", max_length=13)
+    tax_code: str = Field(default="", max_length=16)
+    address: str = Field(default="", max_length=250)
+    postal_code: str = Field(default="", max_length=5)
+    city: str = Field(default="", max_length=120)
+    province: str = Field(default="", max_length=2)
+    email: str = Field(default="", max_length=254)
+    phone: str = Field(default="", max_length=40)
+    pec: str = Field(default="", max_length=254)
+    sdi_code: str = Field(default="", max_length=7)
+
+    @field_validator(*COMPANY_FIELDS, mode="before")
+    @classmethod
+    def validate_company_text(cls, value, info):
+        return normalize_company_field(info.field_name, value)
 
 
 class Preferences(Input):

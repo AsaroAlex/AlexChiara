@@ -22,6 +22,8 @@ bash scripts/check.sh
 
 ## Servizi per la PMI
 
+Per studi e imprese di servizi, il profilo aziendale riusa i dati nei documenti. Preventivo, bozza fattura e incasso si possono collegare con una conversione da rivedere, senza riscrivere gli importi o creare duplicati. La ricerca trova le attività nei diversi moduli; dalla panoramica si possono completare e annullare il completamento. La [ricerca sui concorrenti](docs/research/market-review-2026-10-05.html) documenta le fonti, i prezzi e le priorità di prodotto al 5 ottobre 2026.
+
 Apri **Servizi**, cerca un modulo o scegli un’area e aggiungi una scheda con i dati della tua impresa. Filo prepara il documento locale, calcola i totali di preventivi/bozze fattura, ordina scadenze e priorità e segnala scorte sotto la soglia inserita. Puoi aggiornare, completare, riaprire o esportare ogni attività. La chat suggerisce il servizio da aprire, senza modificare dati o permessi da sola. I nuovi spazi partono vuoti.
 
 [La guida dei servizi PMI](docs/PMI.md) descrive funzioni e limiti: bozze fiscali interne, riferimenti documentali e dati aggiunti dall’utente; SDI, banche, PEC, calendario esterno e telefonia richiedono integrazioni dedicate. I minuti risparmiati sono dichiarazioni dell’utente, senza una stima automatica del costo del personale.

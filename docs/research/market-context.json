@@ -1,0 +1,51 @@
+{
+  "research_date": "2026-10-05",
+  "target": "Studi e imprese di servizi in Italia",
+  "method": {
+    "tool": "Exa",
+    "search_calls": 2,
+    "sources_reviewed": 14,
+    "search_results_requested": 14,
+    "fetched_urls_requested": 2,
+    "fetched_urls_succeeded": 2,
+    "counts_note": "sources_reviewed è la somma dei risultati richiesti. Non è il conteggio di pagine uniche validate."
+  },
+  "sources": [
+    {
+      "id": "istat-ict-2025",
+      "title": "Imprese e ICT — Anno 2025",
+      "url": "https://www.istat.it/wp-content/uploads/2025/12/Statreport%5FICT2025.pdf",
+      "publication_date": "2025-12-15",
+      "quality": "Fonte statistica primaria ISTAT; indagine su imprese con almeno 10 addetti, non rappresenta le microimprese sotto questa soglia.",
+      "excerpts": [
+        "L’utilizzo di software gestionali cresce di circa 7 punti percentuali rispetto al 2023 raggiungendo nel 2025 il 56,0% delle imprese con almeno 10 addetti.",
+        "La mancanza di competenze adeguate frena l’adozione dell’IA in quasi il 60% delle aziende che hanno valutato ma poi non realizzato investimenti in IA."
+      ],
+      "relevance": "Privilegiare flussi comprensibili e riuso dei dati; non dedurre la domanda di Filo o disponibilità a pagare dai tassi generali di adozione."
+    },
+    {
+      "id": "assosoftware-pmi-2023",
+      "title": "Software nelle PMI: un motore d’innovazione per l’Italia",
+      "url": "https://www.assosoftware.it/wp-content/uploads/2023/12/WP_Software_nelle_PMI.pdf",
+      "publication_date": "2023-12",
+      "quality": "Ricerca Osservatori Digital Innovation in collaborazione con AssoSoftware: 520 PMI cross-settoriali dichiarate. Associazione di fornitori interessata alla crescita del settore; non prova benefici causali di Filo.",
+      "excerpts": [
+        "L’indice si compone di quattro dimensioni legate fra loro: l’adozione dei software gestionali, la loro integrazione e la revisione dei processi supportati, l'organizzazione IT e le competenze digitali e, infine, l’impatto sulle performance operative.",
+        "La rilevazione estesa ha raggiunto 520 PMI cross-settoriali con l’obiettivo di fornire una fotografia del mercato italiano."
+      ],
+      "relevance": "L’integrazione dei flussi va considerata insieme alla semplicità, alle competenze e alla revisione del processo."
+    }
+  ],
+  "excluded_evidence": [
+    {
+      "reason": "Cinque dei sei risultati sulla migrazione CRM erano contenuti di fornitori/implementatori; il rimanente era un racconto individuale con interesse a costruire un proprio CRM e incoerenza fra data del titolo e metadati. Non usati per affermare frequenza di problemi o risparmi.",
+      "search_query": "First-hand small professional service business experience switching CRM Odoo Zoho Pipedrive software too much data entry onboarding setup costs complaints client invoicing workflow"
+    }
+  ],
+  "scope_limits": [
+    "Analisi di pagine pubbliche, non collaudo comparativo dei prodotti.",
+    "Nessuna intervista o misurazione di disponibilità a pagare con clienti Filo.",
+    "Nessuna stima TAM, quota di mercato o riduzione del personale derivata da questi dati.",
+    "I prezzi sono fotografie delle fonti consultate; offerte, geolocalizzazione, IVA, vincoli annuali e componenti aggiuntive vanno mantenuti distinti."
+  ]
+}

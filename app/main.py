@@ -18,6 +18,7 @@ from .business import business_summary, create_business_router
 from .business_catalog import list_services
 from .business_chat import propose_business_service
 from .briefing import mailbox_scope
+from .company import COMPANY_FIELDS, OPTIONAL_COMPANY_FIELDS
 from .real_data import real_data_only, visible_service, workspace_data
 from .watches import build_watch_summary, create_watches_router, propose_watch
 from .connectors import ConnectorError, create_router, load_messages
@@ -107,6 +108,7 @@ def create_workspace_app(data_dir=None, start_worker=True):
     def bootstrap(request: Request):
         session = db.session(request.cookies.get("alexchiara_session"))
         company, service, connection, runs, approvals, briefing = workspace_data(db)
+        company = {**dict.fromkeys(COMPANY_FIELDS, ""), **company}
         ai_status = ai.ai_status() if hasattr(ai, "ai_status") else {"mode": "deterministic", "configured": False, "enabled": False, "label": "Analisi locale deterministica"}
         result = {
             "user": getattr(request.state, "filo_user", None),
@@ -136,6 +138,12 @@ def create_workspace_app(data_dir=None, start_worker=True):
     @app.put("/api/company")
     def company(payload: CompanyInput):
         value = payload.model_dump()
+        existing = db.get_setting("company", {})
+        # Older clients send only the original four fields. Their updates must
+        # preserve saved administrative data; an explicit empty string clears it.
+        for field in OPTIONAL_COMPANY_FIELDS:
+            if field not in payload.model_fields_set:
+                value[field] = existing.get(field, "")
         value["demo"] = False
         db.set_setting("company", value)
         db.log_action("company_updated")
@@ -484,6 +492,15 @@ def create_app(data_dir=None, start_worker=True):
     @app.get("/account/")
     def account_page():
         return FileResponse(static / "account.html")
+
+    @app.get("/api/research/market-review")
+    def market_review(request: Request):
+        if (getattr(request.state, "filo_user", None) or {}).get("id") != OWNER_ID:
+            raise HTTPException(status_code=403, detail="La ricerca di prodotto è riservata al gestore di Filo.")
+        report = Path(__file__).resolve().parent.parent / "docs" / "research" / "market-review-2026-10-05.html"
+        if not report.is_file():
+            raise HTTPException(status_code=404, detail="La ricerca non è ancora disponibile.")
+        return FileResponse(report, media_type="text/html", headers={"Cache-Control": "no-store"})
 
     @app.get("/api/health")
     def health():

@@ -1,0 +1,815 @@
+{
+  "schema_version": 1,
+  "research_date": "2026-10-05",
+  "language": "it",
+  "territory": "Produttività email, collaborazione e gestione operativa per Filo",
+  "methodology": {
+    "provider": "Exa",
+    "sources_reviewed": 40,
+    "sources_reviewed_definition": "Somma numResults dei cinque web_search_exa; non equivale a quaranta fonti uniche validate.",
+    "search_calls": 5,
+    "queries": [
+      {
+        "query": "Official Superhuman email product documentation pricing Split Inbox reminders auto summaries 2026 professional email client",
+        "numResults": 8
+      },
+      {
+        "query": "Microsoft Outlook Copilot prioritize my inbox summarize emails Google Workspace Gemini Gmail email summary help official business pricing Italy",
+        "numResults": 10
+      },
+      {
+        "query": "Front Missive shared inbox product features assignment rules internal comments email collaboration official pricing",
+        "numResults": 8
+      },
+      {
+        "query": "Asana ClickUp recurring tasks dependencies workload personal daily planner official pricing help documentation",
+        "numResults": 8
+      },
+      {
+        "query": "Practitioner review stopped using Superhuman Missive Front small team email client expensive notification overload workflow",
+        "numResults": 6
+      }
+    ],
+    "fetch_calls": 6,
+    "url_fetch_count": 19,
+    "unique_urls_requested": 18,
+    "successful_unique_fetched_pages": 17,
+    "failed_or_empty_urls": [
+      "https://www.microsoft.com/it-it/microsoft-365-copilot/pricing/small-business"
+    ],
+    "validation": "Le funzionalità sono descritte da fonti ufficiali aperte. Prezzi dinamici mancanti sono marcati non verificati. Le prestazioni promozionali non sono considerate risultati misurati.",
+    "scope_limits": [
+      "Non è una stima di quota di mercato, dimensione del mercato o willingness-to-pay italiana.",
+      "Non sono stati provati i prodotti nei rispettivi account.",
+      "La pagina Microsoft presenta una promozione già scaduta al momento della ricerca.",
+      "La pagina Google localizzata in italiano restituisce prezzi USD e note promozionali non coerenti: non rappresenta un preventivo italiano.",
+      "Una sola testimonianza di utilizzatore esterna al vendor è stata ritenuta informativa; ha un link referral dichiarato e non è economicamente indipendente."
+    ]
+  },
+  "competitors": [
+    {
+      "name": "Superhuman Mail",
+      "category": "Email personale con AI e strumenti di collaborazione",
+      "verified_features": [
+        {
+          "feature": "Split Inbox: sezioni Important/Other, VIP, calendario e categorie personalizzate",
+          "source_ids": [
+            "superhuman-structure"
+          ],
+          "evidence": "Important shows your person-to-person messages, while Other catches automated messages and mailing lists.",
+          "limits": "Il vendor suggerisce da 3 a 7 sezioni per evitare ulteriori posti da controllare."
+        },
+        {
+          "feature": "Sei etichette di prossimo passo: Respond, Waiting, FYI, Notifications, Promotions, News",
+          "source_ids": [
+            "superhuman-assistant"
+          ],
+          "evidence": "Each email receives one Auto Label, so it's easier to see what needs your attention and what can be reviewed later.",
+          "limits": "Etichette predefinite non rinominabili; togliere una classificazione dal thread non addestra una regola."
+        },
+        {
+          "feature": "Reminder per thread senza risposta, con giorni lavorativi e ora impostabili",
+          "source_ids": [
+            "superhuman-assistant"
+          ],
+          "evidence": "What should trigger the reminder, such as not receiving a reply. Whether the reminder should count weekdays only.",
+          "limits": "Porta di nuovo in evidenza il thread; non equivale a inviare un sollecito."
+        },
+        {
+          "feature": "Bozze personali e follow-up revisionabili; digest degli archiviati",
+          "source_ids": [
+            "superhuman-assistant"
+          ],
+          "evidence": "Auto Drafts appear as standard drafts in Gmail. They are never sent automatically.",
+          "limits": "Digest alle 17:00 locali non personalizzabile; creazione delle bozze usa contesto mail e configurazione personale."
+        }
+      ],
+      "price": {
+        "verification": "verified_official",
+        "currency": "USD",
+        "unit": "utente/mese",
+        "commitment": "annuale",
+        "plans": [
+          {
+            "name": "Starter",
+            "amount": 25
+          },
+          {
+            "name": "Business",
+            "amount": 33
+          },
+          {
+            "name": "Enterprise",
+            "amount": null,
+            "condition": "preventivo"
+          }
+        ],
+        "tax_status": "Non esplicitato nell'estrazione",
+        "conditions": "Starter e Business fino a 25 posti. Auto Drafts, Ask AI e custom AI labels compaiono esplicitamente in Business.",
+        "source_ids": [
+          "superhuman-pricing"
+        ]
+      },
+      "filo_opportunities": [
+        {
+          "feature": "Da rispondere / In attesa / Da controllare più tardi",
+          "feasible_now": true,
+          "optimization": "Categorie di prossimo passo in italiano, motivazione visibile e nessuna archiviazione esterna automatica."
+        },
+        {
+          "feature": "Rinvio locale di email o attività con riapparizione alla data scelta",
+          "feasible_now": true,
+          "optimization": "Conservare origine e stato; mostrare nella vista dei rinviati e non nascondere scadenze critiche senza spiegazione."
+        },
+        {
+          "feature": "Solleciti automatici sui thread inviati privi di risposta",
+          "feasible_now": false,
+          "provider_requirements": [
+            "Casella con accesso a posta inviata e thread",
+            "Sincronizzazione affidabile e rilevamento risposte"
+          ],
+          "optimization": "Prima proporre un sollecito da rivedere, rendendo visibile quando è stata cercata la risposta."
+        },
+        {
+          "feature": "Profilo aziendale riutilizzato nelle bozze e nei documenti",
+          "feasible_now": true,
+          "optimization": "Nome, indirizzo, dati fiscali e stile di firma inseriti una volta; non inferire dati mancanti."
+        }
+      ]
+    },
+    {
+      "name": "Microsoft 365 Copilot in Outlook",
+      "category": "Suite ufficio e assistente email",
+      "verified_features": [
+        {
+          "feature": "Priorità alta/normale/bassa con istruzioni personali",
+          "source_ids": [
+            "microsoft-priority"
+          ],
+          "evidence": "You'll need to give it at least one high priority instruction to get it started.",
+          "limits": "Solo messaggi successivi all'attivazione; non rivaluta messaggi esistenti."
+        },
+        {
+          "feature": "Riepilogo breve nella lista e spiegazione della priorità nel messaggio",
+          "source_ids": [
+            "microsoft-priority"
+          ],
+          "evidence": "Copilot will automatically show a few lines of explanation and reasoning about why Copilot believes the message is important to you.",
+          "limits": "Esclude sottocartelle, messaggi segnati a bassa importanza dal mittente, inviti, fuori ufficio, messaggi cifrati non leggibili e vari messaggi tecnici."
+        },
+        {
+          "feature": "Filtro e ordinamento per priorità Copilot",
+          "source_ids": [
+            "microsoft-priority"
+          ],
+          "evidence": "Filter your mail to show only high priority messages or sort your inbox so that items are grouped by high, normal and low priority.",
+          "limits": "Distribuzione graduale della funzionalità; disponibilità varia per client e licenza."
+        }
+      ],
+      "price": {
+        "verification": "verified_official_list_price_with_expired_promotion",
+        "currency": "EUR",
+        "unit": "utente/mese",
+        "commitment": "annuale con rinnovo automatico",
+        "plans": [
+          {
+            "name": "Microsoft 365 Copilot Business aggiuntivo",
+            "amount": 18.2,
+            "condition": "Richiede separatamente un piano Microsoft 365 Business idoneo"
+          },
+          {
+            "name": "Microsoft 365 Copilot enterprise",
+            "amount": 26,
+            "condition": "Richiede separatamente una licenza Microsoft365 idonea"
+          }
+        ],
+        "tax_status": "IVA esclusa",
+        "excluded_offer": {
+          "amount": 15.6,
+          "start": "2026-07-01",
+          "end": "2026-09-30",
+          "reason": "Scaduta il 30 settembre 2026, sebbene ancora mostrata sulla pagina."
+        },
+        "conditions": "La pagina business mostra anche bundle Standard+Copilot a 20,36 e Premium+Copilot a 27,73; le condizioni promozionali dei bundle non sono abbastanza chiare per considerarli listini definitivi. Confermare al checkout.",
+        "source_ids": [
+          "microsoft-business-pricing",
+          "microsoft-enterprise-pricing"
+        ]
+      },
+      "filo_opportunities": [
+        {
+          "feature": "Motivo concreto dell'urgenza in ogni scheda",
+          "feasible_now": true,
+          "optimization": "Mostrare 'Scaduta da 3 giorni', 'Risposta richiesta', 'Quantità sotto soglia', separando date e preferenze dell'utente."
+        },
+        {
+          "feature": "Filtri Oggi / Scadute / In attesa / Prossimi giorni",
+          "feasible_now": true,
+          "optimization": "Applicarli a tutti i servizi locali della PMI, preservando visibilità dell'intero elenco e accesso al record."
+        },
+        {
+          "feature": "VIP e argomenti personali per la priorità",
+          "feasible_now": true,
+          "optimization": "Regole semplici editabili con motivazione; evitare gerarchie dedotte da titoli o posizioni lavorative."
+        }
+      ]
+    },
+    {
+      "name": "Google Workspace con Gemini in Gmail",
+      "category": "Suite ufficio, email e contesto condiviso",
+      "verified_features": [
+        {
+          "feature": "Riepilogo dei thread, bozze, ricerca dei dettagli e organizzazione email",
+          "source_ids": [
+            "google-gmail-help"
+          ],
+          "evidence": "Riassumi: sintetizza lunghi thread di email in elenchi puntati concisi.",
+          "limits": "Piano Google Workspace o GoogleAI idoneo; supporto lingue/funzionalità variabile."
+        },
+        {
+          "feature": "Proposta orari usando disponibilità Google Calendar",
+          "source_ids": [
+            "google-gmail-help"
+          ],
+          "evidence": "Pianifica: proponi orari per le riunioni in base alla tua disponibilità in Google Calendar.",
+          "limits": "Richiede calendario realmente collegato e accessibile."
+        },
+        {
+          "feature": "Conferma per alcune azioni di organizzazione; annulla le operazioni supportate",
+          "source_ids": [
+            "google-gmail-help"
+          ],
+          "evidence": "Fai clic sul pulsante di conferma o invia una risposta di testo affermativa per elaborare la richiesta.",
+          "limits": "Eliminazione può diventare permanente dopo30 giorni nel cestino. Non tutte le azioni sono equivalenti a un semplice riepilogo."
+        },
+        {
+          "feature": "Firma elettronica e pagine di prenotazione nel piano Standard",
+          "source_ids": [
+            "google-workspace-pricing"
+          ],
+          "evidence": "Pagine di prenotazione degli appuntamenti. Firma elettronica con Documenti e PDF.",
+          "limits": "Non attribuire firma elettronica legalmente qualificata senza verifica specifica."
+        }
+      ],
+      "price": {
+        "verification": "verified_official_usd_not_italian_checkout_quote",
+        "currency": "USD",
+        "unit": "utente/mese",
+        "commitment": "impegno annuale, fatturazione mensile",
+        "plans": [
+          {
+            "name": "Business Starter",
+            "amount": 7
+          },
+          {
+            "name": "Business Standard",
+            "amount": 14
+          },
+          {
+            "name": "Business Plus",
+            "amount": 22
+          }
+        ],
+        "tax_status": "Non esplicitato nell'estrazione",
+        "conditions": "Massimo300 utenti per Starter/Standard/Plus. Escluse offerte 50%: testo principale indica3 mesi, nota dice12 mesi/primi20 utenti; non abbastanza coerente per una raccomandazione economica. Prezzo finale geografico da confermare.",
+        "source_ids": [
+          "google-workspace-pricing"
+        ]
+      },
+      "filo_opportunities": [
+        {
+          "feature": "Ricerca unica tra clienti, preventivi, scadenze e documenti",
+          "feasible_now": true,
+          "optimization": "Risultati con tipo di record, data e pulsante per il prossimo passo; sorgente sempre visibile."
+        },
+        {
+          "feature": "Preparazione della riunione da record locali e appuntamenti manuali",
+          "feasible_now": true,
+          "optimization": "Una scheda con persone, appuntamento, attività aperte e agenda testuale scaricabile, senza inventare conversazioni."
+        },
+        {
+          "feature": "Pianificazione da calendari esterni e documento firmato",
+          "feasible_now": false,
+          "provider_requirements": [
+            "OAuth calendario e permessi",
+            "Fornitore di firma, audit e verifica giuridica del tipo di firma"
+          ],
+          "optimization": "Distinguere esplicitamente l'agenda manuale dal calendario sincronizzato."
+        }
+      ]
+    },
+    {
+      "name": "Front",
+      "category": "Inbox condivisa e supporto multicanale",
+      "verified_features": [
+        {
+          "feature": "Assegnazione della conversazione e commenti interni sulla stessa email",
+          "source_ids": [
+            "front-pricing"
+          ],
+          "evidence": "Gain clear ownership over messages by assigning messages directly to individual teammates.",
+          "limits": "Richiede utenti della stessa organizzazione con accesso al workspace; non equivale a condivisione tra account personali isolati."
+        },
+        {
+          "feature": "Regole Trigger / Condizioni / Azioni, template pronti",
+          "source_ids": [
+            "front-rules"
+          ],
+          "evidence": "Triggers (When): events that cause a rule to start scanning for the conditions. Conditions (If): criteria that needs to exist in order for the rule to run the actions.",
+          "limits": "Regole su tutti i piani, ma alcuni trigger/azioni e SmartRules dipendono dal piano."
+        },
+        {
+          "feature": "Tag, assegnazione round-robin e note automatiche",
+          "source_ids": [
+            "front-rules"
+          ],
+          "evidence": "Automatically categorize your emails by adding tags based on the content, sender, and more.",
+          "limits": "SmartRules su Enterprise o add-on Autopilot; tagging obbligatorio Professional+."
+        },
+        {
+          "feature": "Controllo dell'accesso durante lo spostamento tra inbox",
+          "source_ids": [
+            "front-rules"
+          ],
+          "evidence": "If a rule moves a conversation that is currently assigned to a teammate into an inbox that the assigned teammate does not have access to, then the conversation will automatically be unassigned.",
+          "limits": "Front documenta cambi nei tag quando si spostano thread tra workspace."
+        }
+      ],
+      "price": {
+        "verification": "base_subscription_unverified_dynamic_extraction",
+        "currency": "USD",
+        "unit": "posto/mese",
+        "plans": [
+          {
+            "name": "Starter",
+            "amount": null
+          },
+          {
+            "name": "Professional",
+            "amount": null
+          },
+          {
+            "name": "Enterprise",
+            "amount": null
+          }
+        ],
+        "tax_status": "Non verificato",
+        "conditions": "La pagina ufficiale aperta non rende i prezzi base nell'estrazione: ignorati listini2023 e prezzi nei confronti scritti dai concorrenti. Starter supporta un solo tipo di canale; Professional/Enterprise multicanale. Prova14 giorni senza carta. I prezzi add-on ($20/$10/posto/mese, $0.05/conversazione) presenti senza sufficiente intestazione non sono usati per il costo totale.",
+        "source_ids": [
+          "front-pricing"
+        ]
+      },
+      "filo_opportunities": [
+        {
+          "feature": "Regole locali facili da capire, con antecedente e risultato",
+          "feasible_now": true,
+          "optimization": "Pochi preset italiani: quando una scadenza arriva mostra il prossimo passo; quando una scorta scende proponi riordino. Mostrare ultima esecuzione e dati origine."
+        },
+        {
+          "feature": "Collaborazione reale, assegnatari e commenti condivisi",
+          "feasible_now": false,
+          "provider_requirements": [
+            "Organizzazioni e adesioni",
+            "Ruoli e controllo accessi",
+            "Audit delle modifiche",
+            "Sincronizzazione email condivisa"
+          ],
+          "optimization": "Non riutilizzare o esporre i record tra workspace privati per imitare un'inbox condivisa."
+        }
+      ]
+    },
+    {
+      "name": "Missive",
+      "category": "Email e attività collaborative per piccole squadre",
+      "verified_features": [
+        {
+          "feature": "Inbox di squadra, conversazioni e task",
+          "source_ids": [
+            "missive-pricing"
+          ],
+          "evidence": "Email, SMS, social accounts. Team spaces and inboxes. Conversations and tasks.",
+          "limits": "La casella privata resta un contesto distinto; l'architettura e i permessi del team sono essenziali."
+        },
+        {
+          "feature": "Regole per routing, assegnazione, VIP e risposte automatiche",
+          "source_ids": [
+            "missive-rules"
+          ],
+          "evidence": "They route emails to folders, assign them to the right teammate, send auto-replies, flag VIPs.",
+          "limits": "Nella tabella prezzo Rules & automations sono elencate nel Productive; alcuni strumentiAI richiedono chiave."
+        },
+        {
+          "feature": "Contesto conversazione, chat interna e commenti senza inoltri",
+          "source_ids": [
+            "missive-rules",
+            "missive-pricing"
+          ],
+          "evidence": "Missive is a collaborative email client built for teams.",
+          "limits": "Le performance migliorative riportate nei customer quotes non sono qui considerate misurate o generalizzabili."
+        }
+      ],
+      "price": {
+        "verification": "verified_official",
+        "currency": "USD",
+        "unit": "utente/mese",
+        "commitment": "annuale",
+        "plans": [
+          {
+            "name": "Starter",
+            "amount": 14,
+            "condition": "Fino a 5 utenti"
+          },
+          {
+            "name": "Productive",
+            "amount": 24,
+            "condition": "Fino a 50 utenti, regole e integrazioni"
+          },
+          {
+            "name": "Business",
+            "amount": 36,
+            "condition": "Utenti illimitati, SAML SSO, restrizione IP, analytics avanzate"
+          }
+        ],
+        "tax_status": "Non esplicitato nell'estrazione",
+        "conditions": "Prova30 giorni senza carta. Nessun prezzo mensile non annuale inventato dall'indicazione '20%off'. AI può richiedere una chiave/provider aggiuntivo.",
+        "source_ids": [
+          "missive-pricing"
+        ]
+      },
+      "filo_opportunities": [
+        {
+          "feature": "Trasformare una richiesta in email in scheda operativa senza copiare dati a mano",
+          "feasible_now": true,
+          "optimization": "Azione utente esplicita, precompilazione tracciabile e revisione prima di salvare; record nella propria area privata."
+        },
+        {
+          "feature": "Un luogo per note e prossimo passo di un'attività",
+          "feasible_now": true,
+          "optimization": "Note locali nella scheda con data; non chiamarle chat di squadra se l'account non dispone di membri."
+        },
+        {
+          "feature": "Gestione unificata WhatsApp/SMS/social",
+          "feasible_now": false,
+          "provider_requirements": [
+            "Provider specifici e permessi",
+            "Webhook",
+            "Costi di invio e termini canali"
+          ],
+          "optimization": "Mantenere stato integrazione visibile ed evitare simulazioni di messaggi ricevuti o inviati."
+        }
+      ]
+    },
+    {
+      "name": "ClickUp",
+      "category": "Attività, documenti e processi ripetibili",
+      "verified_features": [
+        {
+          "feature": "Task ricorrenti giornalieri, settimanali, mensili e custom",
+          "source_ids": [
+            "clickup-recurrence"
+          ],
+          "evidence": "Recurring tasks are available on every ClickUp plan.",
+          "limits": "Mostrare istanze future nel calendario richiede piano pagato. Ricorrenza usa la scadenza come data; ha opzioni per ricreare il task o riutilizzarlo."
+        },
+        {
+          "feature": "Native time tracking e email nelle schede nel piano Unlimited",
+          "source_ids": [
+            "clickup-pricing"
+          ],
+          "evidence": "Native Time Tracking. Email in ClickUp.",
+          "limits": "FunzioniAI e relative quote sono piani/costi separati; all'upgrade deve passare l'intero Workspace."
+        },
+        {
+          "feature": "Documenti collaborativi e board inclusi nel piano free",
+          "source_ids": [
+            "clickup-pricing"
+          ],
+          "evidence": "Collaborative Docs. Kanban Boards.",
+          "limits": "Free storage 60 MB; altre funzionalità disponibili con soglie/prove."
+        }
+      ],
+      "price": {
+        "verification": "verified_official",
+        "currency": "USD",
+        "unit": "utente/mese",
+        "plans": [
+          {
+            "name": "FreeForever",
+            "amount": 0
+          },
+          {
+            "name": "Unlimited annuale",
+            "amount": 7
+          },
+          {
+            "name": "Unlimited mensile",
+            "amount": 10
+          },
+          {
+            "name": "Business annuale",
+            "amount": 12
+          },
+          {
+            "name": "Business mensile",
+            "amount": 19
+          }
+        ],
+        "tax_status": "Non esplicitato nell'estrazione",
+        "conditions": "Upgrade a livello di intero Workspace; Business 5.000 esecuzioni automazione/mese. AI aggiuntiva indicata a$9 Brain o$28 Everything per utente/mese, modalità di fatturazioneAI nell'estrazione non abbastanza chiara per un preventivo.",
+        "source_ids": [
+          "clickup-pricing"
+        ]
+      },
+      "filo_opportunities": [
+        {
+          "feature": "Ricorrenze locali per scadenze e procedure",
+          "feasible_now": true,
+          "optimization": "Nextinstance soltanto quando necessario, date deterministiche Europe/Rome, evitare duplicati e fine mese ambigua."
+        },
+        {
+          "feature": "Scegliere i servizi usati e ricordare preferenze",
+          "feasible_now": true,
+          "optimization": "La PMI vede i propri servizi frequenti prima del catalogo completo; niente schermata con decine di moduli uguali."
+        },
+        {
+          "feature": "Timer operativo per verificare minuti prima/dopo",
+          "feasible_now": true,
+          "optimization": "Confronto volontario sull'attività; separare tempo rilevato dal tempo stimato e non trasformare i dati in giudizi sui dipendenti."
+        }
+      ]
+    },
+    {
+      "name": "Asana",
+      "category": "Attività e progetti con blocchi e dipendenze",
+      "verified_features": [
+        {
+          "feature": "Dipendenze 'blocca' e 'bloccata da'",
+          "source_ids": [
+            "asana-dependencies"
+          ],
+          "evidence": "With task dependencies, you can mark a task as blocking another task, or blocked by another task.",
+          "limits": "Starter+; notifiche ai responsabili quando si completa il prerequisito."
+        },
+        {
+          "feature": "Ricorrenze e azioni multiple nel catalogo funzionalità",
+          "source_ids": [
+            "asana-pricing"
+          ],
+          "evidence": "Recurring tasks. Multi-select and bulk actions.",
+          "limits": "La matrice ufficiale le mostra nelPersonal e successivi; personal pubblico attuale presenta2utenti."
+        },
+        {
+          "feature": "Template, campi custom, dashboard e automazioni nei piani pagati",
+          "source_ids": [
+            "asana-pricing"
+          ],
+          "evidence": "Reporting dashboards. Unlimited automations. Forms. Custom templates. Custom fields.",
+          "limits": "I prezzi base non sono comparsi nel contenuto ufficiale estratto;AI Studio e richiesteAI hanno quote e costi distinti."
+        }
+      ],
+      "price": {
+        "verification": "base_subscription_unverified_dynamic_extraction",
+        "currency": "USD",
+        "unit": "utente/mese",
+        "plans": [
+          {
+            "name": "Personal",
+            "amount": null,
+            "condition": "La pagina descrive un piano per una o due persone; importo non reso nell'estrazione."
+          },
+          {
+            "name": "Starter",
+            "amount": null
+          },
+          {
+            "name": "Advanced",
+            "amount": null
+          }
+        ],
+        "tax_status": "Non verificato",
+        "conditions": "Non riutilizzati prezzi storici10,99/24,99 senza conferma. La pagina mostra richiesteAI prepagate$0.50 o on demand $0.60 e50K/75K crediti AI Studio per alcuni piani, che non sono prezzo base per utente.",
+        "source_ids": [
+          "asana-pricing"
+        ]
+      },
+      "filo_opportunities": [
+        {
+          "feature": "Distinguere attività eseguibili da quelle bloccate",
+          "feasible_now": true,
+          "optimization": "'In attesa di cliente', 'in attesa di documento', 'da fare' con blocco esplicito; non proporre come urgente un lavoro impossibile da iniziare senza spiegare il prerequisito."
+        },
+        {
+          "feature": "Dipendenze tra record operativi e stato del prossimo passo",
+          "feasible_now": true,
+          "optimization": "Link verificati nel workspace, nessun ciclo, sblocco trasparente senza creare azioni esterne."
+        }
+      ]
+    }
+  ],
+  "recommendations": [
+    {
+      "priority": 1,
+      "id": "reasoned-next-actions",
+      "source_competitors": [
+        "Microsoft 365 Copilot",
+        "Superhuman"
+      ],
+      "problem": "L'utente vuole capire subito cosa fare e perché, senza aprire varie schermate.",
+      "proposed": "Schede con prossimo passo, motivo concreto, fonte e azione primaria; rendere visibili Scadute / Oggi / In attesa.",
+      "feasible_now": true,
+      "success_metric": "Tempo e clic per identificare il primo compito corretto in un test utente; nessun risultato quantitativo già disponibile."
+    },
+    {
+      "priority": 2,
+      "id": "recurring-local-work",
+      "source_competitors": [
+        "ClickUp",
+        "Asana"
+      ],
+      "problem": "Le PMI ripetono controlli e procedure e non vogliono creare la scheda ogni volta.",
+      "proposed": "Ricorrenze giornaliere, settimanali e mensili su task locali, creando la prossima istanza dopo il completamento con regole chiare.",
+      "feasible_now": true,
+      "success_metric": "Percentuale di attività ripetitive registrate senza doppioni; casi di fine mese e aggiornamento coperti da test."
+    },
+    {
+      "priority": 3,
+      "id": "company-once",
+      "source_competitors": [
+        "Superhuman",
+        "Google Workspace"
+      ],
+      "problem": "Il profilo aziendale attuale ha utilità limitata e dati ripetuti nei documenti.",
+      "proposed": "Dati aziendali inseriti una volta e riutilizzati in preventivi, bozze fattura e firma; preview con provenienza dei dati.",
+      "feasible_now": true,
+      "success_metric": "Numero di campi ripetuti necessari per preparare un documento reale."
+    },
+    {
+      "priority": 4,
+      "id": "one-context-search",
+      "source_competitors": [
+        "Google Workspace",
+        "Missive"
+      ],
+      "problem": "Catalogo ampio rischia di diventare molte liste da controllare.",
+      "proposed": "Ricerca unica sui record privati con tipo, stato, data e apertura diretta.",
+      "feasible_now": true,
+      "success_metric": "Task di trovare preventivo/cliente/scadenza dalla stessa ricerca."
+    },
+    {
+      "priority": 5,
+      "id": "shared-workspace-later",
+      "source_competitors": [
+        "Front",
+        "Missive"
+      ],
+      "problem": "Un team deve evitare doppie risposte e chiarire responsabilità.",
+      "proposed": "Organizzazioni, membri, ruoli, commenti e collisioni in un'implementazione dedicata; preservare gli account privati.",
+      "feasible_now": false,
+      "provider_requirements": [
+        "Modello organizzazione / membri / ruoli",
+        "Audit",
+        "Accesso email condiviso"
+      ],
+      "success_metric": "Conversazioni senza assegnatario e doppie risposte in un pilot condiviso."
+    }
+  ],
+  "practitioner_sources": [
+    {
+      "name": "Michael Hall / Helium",
+      "url": "https://heliumdev.com/blog/front-vs-missive-collaborative-email-inbox",
+      "source_type": "firsthand_practitioner_with_disclosed_referral",
+      "published": "2025-08-06",
+      "updated": "2026-05-26",
+      "evidence": "We paid for features we didn’t need, had to upgrade just to get access to basic tools.",
+      "observation": "Un piccolo team bootstrapped descrive il costo e la complessità dei piani Front come motivo di migrazione verso Missive dopo anni di uso.",
+      "limitations": "Aneddoto di una singola azienda; dichiara credito da referral Missive. Non utilizzato per confermare prezzi o stimare ROI.",
+      "implication_for_filo": "Piani e limiti facili da leggere; privilegiare servizi usati e costi reali rispetto a un catalogo pieno di funzione."
+    }
+  ],
+  "rejected_evidence": [
+    {
+      "url": "https://front.com/webassets/pages/pricing/Front-Pricing-One-Pager-2023-03-06.pdf",
+      "reason": "Listino ufficiale ma risale al 2023, non adatto ai prezzi attuali."
+    },
+    {
+      "url": "https://blog.superhuman.com/front-alternatives/",
+      "reason": "Confronto scritto da un concorrente con promozione del proprio prodotto; non fonte indipendente di reclami o prezzi Front."
+    },
+    {
+      "url": "https://supp.support/blog/missive-alternative",
+      "reason": "Vendor concorrente; incentivi commerciali e listini non verificati."
+    },
+    {
+      "url": "https://valuestreamai.com/blog/missive-vs-front-vs-help-scout-medical-practices-2026",
+      "reason": "Consulente commerciale, settore sanitario USA e compliance HIPAA non centrali per PMI italiana; non usato per prezzi o ritorni."
+    },
+    {
+      "url": "https://missiveapp.com/customers/agis-business-travel",
+      "reason": "Caso cliente italiano interessante ma curato dal vendor; commenti non equiparati a risultati indipendenti."
+    }
+  ],
+  "sources": [
+    {
+      "id": "superhuman-pricing",
+      "url": "https://superhuman.com/plans/mail",
+      "type": "official_pricing",
+      "excerpt": "$25 USD per member / month, billed annually; $33 USD per member / month, billed annually."
+    },
+    {
+      "id": "superhuman-assistant",
+      "url": "https://help.superhuman.com/hc/en-us/articles/46005854346893-Email-Assistant-by-Superhuman-Mail-Gmail",
+      "type": "official_help",
+      "excerpt": "Auto Reminders bring sent emails back to your inbox when they have not received a response."
+    },
+    {
+      "id": "superhuman-structure",
+      "url": "https://help.superhuman.com/hc/en-us/articles/46005793275277-Structure-Your-Inbox",
+      "type": "official_help",
+      "excerpt": "The ideal number of Split Inboxes is usually between 3 and 7."
+    },
+    {
+      "id": "microsoft-priority",
+      "url": "https://support.microsoft.com/en-us/topic/prioritize-my-inbox-65e37040-2c90-4ee3-86d9-e95d5ba0e3cb",
+      "type": "official_help",
+      "excerpt": "Copilot does not go back and re-evaluate or change the priorities of mail you've already received."
+    },
+    {
+      "id": "microsoft-business-pricing",
+      "url": "https://www.microsoft.com/it-it/microsoft-365-copilot/pricing",
+      "type": "official_pricing",
+      "excerpt": "Originally starting from 18,20 € now starting from 15,60 €. Questa offerta di sconto è valida dal 1º luglio 2026 al 30 settembre 2026."
+    },
+    {
+      "id": "microsoft-enterprise-pricing",
+      "url": "https://www.microsoft.com/it-it/microsoft-365-copilot/pricing/enterprise",
+      "type": "official_pricing",
+      "excerpt": "26,00 € utente/mese, pagamento annuale. Il prezzo non include l’IVA. È richiesta una licenza separata per un piano di Microsoft 365 idoneo."
+    },
+    {
+      "id": "google-workspace-pricing",
+      "url": "https://workspace.google.com/intl/it/pricing.html",
+      "type": "official_pricing",
+      "excerpt": "Annuale (risparmia il 16% con un impegno di 1 anno). Tutti i prezzi in $USD."
+    },
+    {
+      "id": "google-gmail-help",
+      "url": "https://support.google.com/mail/answer/14199860?hl=it",
+      "type": "official_help",
+      "excerpt": "Riassumi: sintetizza lunghi thread di email in elenchi puntati concisi. Cerca: trova dettagli specifici."
+    },
+    {
+      "id": "front-pricing",
+      "url": "https://front.com/pricing",
+      "type": "official_pricing_and_feature_matrix",
+      "excerpt": "The Starter plan only supports a single channel type of Email, Front Chat, or SMS."
+    },
+    {
+      "id": "front-rules",
+      "url": "https://help.front.com/en/articles/2109",
+      "type": "official_help",
+      "excerpt": "Rules are available on all plans. Dagger symbols denote features available on the Enterprise plan or with the Autopilot add-on."
+    },
+    {
+      "id": "missive-pricing",
+      "url": "https://missiveapp.com/pricing",
+      "type": "official_pricing",
+      "excerpt": "Starter. 14. per user/month. Billed yearly."
+    },
+    {
+      "id": "missive-rules",
+      "url": "https://missiveapp.com/blog/shared-inbox-rules",
+      "type": "official_product_help_blog",
+      "excerpt": "They route emails to folders, assign them to the right teammate, send auto-replies, flag VIPs."
+    },
+    {
+      "id": "clickup-pricing",
+      "url": "https://clickup.com/pricing",
+      "type": "official_pricing",
+      "excerpt": "unlimited yearly price:$7 Per user/month, billed yearly unlimited monthly price:$10 Per user/month, billed monthly"
+    },
+    {
+      "id": "clickup-recurrence",
+      "url": "https://help.clickup.com/hc/en-us/articles/6309885016471-Use-recurring-tasks",
+      "type": "official_help",
+      "excerpt": "Recurring tasks are available on every ClickUp plan."
+    },
+    {
+      "id": "asana-pricing",
+      "url": "https://asana.com/pricing",
+      "type": "official_pricing_and_feature_matrix",
+      "excerpt": "For one or two people managing personal projects. Custom templates. Recurring tasks."
+    },
+    {
+      "id": "asana-dependencies",
+      "url": "https://help.asana.com/s/article/task-dependencies",
+      "type": "official_help",
+      "excerpt": "Available on Asana Starter, Advanced, Enterprise, and Enterprise+ tiers."
+    },
+    {
+      "id": "helium-practitioner",
+      "url": "https://heliumdev.com/blog/front-vs-missive-collaborative-email-inbox",
+      "type": "firsthand_with_referral",
+      "excerpt": "Yes, that's a referral link. We'll receive a credit on our bill if you sign up using our link."
+    }
+  ]
+}

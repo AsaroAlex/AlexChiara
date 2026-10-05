@@ -4,7 +4,15 @@ const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const state = { data: null, gmail: null, providers: [], mailSetup: null, mailChange: null, imapProvider: null, page: 'overview', companyDirty: false, companyInitialized: false, loading: false, wizard: null, currentRun: null, chatBusy: false, chatPreferences: null, watchSuggestion: null, watchSignature: null, briefingSignature: null, agendaSignature: null, agendaDate: null, agendaView: null, businessServices: [], businessSummary: null, businessCategory: 'all', businessSearch: '', businessScope: 'all', businessLimit: 6, businessService: null, businessRecords: [], businessFilter: 'open', businessOffset: 0, businessTotal: 0, businessPageSize: 100, businessRecord: null, businessEditing: null, businessDelete: null, businessRequest: 0, businessCatalogSignature: null, businessRecordsSignature: null, businessSummarySignature: null };
 let toastTimer;
-let lastFocused;
+const dialogFocus = new WeakMap();
+let businessSearchTimer;
+let businessSearchController;
+let businessSearchRequest = 0;
+let businessConversion = null;
+let businessFormService = null;
+let businessUndo = null;
+const businessPending = new Set();
+const companyFields = ['name', 'sector', 'description', 'signature', 'legal_name', 'vat_number', 'tax_code', 'address', 'postal_code', 'city', 'province', 'email', 'phone', 'pec', 'sdi_code'];
 
 function el(tag, className, text) {
   const element = document.createElement(tag);
@@ -38,7 +46,13 @@ function statusPill(status) {
 function setPill(selector, status) { const node = statusPill(status); const target = $(selector); target.className = node.className; target.textContent = node.textContent; }
 function errorText(error) {
   if (typeof error === 'string') return error;
-  if (Array.isArray(error)) return error.map(item => `${(item.loc || []).filter(x => x !== 'body').join(' · ')}${item.loc ? ': ' : ''}${item.msg || 'Valore non valido'}`).join('; ');
+  if (Array.isArray(error)) return error.map(item => {
+    const location = (item.loc || []).filter(x => x !== 'body');
+    const companyLabels = { name: 'Nome dell’azienda', sector: 'Settore', description: 'Descrizione', signature: 'Firma', legal_name: 'Ragione sociale', vat_number: 'Partita IVA', tax_code: 'Codice fiscale', address: 'Indirizzo', postal_code: 'CAP', city: 'Comune', province: 'Provincia', email: 'Email aziendale', phone: 'Telefono', pec: 'PEC', sdi_code: 'Codice destinatario SDI' };
+    const label = location.length === 1 ? companyLabels[location[0]] : null;
+    const message = label ? String(item.msg || 'Valore non valido').replace(/^Value error, /, '') : item.msg || 'Valore non valido';
+    return `${label || location.join(' · ')}${item.loc ? ': ' : ''}${message}`;
+  }).join('; ');
   return error?.message || 'Non è stato possibile completare l’operazione. Riprova.';
 }
 async function api(path, options = {}) {
@@ -46,7 +60,7 @@ async function api(path, options = {}) {
   if (options.method && options.method !== 'GET' && state.data?.csrf_token) headers['X-CSRF-Token'] = state.data.csrf_token;
   let response;
   try { response = await fetch(path, { credentials: 'same-origin', ...options, headers, body: options.body !== undefined ? JSON.stringify(options.body) : undefined }); }
-  catch (_) { throw new Error('Il servizio non è raggiungibile. Controlla la connessione e riprova.'); }
+  catch (error) { if (error.name === 'AbortError') throw error; throw new Error('Il servizio non è raggiungibile. Controlla la connessione e riprova.'); }
   let result;
   try { result = await response.json(); } catch (_) { result = {}; }
   if (response.status === 401) {
@@ -59,11 +73,13 @@ async function api(path, options = {}) {
   return result;
 }
 function notice(selector, message) { const target = $(selector); target.textContent = message || ''; target.hidden = !message; }
-function toast(message, isError = false) {
+function toast(message, isError = false, undo = null) {
   clearTimeout(toastTimer);
   const target = $('#toast');
-  target.textContent = message; target.classList.toggle('error', isError); target.hidden = false;
-  toastTimer = setTimeout(() => { target.hidden = true; }, 5500);
+  target.replaceChildren(el('span', '', message)); target.classList.toggle('error', isError); target.hidden = false;
+  businessUndo = undo;
+  if (undo) target.append(actionButton('Annulla', 'business-undo', 'ghost'));
+  toastTimer = setTimeout(() => { target.hidden = true; businessUndo = null; }, undo ? 12000 : 5500);
 }
 async function withBusy(button, operation) {
   if (button?.disabled) return;
@@ -80,8 +96,8 @@ function prettyDate(value, withTime = true) {
 }
 function clockTime(service = state.data?.service) { return service ? `${String(service.hour ?? 9).padStart(2, '0')}:${String(service.minute ?? 0).padStart(2, '0')}` : '09:00'; }
 function orderedRuns() { return [...(state.data?.runs || [])].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); }
-function openDialog(selector) { lastFocused = document.activeElement; const dialog = $(selector); if (!dialog.open) dialog.showModal(); if (selector === '#wizard-dialog') { const heading = $('#wizard-title'); if (heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); } } }
-function closeDialog(selector) { if (selector === '#imap-dialog') clearImapSecret(); $(selector).close(); if (lastFocused?.isConnected) lastFocused.focus(); }
+function openDialog(selector) { const dialog = $(selector); if (!dialog.open) { dialogFocus.set(dialog, document.activeElement); dialog.showModal(); } if (selector === '#wizard-dialog') { const heading = $('#wizard-title'); if (heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); } } }
+function closeDialog(selector) { if (selector === '#imap-dialog') clearImapSecret(); $(selector).close(); }
 
 async function refresh(forceCompany = false) {
   const data = await api('/api/bootstrap');
@@ -117,7 +133,10 @@ function render(forceCompany = false) {
   notice('#connection-alert', expired ? 'La connessione alla casella è scaduta. Ricollega la casella per riprendere i controlli.' : '');
   $('.demo-banner').hidden = Boolean(state.data.real_data_only) || connection.provider !== 'demo';
   $('.demo-controls').hidden = Boolean(state.data.real_data_only);
-  $('.form-intro').textContent = company.needs_setup ? 'Inserisci il nome della tua attività e la firma da usare nelle risposte.' : 'Mantieni aggiornati il profilo e la firma usati nelle bozze.';
+  $('.form-intro').textContent = 'Nome e firma per iniziare. Gli altri dati sono facoltativi.';
+  const reusableFields = companyFields.filter(field => !['name', 'sector', 'description', 'signature'].includes(field));
+  const filled = reusableFields.filter(field => company[field]).length;
+  $('#company-profile-summary').textContent = filled ? `${filled} informazioni facoltative salvate. Le utilizziamo dove servono, senza copiarle in ogni scheda.` : 'Aggiungi ragione sociale e contatti quando ti servono. Puoi lavorare anche con il solo nome.';
   const isActive = service.status === 'active';
   const isPaused = service.status === 'paused';
   $('#overview-service-description').textContent = isActive ? 'La tua segreteria è al lavoro: seleziona le email prioritarie e prepara bozze locali che potrai rivedere.' : isPaused ? 'Hai messo il servizio in pausa. Le esecuzioni programmate si fermano; attività e bozze restano a disposizione.' : 'Scegli chi seguire. Filo ordina le richieste e prepara le bozze.';
@@ -151,7 +170,7 @@ function render(forceCompany = false) {
   replace('#activity-summary', ...metrics);
   $('#activity-run-button').hidden = !isActive;
   if (!state.companyInitialized || forceCompany) {
-    for (const field of ['name', 'sector', 'description', 'signature']) $(`#company-${field}`).value = company[field] || '';
+    for (const field of companyFields) $(`#company-${field}`).value = company[field] || '';
     state.companyInitialized = true; state.companyDirty = false;
   }
   const connectionNodes = [statusPill(connection.status || 'disconnected'), el('p', '', connection.label || (connection.provider === 'demo' ? 'Casella demo con email di esempio.' : 'Nessuna casella collegata. Scegli il tuo provider nei Collegamenti.'))];
@@ -246,7 +265,10 @@ function renderBusinessSummary() {
     content.append(meta, el('h3', '', record.title));
     if (record.contact) content.append(el('p', 'small-text', record.contact));
     content.append(el('p', 'business-next-step', record.next_action || businessService(record.service_id)?.next_action || 'Rivedi le informazioni e completa il prossimo passo.'));
-    row.append(content, actionButton('Apri attività', 'business-open-record', 'secondary', 'arrow', { id: record.id, service: record.service_id })); return row;
+    const actions = el('div', 'business-next-action-buttons');
+    actions.append(actionButton('Apri attività', 'business-open-record', 'secondary', 'arrow', { id: record.id, service: record.service_id }), actionButton('Completa', 'business-quick-done', 'ghost', 'check', { id: record.id }));
+    if (businessPending.has(record.id)) $$('button', actions).forEach(button => { button.disabled = true; });
+    row.append(content, actions); return row;
   }));
 }
 async function loadBusinessRecords(serviceId, renderNow = true) {
@@ -305,11 +327,19 @@ function businessFormField(field, value = '') {
   if (field.min !== undefined) input.min = field.min; if (field.max !== undefined) input.max = field.max;
   input.value = value ?? ''; container.append(label, input); return container;
 }
-function openBusinessForm(record = null) {
+function openBusinessForm(record = null, conversion = null) {
   const service = businessService(record?.service_id || state.businessService);
   if (!service) return;
-  state.businessEditing = record; state.businessService = service.id;
-  $('#business-form-module').textContent = service.name; $('#business-form-title').textContent = record ? 'Modifica attività' : 'Aggiungi attività';
+  businessConversion = conversion;
+  state.businessEditing = conversion ? null : record; businessFormService = service.id;
+  if (!conversion) state.businessService = service.id;
+  $('#business-form-module').textContent = service.name; $('#business-form-title').textContent = conversion ? (service.id === 'invoices' ? 'Rivedi la bozza fattura' : 'Rivedi l’incasso') : record ? 'Modifica attività' : 'Aggiungi attività';
+  $('#business-form-intro').textContent = conversion ? 'Abbiamo ripreso i dati dal documento precedente. Controlla importi, riferimenti e scadenza prima di salvare.' : 'Inserisci le informazioni che hai. Filo prepara un riepilogo e ordina le tue scadenze.';
+  $('#business-conversion-note').hidden = !conversion;
+  $('#business-conversion-note').textContent = conversion ? `Da “${conversion.source.title}”. ${service.id === 'invoices' ? 'Questa è una bozza interna: non è una fattura elettronica e non viene inviata allo SDI.' : 'Il salvataggio prepara un promemoria: non registra un pagamento né invia un sollecito.'}` : '';
+  $('#business-savings-fields').hidden = Boolean(conversion);
+  $('.business-form-extra > summary').textContent = conversion ? 'Note facoltative' : 'Note e tempo risparmiato';
+  $('#business-record-form button[type="submit"]').firstChild.textContent = conversion ? (service.id === 'invoices' ? 'Salva bozza fattura ' : 'Salva incasso ') : 'Salva attività ';
   const fields = [
     { id: 'title', label: 'Titolo dell’attività', type: 'text', required: true, max_length: 160 },
     { id: 'contact', label: 'Cliente, referente o fornitore', type: 'text', max_length: 160 },
@@ -317,14 +347,13 @@ function openBusinessForm(record = null) {
     { id: 'status', label: 'Stato', type: 'select', required: true, options: Object.entries(businessStatusLabels).map(([value, label]) => ({ value, label })) },
     { id: 'priority', label: 'Priorità', type: 'select', required: true, options: Object.entries(businessPriorityLabels).map(([value, label]) => ({ value, label })) },
   ];
-  replace('#business-common-fields', ...fields.map(field => businessFormField(field, record?.[field.id] ?? (field.id === 'status' ? 'todo' : field.id === 'priority' ? 'normal' : ''))));
+  replace('#business-common-fields', ...fields.filter(field => !conversion || field.id !== 'status').map(field => businessFormField(field, record?.[field.id] ?? (field.id === 'status' ? 'todo' : field.id === 'priority' ? 'normal' : ''))));
   replace('#business-detail-fields', ...(service.fields || []).map(field => businessFormField(field, record?.details?.[field.id])));
   $('#business-record-notes').value = record?.notes || ''; $('#business-record-saved-minutes').value = record?.saved_minutes || 0;
   notice('#business-form-error', ''); openDialog('#business-form-dialog'); $('#business-field-title').focus();
 }
 async function openBusinessRecord(id, serviceId) {
-  let record = state.businessRecords.find(item => item.id === id);
-  if (!record) { const result = await api(`/api/business/records/${encodeURIComponent(id)}`); record = result.item; }
+  const result = await api(`/api/business/records/${encodeURIComponent(id)}`); const record = result.item;
   if (!record) throw new Error('L’attività non è più disponibile. Aggiorna i tuoi servizi.');
   state.businessRecord = record; renderBusinessDetail(record); openDialog('#business-detail-dialog');
 }
@@ -337,25 +366,68 @@ function renderBusinessDetail(record) {
   const actions = el('div', 'card-actions');
   actions.append(actionButton(businessOpen(record) ? 'Segna completata' : 'Riapri attività', 'business-status', 'primary', 'check', { id: record.id, status: businessOpen(record) ? 'done' : 'todo' }), actionButton('Modifica', 'business-edit', 'secondary', undefined, { id: record.id }));
   const download = el('a', 'button secondary', 'Scarica il documento'); download.href = `/api/business/records/${encodeURIComponent(record.id)}/export`; download.setAttribute('download', ''); download.append(icon('arrow')); actions.append(download, actionButton('Elimina', 'business-delete', 'ghost', undefined, { id: record.id })); body.append(actions);
+  if (['quotes', 'invoices'].includes(record.service_id)) {
+    const target = record.service_id === 'quotes' ? 'invoices' : 'receivables';
+    const workflow = el('div', 'business-commercial-step');
+    workflow.append(el('h3', '', 'Il prossimo passo'), el('p', 'small-text', target === 'invoices' ? 'Riprendi cliente e importi in una bozza interna, da rivedere. Nessun invio allo SDI.' : 'Prepara il promemoria dell’incasso con importo e riferimento. Scegli tu la scadenza.'), actionButton(target === 'invoices' ? 'Prepara bozza fattura' : 'Prepara incasso', 'business-convert', 'secondary', 'arrow', { id: record.id, target })); body.append(workflow);
+  }
+  const links = record.links || { source: null, targets: [] };
+  if (links.source || links.targets?.length) {
+    const connections = el('section', 'business-document-links'); connections.append(el('h3', '', 'Documenti collegati'));
+    for (const link of [...(links.source ? [{ ...links.source, role: 'Origine' }] : []), ...(links.targets || []).map(item => ({ ...item, role: 'Passo successivo' }))]) {
+      const button = actionButton('', 'business-linked-record', 'ghost', 'arrow', { id: link.id, service: link.service_id });
+      const description = el('span'); description.append(el('small', '', `${link.role} · ${businessService(link.service_id)?.name || 'Attività'}`), el('strong', '', link.title)); button.prepend(description); connections.append(button);
+    }
+    body.append(connections);
+  }
   body.append(el('h3', 'business-document-heading', 'Il tuo documento'), el('p', 'small-text', 'Preparato dalle informazioni inserite. Rivedilo prima di utilizzarlo.'));
   const document = el('pre', 'business-document', record.document || 'Il documento non è ancora disponibile.'); body.append(document);
   if (record.saved_minutes) body.append(el('p', 'helper-text', `${record.saved_minutes} minuti risparmiati: tua stima dichiarata.`));
 }
 async function saveBusinessRecord(event) {
   event.preventDefault(); const form = event.currentTarget; if (!form.reportValidity()) return;
-  const service = businessService(state.businessService); if (!service) return;
+  const service = businessService(businessFormService || state.businessService); if (!service) return;
   const values = new FormData(form); const details = {};
-  for (const field of service.fields || []) { const value = String(values.get(field.id) || '').trim(); if (value) details[field.id] = ['number', 'money'].includes(field.type) ? Number(value) : value; else if (state.businessEditing && !field.required) details[field.id] = null; }
+  for (const field of service.fields || []) { const value = String(values.get(field.id) || '').trim(); if (value) details[field.id] = ['number', 'money'].includes(field.type) ? Number(value) : value; else if ((state.businessEditing || businessConversion) && !field.required) details[field.id] = null; }
   const body = { title: String(values.get('title') || '').trim(), contact: String(values.get('contact') || '').trim(), due_date: values.get('due_date') || null, status: values.get('status'), priority: values.get('priority'), notes: String(values.get('notes') || '').trim(), saved_minutes: Number(values.get('saved_minutes') || 0), details };
-  if (!state.businessEditing) body.service_id = service.id;
+  const conversion = businessConversion;
+  if (conversion) { delete body.status; delete body.saved_minutes; body.target_service_id = service.id; }
+  else if (!state.businessEditing) body.service_id = service.id;
   notice('#business-form-error', '');
   await withBusy($('button[type="submit"]', form), async () => {
-    try { const editing = state.businessEditing; const result = await api(editing ? `/api/business/records/${encodeURIComponent(editing.id)}` : '/api/business/records', { method: editing ? 'PATCH' : 'POST', body }); closeDialog('#business-form-dialog'); state.businessEditing = null; await refresh(); if (result.item && $('#business-detail-dialog').open) { state.businessRecord = result.item; renderBusinessDetail(result.item); } toast(editing ? 'Attività aggiornata. Il documento è pronto da rivedere.' : 'Attività salvata. Il documento e le scadenze sono pronti.'); }
+    try {
+      const editing = state.businessEditing; const path = conversion ? `/api/business/records/${encodeURIComponent(conversion.source.id)}/convert` : editing ? `/api/business/records/${encodeURIComponent(editing.id)}` : '/api/business/records';
+      const result = await api(path, { method: editing ? 'PATCH' : 'POST', body }); closeDialog('#business-form-dialog'); state.businessEditing = null; businessConversion = null;
+      await refresh();
+      if (conversion && result.item) { if ($('#business-detail-dialog').open) closeDialog('#business-detail-dialog'); await openBusinessModule(result.item.service_id); await openBusinessRecord(result.item.id, result.item.service_id); }
+      else if (result.item && $('#business-detail-dialog').open) { state.businessRecord = result.item; renderBusinessDetail(result.item); }
+      toast(conversion ? result.created ? 'Passo successivo salvato e collegato al documento di origine.' : 'Il documento collegato è già presente. Lo abbiamo aperto.' : editing ? 'Attività aggiornata. Il documento è pronto da rivedere.' : 'Attività salvata. Il documento e le scadenze sono pronti.');
+    }
     catch (error) { notice('#business-form-error', error.message); }
   });
 }
 async function handleBusinessAction(button) {
   const action = button.dataset.action;
+  if (action === 'business-search-open') { openBusinessSearch(); return; }
+  if (action === 'business-search-close') { closeDialog('#business-search-dialog'); return; }
+  if (action === 'business-search-result' || action === 'business-linked-record') { await withBusy(button, async () => { if ($('#business-search-dialog').open) closeDialog('#business-search-dialog'); if ($('#business-detail-dialog').open) closeDialog('#business-detail-dialog'); await openBusinessModule(button.dataset.service); await openBusinessRecord(button.dataset.id, button.dataset.service); }); return; }
+  if (action === 'business-convert') {
+    await withBusy(button, async () => {
+      const result = await api(`/api/business/records/${encodeURIComponent(button.dataset.id)}/conversion?target_service_id=${encodeURIComponent(button.dataset.target)}`);
+      if (result.existing) { closeDialog('#business-detail-dialog'); await openBusinessModule(result.existing.service_id); await openBusinessRecord(result.existing.id, result.existing.service_id); }
+      else openBusinessForm(result.proposal, { source: result.source, target: button.dataset.target });
+    }); return;
+  }
+  if (action === 'business-quick-done') {
+    const id = button.dataset.id; if (businessPending.has(id)) return; businessPending.add(id);
+    try { await withBusy(button, async () => { const original = (await api(`/api/business/records/${encodeURIComponent(id)}`)).item; if (!businessOpen(original)) { await refresh(); return; } await api(`/api/business/records/${encodeURIComponent(id)}`, { method: 'PATCH', body: { status: 'done' } }); await refresh(); toast('Attività completata. Puoi annullare questa modifica.', false, { id, status: original.status }); }); }
+    finally { businessPending.delete(id); state.businessSummarySignature = null; renderBusinessSummary(); } return;
+  }
+  if (action === 'business-undo') {
+    const undo = businessUndo; if (!undo || businessPending.has(undo.id)) return; businessPending.add(undo.id); clearTimeout(toastTimer);
+    try { await withBusy(button, async () => { const record = (await api(`/api/business/records/${encodeURIComponent(undo.id)}`)).item; if (record.status !== 'done') { toast('Lo stato è già cambiato. Abbiamo mantenuto l’ultima modifica.'); return; } await api(`/api/business/records/${encodeURIComponent(undo.id)}`, { method: 'PATCH', body: { status: undo.status } }); await refresh(); toast('Completamento annullato. L’attività è tornata tra le priorità.'); }); }
+    finally { businessPending.delete(undo.id); state.businessSummarySignature = null; renderBusinessSummary(); } return;
+  }
   if (action === 'open-business') { await openBusinessModule(button.dataset.service || button.dataset.id); return; }
   if (action === 'business-open-catalog' || action === 'business-back') { state.businessService = null; state.businessRequest++; location.hash = 'services'; setPage('services'); renderBusiness(); $('#services-title').tabIndex = -1; $('#services-title').focus(); return; }
   if (action === 'open-business-agenda') { location.hash = 'overview'; setPage('overview'); $('#agenda-title').scrollIntoView({ behavior: 'smooth', block: 'start' }); $('#agenda-view-date').focus({ preventScroll: true }); return; }
@@ -372,6 +444,26 @@ async function handleBusinessAction(button) {
   if (action === 'business-delete') { state.businessDelete = button.dataset.id; $('#business-delete-description').textContent = `“${state.businessRecord?.title || 'Questa attività'}” e il suo documento verranno rimossi dai tuoi servizi.`; openDialog('#business-delete-dialog'); return; }
   if (action === 'business-confirm-delete') { await withBusy(button, async () => { const id = state.businessDelete; if (!id) return; await api(`/api/business/records/${encodeURIComponent(id)}`, { method: 'DELETE' }); closeDialog('#business-delete-dialog'); if ($('#business-detail-dialog').open) closeDialog('#business-detail-dialog'); state.businessDelete = null; state.businessRecord = null; await refresh(); toast('Attività eliminata.'); }); return; }
   if (action === 'business-status') { await withBusy(button, async () => { const result = await api(`/api/business/records/${encodeURIComponent(button.dataset.id)}`, { method: 'PATCH', body: { status: button.dataset.status } }); await refresh(); if (result.item && $('#business-detail-dialog').open && state.businessRecord?.id === result.item.id) { state.businessRecord = result.item; renderBusinessDetail(result.item); } toast(button.dataset.status === 'done' ? 'Attività completata. Resta disponibile nello storico.' : 'Attività riaperta.'); }); }
+}
+
+function stopBusinessSearch() { clearTimeout(businessSearchTimer); businessSearchController?.abort(); businessSearchController = null; businessSearchRequest++; }
+function openBusinessSearch() {
+  stopBusinessSearch(); $('#business-global-search').value = ''; replace('#business-search-results'); notice('#business-search-error', ''); $('#business-search-status').textContent = 'Scrivi una parola per trovare un’attività, un cliente o un documento.';
+  openDialog('#business-search-dialog'); $('#business-global-search').focus();
+}
+async function searchBusinessRecords(query, request) {
+  if (request !== businessSearchRequest || !$('#business-search-dialog').open) return;
+  businessSearchController = new AbortController(); $('#business-search-status').textContent = 'Cerchiamo nelle tue attività…'; notice('#business-search-error', '');
+  try {
+    const result = await api(`/api/business/records?q=${encodeURIComponent(query)}&limit=20`, { signal: businessSearchController.signal });
+    if (request !== businessSearchRequest || !$('#business-search-dialog').open) return;
+    const items = result.items || []; $('#business-search-status').textContent = items.length ? `${result.total} ${result.total === 1 ? 'attività trovata' : 'attività trovate'}${result.total > items.length ? ' · primi 20 risultati' : ''}` : 'Nessuna attività trovata. Prova un titolo, un cliente o una parola nelle note.';
+    replace('#business-search-results', ...items.map(record => {
+      const button = actionButton('', 'business-search-result', 'ghost', 'arrow', { id: record.id, service: record.service_id }); button.classList.add('business-search-result');
+      const content = el('span'); content.append(el('small', '', `${businessService(record.service_id)?.name || record.service_name || 'Attività'} · ${businessStatusLabels[record.status] || 'Da fare'}`), el('strong', '', record.title));
+      if (record.contact) content.append(el('span', 'small-text', record.contact)); button.prepend(content); return button;
+    }));
+  } catch (error) { if (error.name !== 'AbortError' && request === businessSearchRequest && $('#business-search-dialog').open) { replace('#business-search-results'); $('#business-search-status').textContent = ''; notice('#business-search-error', error.message); } }
 }
 
 function currentBriefing() {
@@ -829,6 +921,21 @@ async function handleAction(button) {
 }
 
 document.addEventListener('click', event => { const button = event.target.closest('[data-action]'); if (button && !button.disabled) handleAction(button).catch(error => toast(error.message, true)); });
+$('#business-search-button kbd').textContent = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘ K' : 'Ctrl K';
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && $('#business-search-dialog').open) { event.preventDefault(); closeDialog('#business-search-dialog'); return; }
+  if (event.key.toLowerCase() !== 'k' || !(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey || event.repeat) return;
+  if (event.target.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"])') || $('dialog[open]') || !state.data) return;
+  event.preventDefault(); openBusinessSearch();
+});
+$$('dialog').forEach(dialog => dialog.addEventListener('close', () => {
+  if (dialog.id === 'business-search-dialog') stopBusinessSearch();
+  if (dialog.id === 'business-form-dialog') {
+    businessConversion = null; businessFormService = null;
+  }
+  const previous = dialogFocus.get(dialog); const current = $('dialog[open]');
+  if (previous?.isConnected && (!current || current.contains(previous)) && previous.getClientRects().length) previous.focus({ preventScroll: true });
+}));
 document.addEventListener('input', event => {
   const target = event.target;
   if (target.closest('#company-form')) { state.companyDirty = true; $('#company-save-status').textContent = 'Modifiche da salvare'; }
@@ -841,6 +948,11 @@ document.addEventListener('change', event => {
   if ($('#activate-button')) $('#activate-button').disabled = !state.wizard.authorizedRead || !state.wizard.authorizedDraft;
 });
 $('#business-record-form').addEventListener('submit', saveBusinessRecord);
+$('#business-global-search').addEventListener('input', event => {
+  stopBusinessSearch(); const request = businessSearchRequest; const query = event.target.value.trim(); replace('#business-search-results'); notice('#business-search-error', '');
+  if (!query) { $('#business-search-status').textContent = 'Scrivi una parola per trovare un’attività, un cliente o un documento.'; return; }
+  $('#business-search-status').textContent = 'Cerchiamo nelle tue attività…'; businessSearchTimer = setTimeout(() => searchBusinessRecords(query, request), 220);
+});
 $('#business-service-search').addEventListener('input', event => { state.businessSearch = event.target.value; state.businessLimit = 6; renderBusinessCatalog(); });
 $('#business-service-scope').addEventListener('change', event => { state.businessScope = event.target.value; state.businessLimit = 6; renderBusinessCatalog(); });
 $('#business-record-filter').addEventListener('change', async event => { state.businessFilter = event.target.value; state.businessOffset = 0; if (state.businessService) await loadBusinessRecords(state.businessService); });

@@ -15,11 +15,17 @@ La pagina **Servizi** offre 23 moduli aziendali locali, oltre alla segreteria em
 
 I moduli usano schede con campi specifici. Puoi assegnare una scadenza, una priorità e uno stato, aggiornare i dati, completare o riaprire un'attività. Dalla scheda Filo prepara un documento locale da leggere, copiare o scaricare in `.txt`. La modifica dei dati aggiorna il documento.
 
+La ricerca **Cerca attività** trova titoli, referenti, note e dati delle schede in tutti i moduli aziendali; non cerca nella casella email. Si può aprire anche con `Ctrl/Cmd + K`. Le attività della panoramica possono essere completate direttamente e riaperte con il comando per annullare.
+
 La panoramica mostra subito le attività scadute, quelle di oggi e quelle che richiedono attenzione, con il prossimo passo. Per il magazzino una quantità inferiore alla soglia annotata propone un controllo e un riordino: non aggiorna la giacenza e non invia ordini. Le date vengono valutate nel fuso italiano `Europe/Rome`.
 
 La chat propone il modulo pertinente, ad esempio **Preventivi**, **Incassi** o **Verbali**, senza creare record o attivare permessi soltanto dal testo della richiesta. La segreteria email mantiene il proprio consenso e i limiti del collegamento Gmail/Outlook/IMAP.
 
 ## Documenti e amministrazione
+
+**La tua azienda** raccoglie anche ragione sociale, partita IVA, codice fiscale, indirizzo e contatti. Questi campi sono facoltativi e vengono riutilizzati nell'intestazione dei preventivi, delle bozze fattura e degli incassi. I controlli verificano il formato, senza interrogare registri fiscali. Un export usa il profilo aziendale attualmente salvato: non rappresenta una copia storica immutabile di una fattura emessa.
+
+Dal dettaglio di un preventivo puoi preparare una **bozza fattura** con cliente, descrizione, imponibile, IVA e condizioni già compilati. Il modulo si apre per la revisione: annullare non crea alcuna scheda. Da una bozza fattura puoi preparare una scheda **Incassi** con l'importo totale. Le scadenze restano da inserire, senza inventare termini di pagamento. Le schede conservano i collegamenti all'origine; ripetere la conversione apre la stessa destinazione, senza creare duplicati o sovrascrivere modifiche. La conversione non completa l'origine, non emette fatture fiscali e non verifica che un pagamento sia avvenuto.
 
 Preventivi e bozze fattura calcolano imponibile, IVA e totale con aritmetica decimale. L'imponibile e l'aliquota sono inseriti dall'utente; Filo non determina il trattamento fiscale del caso concreto. La **bozza fattura** è un promemoria interno da verificare: non è un XML fiscale e non viene inviata allo SDI. Il modulo incassi prepara un testo di sollecito da rivedere e usare nella propria casella.
 

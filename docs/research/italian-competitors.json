@@ -1,0 +1,723 @@
+{
+  "research_date": "2026-10-05",
+  "workstream": "Italian financial and administrative SME competitors",
+  "target_segment": "Studi e imprese di servizi (scelto dall'utente)",
+  "scope": "Sei prodotti in tre gruppi societari; confronto delle funzionalità pubbliche pertinenti alla segreteria e alle operazioni di una PMI. Non è un censimento di ogni software italiano né una prova d'uso dei prodotti.",
+  "methodology": {
+    "tool": "Exa web_search_exa + web_fetch_exa",
+    "search_queries": [
+      {
+        "query": "Pagina ufficiale Fatture in Cloud listino prezzi Standard Premium Premium Plus Complete abbonamento fatturazione elettronica solleciti incassi 2026",
+        "objective": "Privilegiare fonti ufficiali fattureincloud.it, estrarre piani, canone annuo IVA, caratteristiche solleciti, riconciliazione pagamenti, API e collaborazione commercialista.",
+        "numResults": 10
+      },
+      {
+        "query": "Pagina ufficiale Danea Easyfatt prezzi versioni Standard Professional Enterprise One Enterprise magazzino preventivi acquisti scadenze pagamenti",
+        "objective": "Privilegiare danea.it prezzi e funzionalità ufficiali. Escludere recensioni commerciali rivenditori quando esiste pagina produttore; estrarre condizioni di licenza e rinnovo.",
+        "numResults": 10
+      },
+      {
+        "query": "Pagina ufficiale Fattura24 prezzi annuali mensili dashboard Business Professional Enterprise fatturazione elettronica automazioni preventivi",
+        "objective": "Cercare fattura24.com listino e aiuto ufficiale. Estrarre tariffe effettive IVA, condizioni pagamento e caratteristiche cruscotto modelli documenti API.",
+        "numResults": 10
+      },
+      {
+        "query": "Pagine ufficiali TeamSystem Digital fatture Enterprise Cloud e Zucchetti Fatturazione Elettronica Tieni il Conto software piccole imprese prezzi funzioni incassi banche",
+        "objective": "Privilegiare teamsystem.com e zucchetti.it o portali ufficiali prodotto. Estrarre differenze per PMI, condivisione studio, banche, SDI, pagamenti e tariffe pubbliche se presenti.",
+        "numResults": 10
+      },
+      {
+        "query": "Pagina ufficiale Fatture in Cloud prezzi abbonamenti Standard 144 Premium 252 Premium Plus 348 Complete 612 euro annui IVA acquisto licenza",
+        "objective": "Cercare esclusivamente evidenza ufficiale del produttore (fattureincloud.it o teamsystem.com) dei prezzi delle quattro licenze generali: verifica importi, ciclo annuale e IVA; non usare prezzi di recensioni/affiliati come prova definitiva.",
+        "numResults": 10
+      }
+    ],
+    "search_calls": 5,
+    "sources_reviewed": 50,
+    "source_count_definition": "Somma numResults richiesti nelle cinque ricerche, non numero di pagine integralmente lette né di fonti indipendenti.",
+    "fetched_url_count": 18,
+    "fetched_urls": [
+      "https://www.fattureincloud.it/costo/",
+      "https://www.fattureincloud.it/software-fatturazione/caratteristiche/",
+      "https://www.danea.it/software/easyfatt/prezzi/",
+      "https://www.danea.it/software/easyfatt/caratteristiche/",
+      "https://www.fattura24.com/prezzi/",
+      "https://www.fattura24.com/manuale/vendite/preventivi/",
+      "https://www.teamsystem.com/aziende/enterprise/",
+      "https://www.teamsystem.com/store/ts-digital-invoice/",
+      "https://www.zucchetti.it/it/cms/professionisti/contabilita-fisco-finanza/fatturazione-elettronica/tieni-il-conto/software-fatturazione-elettronica.html",
+      "https://help.zucchetti.it/dms/ticpro/help/sam/ticpro_standard/pages/intro_ticpro.html",
+      "https://www.teamsystem.com/store/fatture-in-cloud/prezzi/",
+      "https://www.danea.it/software/easyfatt/acquista/",
+      "https://www.danea.it/software/easyfatt/professional/",
+      "https://www.danea.it/software/easyfatt/enterprise-one/",
+      "https://www.zucchetti.it/website/cms/ITA/prodotto/7130-software-fatturazione-elettronica-commercialisti.html",
+      "https://www.fattura24.com/",
+      "https://www.fattura24.com/avvisi/2025/01-12/",
+      "https://www.fattureincloud.app/"
+    ],
+    "quoted_source_count": 16,
+    "fit_criteria": "Alto: documenti, incassi e lavoro di professionisti/servizi direttamente pertinenti. Medio: utile per alcuni studi/imprese, con maggiore complessità o logistica. Basso: attività di commercio/produzione poco pertinenti al primo target.",
+    "source_policy": "Fonti ufficiali prodotto/listino/help. Nessuna iscrizione, prova account, richiesta informazioni o contatto al fornitore. Affermazioni di marketing non trattate come performance misurata.",
+    "pricing_policy": "Solo importi leggibili e collegati univocamente a piano e condizione sono verificati. Nessun prezzo inventato né ricavato per inferenza da snippet privi di intestazione. Equivalenti mensili dichiarati separatamente da fatturazione mensile.",
+    "limitations": [
+      "Le pagine dinamiche di Fatture in Cloud e Danea non restituiscono i prezzi core completi; lettura alternativa delle pagine ufficiali effettuata, estrazione ancora incompleta.",
+      "Il tentativo di leggere il sito ufficiale direttamente dalla shell ha ricevuto HTTP 403 dal proxy; nessun tentativo di aggirare la restrizione.",
+      "TeamSystem Store TS Digital Invoice e pagina prezzi Fatture in Cloud hanno restituito solo contenuto generico; esclusi come prova di prodotto/prezzo.",
+      "Date di pubblicazione/aggiornamento non indicate per la maggior parte delle pagine. research_date indica la lettura, non la data di aggiornamento della fonte.",
+      "Fatture in Cloud, Danea e TeamSystem Enterprise appartengono allo stesso gruppo; Tieni il Conto e PRO allo stesso gruppo Zucchetti. Non contarli come sei fornitori indipendenti."
+    ]
+  },
+  "competitors": [
+    {
+      "product": "Fatture in Cloud",
+      "group": "TeamSystem",
+      "segment": "Freelance, professionisti e piccole imprese; confronto diretto per studi e servizi",
+      "fit_services": "alto",
+      "strongest_features": [
+        {
+          "feature": "Dati cliente e listini riutilizzabili, con conversione preventivo approvato in fattura/ordine",
+          "source_ids": [
+            "fic-features"
+          ]
+        },
+        {
+          "feature": "Scadenziario alimentato dai documenti non saldati e avvisi nella homepage",
+          "source_ids": [
+            "fic-features"
+          ]
+        },
+        {
+          "feature": "Solleciti configurabili per tipo di documento, data e soglia importo",
+          "source_ids": [
+            "fic-features"
+          ]
+        },
+        {
+          "feature": "Registrazione documenti passivi, OCR, pagamenti e riconciliazione bancaria",
+          "source_ids": [
+            "fic-features"
+          ],
+          "requires_real_integration": true
+        },
+        {
+          "feature": "Commercialista e multiutenza con credenziali e permessi specifici",
+          "source_ids": [
+            "fic-pricing"
+          ]
+        }
+      ],
+      "pricing": {
+        "verification": "parziale",
+        "currency": "EUR",
+        "vat": "IVA esclusa per gli importi verificati",
+        "basis": "Licenza/azienda; fatturazione annuale, non canone per ogni dipendente",
+        "verified_offers": [
+          {
+            "plan": "Standard Forfettari - rinnovo",
+            "annual_amount": 96,
+            "monthly_equivalent": 8,
+            "billing_period": "annual",
+            "eligibility": "Contribuenti in regime forfettario; questo importo è il rinnovo dopo la promozione iniziale",
+            "source_ids": [
+              "fic-pricing"
+            ]
+          },
+          {
+            "plan": "Standard Forfettari - promo iniziale",
+            "monthly_advertised_amount": 4,
+            "annual_amount": null,
+            "billing_period": "annual",
+            "eligibility": "Regime forfettario; il totale del primo anno non viene confermato dal testo della pagina prezzi estratto",
+            "source_ids": [
+              "fic-home",
+              "fic-pricing"
+            ]
+          }
+        ],
+        "payment_fees": {
+          "card_or_paypal": 1,
+          "bank_transfer": 2.5,
+          "frequency": "per pagamento annuale",
+          "vat": "IVA esclusa",
+          "source_ids": [
+            "fic-pricing"
+          ]
+        },
+        "general_plans_verified": false,
+        "notes": "I prezzi Standard/Premium/Premium Plus/Complete non sono visibili nel testo ufficiale estratto (contenuto dinamico). Le recensioni trovate riportano importi e limiti documentali discordanti: esclusi dal confronto numerico definitivo. Rinnovo automatico esplicitato nella nota dell'offerta Forfettari; non esteso per inferenza a ogni licenza."
+      },
+      "filo_improvements": [
+        {
+          "priority": "P0",
+          "feature": "Riutilizzare il profilo aziendale e l'anagrafica nei documenti; conversione locale preventivo→bozza fattura→incasso",
+          "optimization": "Mostrare campi mancanti prima di preparare il documento; conservare origine, importi e condizioni; una conversione ripetuta non deve produrre duplicati.",
+          "requires_integration": false
+        },
+        {
+          "priority": "P1",
+          "feature": "Promemoria pagamento proposti con motivazione e importo",
+          "optimization": "Rendere visibile una bozza modificabile e far confermare destinatario e invio; nessun sollecito automatico senza canale collegato e regola esplicita.",
+          "requires_integration": "Solo per invio email o incasso reale"
+        }
+      ]
+    },
+    {
+      "product": "Danea Easyfatt",
+      "group": "TeamSystem",
+      "segment": "Professional per artigiani, piccole attività e servizi; Enterprise per commercio, e-commerce e produzione",
+      "fit_services": "medio",
+      "strongest_features": [
+        {
+          "feature": "Trasformazione documenti, preventivi, rapporti d'intervento e avvisi di parcella",
+          "source_ids": [
+            "easyfatt-features"
+          ]
+        },
+        {
+          "feature": "Fatture ricorrenti per assistenze e canoni",
+          "source_ids": [
+            "easyfatt-features"
+          ]
+        },
+        {
+          "feature": "Scadenziario pagamenti e solleciti email",
+          "source_ids": [
+            "easyfatt-features"
+          ]
+        },
+        {
+          "feature": "Import/export Excel/XML e archivio di file associati a cliente, documento e pagamento",
+          "source_ids": [
+            "easyfatt-features"
+          ]
+        },
+        {
+          "feature": "Multi-magazzino, lotti/seriali, distinte base e vendita al banco nelle versioni superiori",
+          "source_ids": [
+            "easyfatt-enterprise-one"
+          ],
+          "fit_services": "basso"
+        }
+      ],
+      "pricing": {
+        "verification": "base_non_verificata_optional_verificati",
+        "currency": "EUR",
+        "vat": "IVA esclusa (dichiarazione generale del listino)",
+        "basis": "Licenza software annuale; Professional installabile su 2 PC senza uso multiutente",
+        "core_license_amount": null,
+        "billing_period": "annual",
+        "support_included_months": 12,
+        "payment_fees": {
+          "card_or_paypal": 1,
+          "bank_transfer": 2.5,
+          "frequency": "per pagamento annuale",
+          "vat": "IVA esclusa"
+        },
+        "verified_optional_offers": [
+          {
+            "product": "Fatturazione elettronica per azienda aggiuntiva",
+            "annual_amount": 120,
+            "basis": "Per azienda aggiuntiva; Professional o superiore",
+            "source_ids": [
+              "easyfatt-pricing"
+            ]
+          },
+          {
+            "product": "Modulo Contabilità in Cloud",
+            "monthly_advertised_amount": 21,
+            "billing_period": null,
+            "basis": "Fino a 50.000 transazioni; Professional o superiore; periodo effettivo di addebito dell'optional non verificato",
+            "source_ids": [
+              "easyfatt-pricing"
+            ]
+          },
+          {
+            "product": "Business Information",
+            "annual_amount": 94,
+            "basis": "5.000 verifiche nell'anno",
+            "source_ids": [
+              "easyfatt-pricing"
+            ]
+          }
+        ],
+        "source_ids": [
+          "easyfatt-pricing",
+          "easyfatt-buy",
+          "easyfatt-pro"
+        ],
+        "notes": "Prezzi delle licenze core sostituiti da '_' nelle pagine pubbliche estratte. Non confondere costo optional con prezzo dell'intera licenza. La pagina prezzi della versione Cloud dichiara 'No rinnovo automatico', senza trasferire questa condizione a tutte le edizioni."
+      },
+      "filo_improvements": [
+        {
+          "priority": "P1",
+          "feature": "Ricorrenze per canoni, rinnovi contrattuali e assistenze",
+          "optimization": "Creare promemoria e bozze da rivedere sulla data concordata, con prossima occorrenza e possibilità di saltarla; non emettere fatture fiscali automaticamente.",
+          "requires_integration": false
+        },
+        {
+          "priority": "P1",
+          "feature": "Importazione anagrafiche da CSV",
+          "optimization": "Anteprima, mappatura colonne e segnalazione duplicati prima dell'importazione; cancellazione reversibile della sola importazione.",
+          "requires_integration": false
+        }
+      ]
+    },
+    {
+      "product": "Fattura24",
+      "group": "Fattura24",
+      "segment": "Professionisti, partite IVA e PMI orientate a documenti e controllo di gestione",
+      "fit_services": "alto",
+      "strongest_features": [
+        {
+          "feature": "Profilo fatturazione, richiamo rubrica, preventivo approvato, dettaglio righe/IVA e modelli email",
+          "source_ids": [
+            "f24-quote-help"
+          ]
+        },
+        {
+          "feature": "Budget vs Actual, flusso di cassa e bilancino alimentati da documenti",
+          "source_ids": [
+            "f24-home",
+            "f24-pricing"
+          ]
+        },
+        {
+          "feature": "API e connettore MCP per interrogare i numeri reali con Claude/ChatGPT",
+          "source_ids": [
+            "f24-home",
+            "f24-pricing"
+          ]
+        },
+        {
+          "feature": "Importazione anagrafiche e prodotti da Excel/CSV; multiutenza per piano",
+          "source_ids": [
+            "f24-pricing"
+          ]
+        },
+        {
+          "feature": "Assistenza e guide sintetiche contestuali, autenticazione a due fattori",
+          "source_ids": [
+            "f24-home"
+          ]
+        }
+      ],
+      "pricing": {
+        "verification": "Professional_verificato_altri_piani_non_verificati",
+        "currency": "EUR",
+        "vat": "IVA esclusa",
+        "basis": "Piano per account aziendale; utenti aggiuntivi inclusi entro limiti del piano",
+        "verified_offers": [
+          {
+            "plan": "Professional + AI - primo anno",
+            "annual_amount": 48,
+            "monthly_equivalent": 4,
+            "billing_period": "annual",
+            "promotion": true,
+            "source_ids": [
+              "f24-pricing"
+            ]
+          },
+          {
+            "plan": "Professional + AI - rinnovo",
+            "annual_amount": 120,
+            "monthly_equivalent": 10,
+            "billing_period": "annual",
+            "promotion": false,
+            "source_ids": [
+              "f24-pricing",
+              "f24-2026-notice"
+            ]
+          },
+          {
+            "plan": "Professional - clienti continuativi al 31/12/2025",
+            "annual_amount": 96,
+            "monthly_equivalent": 8,
+            "billing_period": "annual",
+            "eligibility": "Abbonamento Professional attivo e regolarmente pagato al 31 dicembre 2025; sconto di 24€/anno rispetto al listino mantenuto finché non scade",
+            "source_ids": [
+              "f24-2026-notice"
+            ]
+          }
+        ],
+        "renewal": "Non automatico; scadenza senza rinnovo riporta l'account alla situazione Standard limitata",
+        "professional_limits": {
+          "documents_per_class_last_12_months": 3000,
+          "users_max": 2,
+          "custom_models": 2,
+          "ai_connector": "3 giorni al mese (come indicato nella tabella ufficiale; piano non illimitato)"
+        },
+        "other_plan_amounts": null,
+        "source_ids": [
+          "f24-pricing"
+        ],
+        "notes": "Un frammento '16 12 €/mese' è presente senza intestazione collegata univocamente al piano: non attribuito. Le celle con icone spuntate nella tabella vengono perse nell'estrazione, quindi non si assume che ogni funzione elencata sia inclusa in Professional. Conservazione a norma non inclusa: il produttore invita ad attivare il servizio separato dell'Agenzia delle Entrate."
+      },
+      "filo_improvements": [
+        {
+          "priority": "P0",
+          "feature": "Ricerca trasversale con azioni e documenti collegati",
+          "optimization": "Una domanda semplice o ricerca deve raggiungere subito la scheda corretta e mostrarne il prossimo passo, senza obbligare a imparare i nomi dei 23 moduli.",
+          "requires_integration": false
+        },
+        {
+          "priority": "P1",
+          "feature": "Situazione degli incassi e degli impegni dai dati reali inseriti",
+          "optimization": "Separare preventivi, bozze, entrate previste e incassi registrati; indicare fonte, periodo e copertura, senza chiamare fatturato ciò che è ancora una bozza.",
+          "requires_integration": false
+        },
+        {
+          "priority": "P2",
+          "feature": "Interrogazione dei numeri dell'azienda tramite AI",
+          "optimization": "Risposte con fonte, periodo e documenti cliccabili; rispettare i permessi e distinguere somma deterministica dal commento del modello.",
+          "requires_integration": "Modello AI o MCP, accessi scoped e dati contabili affidabili"
+        }
+      ]
+    },
+    {
+      "product": "TeamSystem Enterprise",
+      "group": "TeamSystem",
+      "segment": "PMI strutturate e imprese con processi multipli, progetti, produzione e integrazioni ERP",
+      "fit_services": "medio",
+      "strongest_features": [
+        {
+          "feature": "ERP modulare con amministrazione, finanza, CRM, commesse, acquisti, magazzino, documenti e HR",
+          "source_ids": [
+            "ts-enterprise"
+          ]
+        },
+        {
+          "feature": "Desktop configurabile e percorsi rapidi per le funzioni più usate",
+          "source_ids": [
+            "ts-enterprise"
+          ]
+        },
+        {
+          "feature": "AI per proposta contropartita/IVA, riconciliazione, assistenza e commento dei report",
+          "source_ids": [
+            "ts-enterprise"
+          ],
+          "requires_real_integration": true
+        },
+        {
+          "feature": "Controllo flussi di cassa e consuntivazione progetti",
+          "source_ids": [
+            "ts-enterprise"
+          ]
+        }
+      ],
+      "pricing": {
+        "verification": "preventivo_personalizzato_verificato",
+        "currency": "EUR",
+        "amount": null,
+        "billing_period": null,
+        "per_seat_amount": null,
+        "vat": null,
+        "basis": "Definito secondo utenti, moduli, personalizzazione, formazione/supporto e cloud/on-premise",
+        "source_ids": [
+          "ts-enterprise"
+        ],
+        "notes": "Nessuna cifra pubblica verificata; non confrontabile numericamente con un piano self-service."
+      },
+      "filo_improvements": [
+        {
+          "priority": "P0",
+          "feature": "Azioni più frequenti accessibili dalla panoramica",
+          "optimization": "Poche scorciatoie pertinenti e guidate dal contesto di studi e servizi, con ricerca unificata; configurazione minima e nessun desktop con decine di widget.",
+          "requires_integration": false
+        },
+        {
+          "priority": "P2",
+          "feature": "Costo, ore e avanzamento delle commesse",
+          "optimization": "Mostrare dati dichiarati per singola commessa con scostamenti e attività mancanti; evitare indicatori automatici senza consuntivi.",
+          "requires_integration": false
+        }
+      ]
+    },
+    {
+      "product": "Zucchetti Tieni il Conto",
+      "group": "Zucchetti",
+      "segment": "Microimprese, artigiani, ditte individuali e forfettari collegati al commercialista",
+      "fit_services": "alto",
+      "strongest_features": [
+        {
+          "feature": "Creazione fattura dalla homepage, app mobile e invio SDI tramite Digital Hub",
+          "source_ids": [
+            "tic",
+            "tic-legacy"
+          ]
+        },
+        {
+          "feature": "Alert per fatture in scadenza, scartate, errate e soglie",
+          "source_ids": [
+            "tic"
+          ]
+        },
+        {
+          "feature": "Pianificazione entrate/uscite e agenda giornaliera",
+          "source_ids": [
+            "tic"
+          ]
+        },
+        {
+          "feature": "Scambio documenti con studio, cruscotto sullo stato scarti/bozze",
+          "source_ids": [
+            "tic"
+          ]
+        }
+      ],
+      "pricing": {
+        "verification": "non_verificato",
+        "currency": "EUR",
+        "amount": null,
+        "billing_period": null,
+        "vat": null,
+        "per_seat_amount": null,
+        "source_ids": [
+          "tic",
+          "tic-legacy"
+        ],
+        "notes": "Le pagine ufficiali consultate descrivono il prodotto e invitano a richiedere informazioni, ma non mostrano un listino numerico. Non si deduce un prezzo da rivenditori."
+      },
+      "filo_improvements": [
+        {
+          "priority": "P0",
+          "feature": "Panoramica basata su eccezioni operative",
+          "optimization": "Prima mostrare scaduti, problemi, richieste da rispondere e prossimo appuntamento, poi il riepilogo; offrire azione diretta e motivo della priorità.",
+          "requires_integration": false
+        },
+        {
+          "priority": "P1",
+          "feature": "Preparazione pacchetto documenti per commercialista",
+          "optimization": "Scaricare un insieme esplicito per periodo con documenti mancanti segnalati; non pubblicare dati a uno studio finché non esiste un invito e un permesso vero.",
+          "requires_integration": "Solo per accesso e sincronizzazione dello studio"
+        }
+      ]
+    },
+    {
+      "product": "Zucchetti Tieni il Conto PRO",
+      "group": "Zucchetti",
+      "segment": "Micro e piccole imprese che necessitano di contabilità, ciclo attivo e magazzino in cloud",
+      "fit_services": "medio",
+      "strongest_features": [
+        {
+          "feature": "Onboarding aziendale guidato, piano dei conti e tabelle base precaricati",
+          "source_ids": [
+            "tic-pro-help"
+          ]
+        },
+        {
+          "feature": "Import anagrafiche clienti, fornitori e articoli da foglio di calcolo",
+          "source_ids": [
+            "tic-pro-help"
+          ]
+        },
+        {
+          "feature": "Ricerca diretta delle funzioni e cronologia delle scelte più utilizzate",
+          "source_ids": [
+            "tic-pro-help"
+          ]
+        },
+        {
+          "feature": "Cruscotti informativi, operativi e di analisi; consultazione supporto centralizzato",
+          "source_ids": [
+            "tic-pro-help"
+          ]
+        },
+        {
+          "feature": "Ciclo ordine→DDT→fattura, scritture contabili e magazzino con movimenti",
+          "source_ids": [
+            "tic-pro-help"
+          ]
+        }
+      ],
+      "pricing": {
+        "verification": "non_verificato",
+        "currency": "EUR",
+        "amount": null,
+        "billing_period": null,
+        "vat": null,
+        "per_seat_amount": null,
+        "source_ids": [
+          "tic-pro-help"
+        ],
+        "notes": "Configurazioni/moduli estensibili e utenti aggiuntivi descritti, nessun prezzo numerico pubblico nella fonte letta."
+      },
+      "filo_improvements": [
+        {
+          "priority": "P0",
+          "feature": "La tua azienda come anagrafica comune e checklist iniziale",
+          "optimization": "Dati richiesti una sola volta, salvati nel workspace privato, riutilizzati nei documenti; campi facoltativi per chi vuole partire subito e avvisi sui dati mancanti pertinenti.",
+          "requires_integration": false
+        },
+        {
+          "priority": "P1",
+          "feature": "Guide brevi vicino alle azioni",
+          "optimization": "Una frase che spiega cosa produce il comando e come usa i dati; link al risultato o al prossimo passo, senza costringere a leggere un manuale.",
+          "requires_integration": false
+        }
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "fic-features",
+      "url": "https://www.fattureincloud.it/software-fatturazione/caratteristiche/",
+      "title": "Software gestionale cloud e fatturazione: funzionalità",
+      "source_date": null,
+      "quality": "official_product",
+      "excerpt": "Una volta approvati, li converti immediatamente in fatture o ordini. ... Tutte le scadenze imminenti ti vengono notificate nella pagina principale."
+    },
+    {
+      "id": "fic-pricing",
+      "url": "https://www.fattureincloud.it/costo/",
+      "title": "Prezzi software per fatture online",
+      "source_date": null,
+      "quality": "official_pricing",
+      "excerpt": "Allo scadere del primo anno, il prezzo si aggiorna a 8,00 €/mese – 96,00 €/anno + IVA."
+    },
+    {
+      "id": "fic-home",
+      "url": "https://www.fattureincloud.app/",
+      "title": "Fattura elettronica e fatturazione online",
+      "source_date": null,
+      "quality": "official_product",
+      "excerpt": "FORFETTARIO, semplificati la vita a soli 4€/mese!"
+    },
+    {
+      "id": "easyfatt-features",
+      "url": "https://www.danea.it/software/easyfatt/caratteristiche/",
+      "title": "Caratteristiche Easyfatt",
+      "source_date": null,
+      "quality": "official_product",
+      "excerpt": "Procedure automatizzate di trasformazione documenti (ad es.: trasformazione del preventivo in fattura, oppure creazione fatture dai DDT del mese). ... Gestione fatture ricorrenti per assistenze, canoni, etc."
+    },
+    {
+      "id": "easyfatt-pricing",
+      "url": "https://www.danea.it/software/easyfatt/prezzi/",
+      "title": "Prezzi: Versioni, Adeguamenti e Servizi Easyfatt",
+      "source_date": null,
+      "quality": "official_pricing",
+      "excerpt": "In caso di acquisto della licenza, il prezzo è addebitato su base annuale in un’unica soluzione. ... I prezzi esposti si intendono Iva esclusa."
+    },
+    {
+      "id": "easyfatt-buy",
+      "url": "https://www.danea.it/software/easyfatt/acquista/",
+      "title": "Danea Easyfatt: scegli la versione",
+      "source_date": null,
+      "quality": "official_pricing",
+      "excerpt": "12 mesi di Danea Support Plan (aggiornamenti e assistenza tecnica) compresi nel prezzo! ... Il pagamento è in un'unica soluzione annuale."
+    },
+    {
+      "id": "easyfatt-pro",
+      "url": "https://www.danea.it/software/easyfatt/professional/",
+      "title": "Easyfatt Professional e Professional Cloud",
+      "source_date": null,
+      "quality": "official_product",
+      "excerpt": "La licenza consente l’installazione del programma su 2 PC (non in multiutenza)."
+    },
+    {
+      "id": "easyfatt-enterprise-one",
+      "url": "https://www.danea.it/software/easyfatt/enterprise-one/",
+      "title": "Easyfatt Enterprise One e Enterprise One Cloud",
+      "source_date": null,
+      "quality": "official_product",
+      "excerpt": "Tenuta delle distinte base (anche multilivello), la tracciabilità tramite lotti, scadenze, seriali; la gestione di agenti e provvigioni, e gestione multi-magazzino."
+    },
+    {
+      "id": "f24-pricing",
+      "url": "https://www.fattura24.com/prezzi/",
+      "title": "Prezzi e versioni",
+      "source_date": null,
+      "quality": "official_pricing",
+      "excerpt": "Fattura24 Professional + AI ... 4 €/mese ... Ovvero 48 € + IVA il 1° anno Al rinnovo 120 €/anno + IVA."
+    },
+    {
+      "id": "f24-2026-notice",
+      "url": "https://www.fattura24.com/avvisi/2025/01-12/",
+      "title": "Aggiornamento tariffa per il Piano Professional",
+      "source_date": "2025-12-01",
+      "effective_date": "2026-01-01",
+      "quality": "official_notice",
+      "excerpt": "A partire dal 1° gennaio 2026 il prezzo del piano Professional di Fattura24 passerà da 96 € a 120 € all’anno. ... uno sconto a vita di 24 € all’anno ... valido finché l’abbonamento Professional non verrà lasciato scadere."
+    },
+    {
+      "id": "f24-quote-help",
+      "url": "https://www.fattura24.com/manuale/vendite/preventivi/",
+      "title": "Preventivi - manuale",
+      "source_date": null,
+      "quality": "official_help",
+      "excerpt": "La prima operazione da fare è quella di inserire all’interno del Profilo fatturazione ... i dati principali necessari alla creazione del documento. ... Ricerca avanzata in rubrica: consente di richiamare il cliente dalla rubrica."
+    },
+    {
+      "id": "f24-home",
+      "url": "https://www.fattura24.com/",
+      "title": "Dalla prima fattura al controllo totale",
+      "source_date": null,
+      "quality": "official_product",
+      "excerpt": "Pianifica il tuo budget annuale e confrontalo con i risultati che stai ottenendo. ... Con le API pubbliche colleghi Fattura24 ai software che usi già."
+    },
+    {
+      "id": "ts-enterprise",
+      "url": "https://www.teamsystem.com/aziende/enterprise/",
+      "title": "Software Gestionale ERP per Aziende potenziato dall'AI",
+      "source_date": null,
+      "quality": "official_product_and_pricing",
+      "excerpt": "Ogni piccola azienda può ... configurare il desktop a proprio piacimento, creare dei percorsi preferenziali per avere sempre disponibili le funzioni più utilizzate. ... il prezzo viene definito in base alle esigenze specifiche dell’impresa."
+    },
+    {
+      "id": "tic",
+      "url": "https://www.zucchetti.it/it/cms/professionisti/contabilita-fisco-finanza/fatturazione-elettronica/tieni-il-conto/software-fatturazione-elettronica.html",
+      "title": "Software Fatturazione Elettronica per Commercialisti",
+      "source_date": null,
+      "quality": "official_product",
+      "excerpt": "Alert automatici in presenza di fatture in scadenza, scartate, errate o in caso di superamento di determinate soglie di fatturazione. ... Grafici intuitivi per monitorare i flussi di cassa e pianificare delle entrate e uscite future."
+    },
+    {
+      "id": "tic-legacy",
+      "url": "https://www.zucchetti.it/website/cms/ITA/prodotto/7130-software-fatturazione-elettronica-commercialisti.html",
+      "title": "Tieni il Conto: la fattura elettronica diventa semplice",
+      "source_date": null,
+      "quality": "official_product",
+      "excerpt": "L'azienda può ... creare direttamente dalla sua homepage una fattura subito pronta per la spedizione."
+    },
+    {
+      "id": "tic-pro-help",
+      "url": "https://help.zucchetti.it/dms/ticpro/help/sam/ticpro_standard/pages/intro_ticpro.html",
+      "title": "Tieni il Conto PRO - introduzione",
+      "source_date": null,
+      "quality": "official_help",
+      "excerpt": "Al primo accesso, una procedura guidata accompagna passo passo l'utente ... è possibile importare facilmente le anagrafiche clienti, fornitori e articoli direttamente da un foglio di calcolo. ... ricerca diretta della funzionalità desiderata ... cronologia delle scelte più utilizzate."
+    }
+  ],
+  "summary_notes": [
+    "Per il target studi/servizi, le funzioni da riusare prima sono dati aziendali comuni, conversione documenti, monitoraggio incassi, canoni ricorrenti e azioni dalla panoramica. Magazzino avanzato, produzione e registratore di cassa hanno priorità inferiore.",
+    "Filo può distinguersi collegando email prioritarie e operazioni amministrative in una giornata proposta, con documento e prossimo passo già accessibili e uno storico delle origini.",
+    "Una bozza fattura locale non equivale a fattura fiscale, XML, trasmissione SDI o conservazione; chiamarla bozza nel flusso e nel download.",
+    "Confronto prezzi non omogeneo: Fattura24 Professional costa 120€+IVA/anno a regime, ma ha limiti di piano ed estrazione delle spunte incompleta; non può provare equivalenza funzionale con il prezzo di Filo.",
+    "Un prezzo Filo per studi/servizi deve essere validato su utenti reali e tempo risparmiato, senza promettere un numero di dipendenti sostituiti. Nessun prezzo o addebito viene configurato da questa ricerca.",
+    "L'ottimizzazione è una nuova implementazione dei pattern funzionali pubblici; nessun codice, marchio, testo commerciale o schermata protetta viene copiato."
+  ],
+  "integration_needs": [
+    {
+      "feature": "SDI, notifiche scarto e conservazione",
+      "need": "Provider/intermediario accreditato, contratto, credenziali, validazione XML e ciclo ricevute; eventuale conservazione separata esplicita."
+    },
+    {
+      "feature": "Riconciliazione bancaria e pagamenti",
+      "need": "Provider banking/payment, accessi autorizzati e gestione consensi; commissioni e prezzi separati dalla licenza."
+    },
+    {
+      "feature": "Anagrafiche pubbliche/VIES",
+      "need": "Servizi ufficiali o API autorizzate, qualità e limiti dati; nessuna compilazione fittizia."
+    },
+    {
+      "feature": "OCR documenti",
+      "need": "Caricamento protetto, parser/OCR reale, anteprima di verifica; dati estratti non confermati non devono creare registrazioni fiscali."
+    },
+    {
+      "feature": "Accesso commercialista e team",
+      "need": "Inviti, workspace condiviso e permessi per ruolo; l'isolamento attuale dei singoli account non costituisce multiutenza aziendale."
+    }
+  ]
+}

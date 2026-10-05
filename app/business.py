@@ -12,9 +12,10 @@ from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, HTTPException, Path, Query
 from fastapi.responses import Response
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from .business_catalog import get_service, list_services
+from .company import get_document_company
 
 
 ROME = ZoneInfo("Europe/Rome")
@@ -105,6 +106,31 @@ class RecordPatch(BaseModel):
         return _calendar_date(value)
 
 
+class ConversionInput(BaseModel):
+    """Only editable proposal fields; conversion never changes source progress."""
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    target_service_id: Literal["invoices", "receivables"]
+    title: str | None = Field(default=None, min_length=1, max_length=160)
+    contact: str | None = Field(default=None, max_length=200)
+    due_date: str | None = None
+    priority: Priority | None = None
+    notes: str | None = Field(default=None, max_length=2000)
+    details: dict[str, Any] | None = Field(default=None, max_length=24)
+
+    @field_validator("title", "contact", "notes")
+    @classmethod
+    def validate_text(cls, value, info):
+        if value is None:
+            return value
+        return _readable_text(value, multiline=info.field_name == "notes")
+
+    @field_validator("due_date", mode="before")
+    @classmethod
+    def validate_date(cls, value):
+        return _calendar_date(value)
+
+
 def _initialize(db):
     with db.connection() as conn:
         conn.executescript("""
@@ -125,6 +151,12 @@ def _initialize(db):
             );
             CREATE INDEX IF NOT EXISTS business_records_service ON business_records(service_id, status);
             CREATE INDEX IF NOT EXISTS business_records_due ON business_records(status, due_date, id);
+            CREATE TABLE IF NOT EXISTS business_links (
+                source_record_id TEXT NOT NULL REFERENCES business_records(id) ON DELETE CASCADE,
+                target_record_id TEXT NOT NULL UNIQUE REFERENCES business_records(id) ON DELETE CASCADE,
+                target_service_id TEXT NOT NULL,
+                PRIMARY KEY (source_record_id, target_service_id)
+            );
         """)
 
 
@@ -262,7 +294,7 @@ def _attention_reason(item):
     return None
 
 
-def _document(item, service):
+def _document(item, service, company=None):
     labels = {"todo": "Da fare", "in_progress": "In corso", "waiting": "In attesa", "done": "Completata", "cancelled": "Annullata"}
     lines = [
         f'Filo — {service.get("output_title", service["name"])}',
@@ -271,6 +303,19 @@ def _document(item, service):
     ]
     if service.get("output_intro"):
         lines.extend([service["output_intro"], ""])
+    if item["service_id"] in ("quotes", "invoices", "receivables") and company:
+        # Current workspace identity is reused only in commercial internal drafts.
+        # The helper omits demo identities and invalid legacy profile fields.
+        identity = company.get("legal_name") or company.get("name")
+        if identity:
+            lines.append(f"Azienda emittente: {identity}")
+        issuer_fields = (("vat_number", "Partita IVA"), ("tax_code", "Codice fiscale"),
+                         ("address", "Indirizzo"), ("postal_code", "CAP"), ("city", "Comune"),
+                         ("province", "Provincia"), ("email", "Email aziendale"),
+                         ("phone", "Telefono aziendale"), ("pec", "PEC"), ("sdi_code", "Codice destinatario"))
+        lines.extend(f'{label}: {company[key]}' for key, label in issuer_fields if company.get(key))
+        if identity or any(company.get(key) for key, _ in issuer_fields):
+            lines.append("")
     if item["contact"]:
         lines.append(f'Referente: {item["contact"]}')
     if item["due_date"]:
@@ -306,6 +351,10 @@ def _document(item, service):
         lines.append("Se il pagamento è già stato effettuato, vi chiediamo di segnalarcelo. Grazie.")
     if item["notes"]:
         lines.extend(["", "Note inserite:", item["notes"]])
+    if item.get("links", {}).get("source"):
+        origin = item["links"]["source"]
+        lines.extend(["", f'Origine interna: {_service(origin["service_id"])["name"]} — {origin["title"]}',
+                      "I dati sono stati copiati alla creazione e possono essere modificati separatamente."])
     if item["attention_reason"] == "stock_below_minimum":
         lines.extend(["", "Prossimo passo:", item["next_action"]])
     if service.get("output_footer"):
@@ -314,7 +363,7 @@ def _document(item, service):
     return "\n".join(lines).rstrip() + "\n"
 
 
-def _item(row):
+def _item(row, *, company=None, links=None):
     item = dict(row)
     item["details"] = json.loads(item["details"])
     service = _service(item["service_id"])
@@ -330,8 +379,77 @@ def _item(row):
         minimum = format(Decimal(str(details["reorder_level"])), "f").replace(".", ",")
         unit = " " + details["unit"] if details.get("unit") else ""
         item["next_action"] = f'Verifica il riordino di {details["item"]} ({details["sku"]}): quantità inserita {quantity}{unit}, sotto la soglia di {minimum}{unit}. Conferma il conteggio e le quantità prima di preparare l’ordine.'
-    item["document"] = _document(item, service)
+    item["links"] = links or {"source": None, "targets": []}
+    item["document"] = _document(item, service, company)
     return item
+
+
+def _record_links(conn, record_ids):
+    """Fetch a page's private relationships in one read snapshot."""
+    ids = list(record_ids)
+    result = {record_id: {"source": None, "targets": []} for record_id in ids}
+    if not ids:
+        return result
+    placeholders = ",".join("?" for _ in ids)
+    rows = conn.execute(f"""
+        SELECT l.source_record_id, l.target_record_id,
+               s.title AS source_title, s.service_id AS source_service_id,
+               t.title AS target_title, t.service_id AS target_service_id
+        FROM business_links l
+        JOIN business_records s ON s.id=l.source_record_id
+        JOIN business_records t ON t.id=l.target_record_id
+        WHERE l.source_record_id IN ({placeholders}) OR l.target_record_id IN ({placeholders})
+        ORDER BY t.created_at,t.id
+    """, [*ids, *ids]).fetchall()
+    for row in rows:
+        if row["source_record_id"] in result:
+            result[row["source_record_id"]]["targets"].append({"id": row["target_record_id"], "title": row["target_title"], "service_id": row["target_service_id"]})
+        if row["target_record_id"] in result:
+            result[row["target_record_id"]]["source"] = {"id": row["source_record_id"], "title": row["source_title"], "service_id": row["source_service_id"]}
+    return result
+
+
+def _record_identity(row):
+    return {key: row[key] for key in ("id", "title", "service_id")}
+
+
+def _conversion_proposal(row, target_service_id):
+    directions = {"quotes": "invoices", "invoices": "receivables"}
+    if directions.get(row["service_id"]) != target_service_id:
+        raise HTTPException(status_code=422, detail="Puoi creare una bozza fattura da un preventivo o un incasso da una bozza fattura.")
+    details = json.loads(row["details"])
+    if target_service_id == "invoices":
+        mapped = {"client": details["client"], "reference": ("Bozza da " + row["title"])[:160],
+                  "description": details["scope"], "net_amount": details["net_amount"], "vat_rate": details["vat_rate"]}
+        if details.get("payment_terms"):
+            mapped["payment_terms"] = details["payment_terms"]
+        title = ("Bozza fattura — " + row["title"])[:160]
+    else:
+        totals = _totals({"service_id": row["service_id"], "details": details})
+        mapped = {"client": details["client"], "reference": details["reference"], "amount": totals["gross_amount"]}
+        if details.get("payment_terms"):
+            mapped["payment_context"] = details["payment_terms"]
+        title = ("Incasso — " + row["title"])[:160]
+    return {"service_id": target_service_id, "title": title, "contact": row["contact"],
+            "due_date": None, "status": "todo", "priority": row["priority"], "notes": row["notes"],
+            "details": mapped, "saved_minutes": 0}
+
+
+def _insert_record(conn, payload, *, source="manual"):
+    """Validate and insert within the caller's write transaction."""
+    try:
+        service = _service(payload.service_id, writable=True)
+        details = _validated_details(service, payload.details)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if conn.execute("SELECT COUNT(*) FROM business_records").fetchone()[0] >= MAX_RECORDS:
+        raise HTTPException(status_code=409, detail="Hai raggiunto il limite di attività salvate. Elimina quelle non più necessarie.")
+    values = payload.model_dump()
+    values.update({"id": uuid4().hex, "details": json.dumps(details, ensure_ascii=False), "source": source,
+                   "created_at": datetime.now(UTC).isoformat(timespec="microseconds")})
+    values["updated_at"] = values["created_at"]
+    conn.execute("INSERT INTO business_records(id,service_id,title,contact,due_date,status,priority,notes,details,saved_minutes,source,created_at,updated_at) VALUES (:id,:service_id,:title,:contact,:due_date,:status,:priority,:notes,:details,:saved_minutes,:source,:created_at,:updated_at)", values)
+    return conn.execute("SELECT * FROM business_records WHERE id=?", (values["id"],)).fetchone()
 
 
 def _today(now=None):
@@ -355,6 +473,7 @@ def _urgency(item, today):
 def business_summary(db, now=None):
     """Prioritize only recorded work using the Rome calendar day."""
     today = _today(now)
+    company = get_document_company(db)
     with db.connection() as conn:
         # One read snapshot keeps counts and documents consistent with concurrent edits.
         conn.execute("BEGIN")
@@ -366,8 +485,9 @@ def business_summary(db, now=None):
         ranks = {"overdue": 0, "today": 1, "attention": 2, "upcoming": 3, "undated": 4}
         open_items.sort(key=lambda item: (ranks[item["urgency"]], PRIORITY_VALUES.index(item["priority"]), item["due_date"] or "9999-12-31", item["created_at"], item["id"]))
         next_actions = []
+        links = _record_links(conn, [metadata["id"] for metadata in open_items[:12]])
         for metadata in open_items[:12]:
-            item = _item(conn.execute("SELECT * FROM business_records WHERE id=?", (metadata["id"],)).fetchone())
+            item = _item(conn.execute("SELECT * FROM business_records WHERE id=?", (metadata["id"],)).fetchone(), company=company, links=links[metadata["id"]])
             item["urgency"] = metadata["urgency"]
             next_actions.append(item)
     counts = {status: sum(item["status"] == status for item in items) for status in STATUS_VALUES}
@@ -406,7 +526,7 @@ def create_business_router(db):
         return business_summary(db)
 
     @router.get("/records")
-    def records(service_id: str | None = Query(default=None, max_length=64), status: StatusFilter | None = None, limit: int = Query(default=250, ge=1, le=250), offset: int = Query(default=0, ge=0, le=MAX_RECORDS)):
+    def records(service_id: str | None = Query(default=None, max_length=64), status: StatusFilter | None = None, limit: int = Query(default=250, ge=1, le=250), offset: int = Query(default=0, ge=0, le=MAX_RECORDS), q: str | None = Query(default=None, max_length=120)):
         filters, values = [], []
         if service_id is not None:
             try:
@@ -420,38 +540,44 @@ def create_business_router(db):
         elif status is not None:
             filters.append("status=?")
             values.append(status)
+        if q is not None:
+            try:
+                q = _readable_text(q, maximum=120)
+            except ValueError as exc:
+                raise HTTPException(status_code=422, detail=str(exc)) from exc
+            if q:
+                literal = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+                term = "%" + literal + "%"
+                filters.append("(title LIKE ? ESCAPE '\\' OR contact LIKE ? ESCAPE '\\' OR notes LIKE ? ESCAPE '\\' OR EXISTS (SELECT 1 FROM json_each(business_records.details) detail WHERE CAST(detail.value AS TEXT) LIKE ? ESCAPE '\\'))")
+                values.extend([term] * 4)
         where = " WHERE " + " AND ".join(filters) if filters else ""
+        company = get_document_company(db)
         with db.connection() as conn:
             conn.execute("BEGIN")
             total = conn.execute("SELECT COUNT(*) FROM business_records" + where, values).fetchone()[0]
             rows = conn.execute("SELECT * FROM business_records" + where + " ORDER BY updated_at DESC,id LIMIT ? OFFSET ?", [*values, limit, offset]).fetchall()
-        return {"items": [_item(row) for row in rows], "total": total, "limit": limit, "offset": offset, "source": SOURCE}
+            links = _record_links(conn, [row["id"] for row in rows])
+            items = [_item(row, company=company, links=links[row["id"]]) for row in rows]
+        return {"items": items, "total": total, "limit": limit, "offset": offset, "source": SOURCE}
 
     @router.post("/records", status_code=201)
     def add_record(payload: RecordInput):
-        try:
-            service = _service(payload.service_id, writable=True)
-            details = _validated_details(service, payload.details)
-        except ValueError as exc:
-            raise HTTPException(status_code=422, detail=str(exc)) from exc
-        values = payload.model_dump()
-        values.update({"id": uuid4().hex, "details": json.dumps(details, ensure_ascii=False), "created_at": datetime.now(UTC).isoformat(timespec="microseconds")})
-        values["updated_at"] = values["created_at"]
+        company = get_document_company(db)
         with db.connection() as conn:
             conn.execute("BEGIN IMMEDIATE")
-            if conn.execute("SELECT COUNT(*) FROM business_records").fetchone()[0] >= MAX_RECORDS:
-                raise HTTPException(status_code=409, detail="Hai raggiunto il limite di attività salvate. Elimina quelle non più necessarie.")
-            conn.execute("INSERT INTO business_records(id,service_id,title,contact,due_date,status,priority,notes,details,saved_minutes,created_at,updated_at) VALUES (:id,:service_id,:title,:contact,:due_date,:status,:priority,:notes,:details,:saved_minutes,:created_at,:updated_at)", values)
-            item = _item(conn.execute("SELECT * FROM business_records WHERE id=?", (values["id"],)).fetchone())
+            item = _item(_insert_record(conn, payload), company=company)
         return {"item": item}
 
     @router.get("/records/{record_id}")
     def get_record(record_id: str = Path(pattern=r"^[a-f0-9]{32}$")):
+        company = get_document_company(db)
         with db.connection() as conn:
+            conn.execute("BEGIN")
             row = conn.execute("SELECT * FROM business_records WHERE id=?", (record_id,)).fetchone()
-        if not row:
-            raise HTTPException(status_code=404, detail="Attività non trovata.")
-        return {"item": _item(row)}
+            if not row:
+                raise HTTPException(status_code=404, detail="Attività non trovata.")
+            item = _item(row, company=company, links=_record_links(conn, [record_id])[record_id])
+        return {"item": item}
 
     @router.patch("/records/{record_id}")
     def update_record(payload: RecordPatch, record_id: str = Path(pattern=r"^[a-f0-9]{32}$")):
@@ -461,6 +587,7 @@ def create_business_router(db):
         for key, value in changes.items():
             if value is None and key not in ("contact", "notes", "due_date"):
                 raise HTTPException(status_code=422, detail="Questo campo non può essere vuoto.")
+        company = get_document_company(db)
         with db.connection() as conn:
             conn.execute("BEGIN IMMEDIATE")
             row = conn.execute("SELECT * FROM business_records WHERE id=?", (record_id,)).fetchone()
@@ -480,7 +607,7 @@ def create_business_router(db):
             item.update(changes)
             item["updated_at"] = datetime.now(UTC).isoformat(timespec="microseconds")
             conn.execute("UPDATE business_records SET title=:title,contact=:contact,due_date=:due_date,status=:status,priority=:priority,notes=:notes,details=:details,saved_minutes=:saved_minutes,updated_at=:updated_at WHERE id=:id", item)
-            updated = _item(conn.execute("SELECT * FROM business_records WHERE id=?", (record_id,)).fetchone())
+            updated = _item(conn.execute("SELECT * FROM business_records WHERE id=?", (record_id,)).fetchone(), company=company, links=_record_links(conn, [record_id])[record_id])
         return {"item": updated}
 
     @router.delete("/records/{record_id}")
@@ -491,13 +618,61 @@ def create_business_router(db):
             raise HTTPException(status_code=404, detail="Attività non trovata.")
         return {"deleted": True, "id": record_id}
 
+    @router.get("/records/{record_id}/conversion")
+    def conversion_proposal(target_service_id: Literal["invoices", "receivables"], record_id: str = Path(pattern=r"^[a-f0-9]{32}$")):
+        company = get_document_company(db)
+        with db.connection() as conn:
+            conn.execute("BEGIN")
+            row = conn.execute("SELECT * FROM business_records WHERE id=?", (record_id,)).fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Attività non trovata.")
+            proposal = _conversion_proposal(row, target_service_id)
+            existing_row = conn.execute("SELECT r.* FROM business_links l JOIN business_records r ON r.id=l.target_record_id WHERE l.source_record_id=? AND l.target_service_id=?", (record_id, target_service_id)).fetchone()
+            existing = _item(existing_row, company=company, links=_record_links(conn, [existing_row["id"]])[existing_row["id"]]) if existing_row else None
+        return {"proposal": proposal, "existing": existing, "source": _record_identity(row)}
+
+    @router.post("/records/{record_id}/convert")
+    def convert_record(payload: ConversionInput, record_id: str = Path(pattern=r"^[a-f0-9]{32}$")):
+        company = get_document_company(db)
+        with db.connection() as conn:
+            # Serialize duplicate clicks and concurrent retries before inspecting the link.
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute("SELECT * FROM business_records WHERE id=?", (record_id,)).fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Attività non trovata.")
+            proposal = _conversion_proposal(row, payload.target_service_id)
+            existing = conn.execute("SELECT r.* FROM business_links l JOIN business_records r ON r.id=l.target_record_id WHERE l.source_record_id=? AND l.target_service_id=?", (record_id, payload.target_service_id)).fetchone()
+            if existing:
+                item = _item(existing, company=company, links=_record_links(conn, [existing["id"]])[existing["id"]])
+                return {"item": item, "created": False, "source": _record_identity(row)}
+            changes = payload.model_dump(exclude_unset=True, exclude={"target_service_id"})
+            for key, value in changes.items():
+                if value is None and key not in ("contact", "notes", "due_date"):
+                    raise HTTPException(status_code=422, detail="Questo campo non può essere vuoto.")
+            if "details" in changes:
+                changes["details"] = {**proposal["details"], **changes["details"]}
+            for key in ("contact", "notes"):
+                if key in changes and changes[key] is None:
+                    changes[key] = ""
+            proposal.update(changes)
+            try:
+                validated = RecordInput(**proposal)
+            except ValidationError as exc:
+                raise HTTPException(status_code=422, detail="Controlla i campi della bozza: alcuni valori non sono validi.") from exc
+            target = _insert_record(conn, validated, source="conversion")
+            conn.execute("INSERT INTO business_links(source_record_id,target_record_id,target_service_id) VALUES(?,?,?)", (record_id, target["id"], payload.target_service_id))
+            item = _item(target, company=company, links=_record_links(conn, [target["id"]])[target["id"]])
+        return {"item": item, "created": True, "source": _record_identity(row)}
+
     @router.get("/records/{record_id}/export")
     def export_record(record_id: str = Path(pattern=r"^[a-f0-9]{32}$")):
+        company = get_document_company(db)
         with db.connection() as conn:
+            conn.execute("BEGIN")
             row = conn.execute("SELECT * FROM business_records WHERE id=?", (record_id,)).fetchone()
-        if not row:
-            raise HTTPException(status_code=404, detail="Attività non trovata.")
-        item = _item(row)
+            if not row:
+                raise HTTPException(status_code=404, detail="Attività non trovata.")
+            item = _item(row, company=company, links=_record_links(conn, [record_id])[record_id])
         return Response(content=item["document"].encode("utf-8"), media_type="text/plain; charset=utf-8", headers={"Content-Disposition": f'attachment; filename="filo-{item["service_id"]}-{record_id}.txt"', "X-Content-Type-Options": "nosniff"})
 
     return router

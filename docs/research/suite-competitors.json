@@ -1,0 +1,653 @@
+{
+  "research_date": "2026-10-05",
+  "target": "Studi professionali e piccole imprese italiane di servizi",
+  "scope": "Suite gestionali e CRM: dati clienti riutilizzabili, percorso preventivo→fattura/incasso, prossima attività e ricerca.",
+  "method": {
+    "tool": "Exa",
+    "search_calls": 5,
+    "num_results_requested_each": 7,
+    "search_results_requested": 35,
+    "fetched_urls_requested": 19,
+    "fetched_urls_successful": 15,
+    "fetch_failures": [
+      "https://www.zoho.com/books/help/quotes/",
+      "https://www.zoho.com/books/help/estimates/",
+      "https://knowledge.hubspot.com/records/filter-activities-on-records",
+      "https://support.pipedrive.com/en/article/searching-for-data-in-pipedrive"
+    ],
+    "sources_reviewed": 35,
+    "sources_reviewed_definition": "Search skill metric: sum of requested numResults across five Exa search calls (5 × 7 = 35). Fetch URL requests and successes are tracked separately; this is not a unique-page count.",
+    "successfully_fetched_unique_sources": 15,
+    "source_quality": "Official vendor/help/pricing pages only for facts; marketing claims are explicitly separated from measured performance.",
+    "source_requests_total": 54,
+    "fetch_urls_requested": 19,
+    "fetch_urls_succeeded": 15
+  },
+  "search_queries": [
+    "Official Odoo documentation managing customers contacts quotations invoices activities sales pipeline and Odoo pricing Standard Custom EUR Europe",
+    "Official Zoho One Zoho Books Italy estimates convert to invoices customer records and Zoho CRM workflow automation pricing euros per employee per user",
+    "Official HubSpot CRM activity timeline deal pipeline quotes product features sales hub pricing starter Europe monthly per seat",
+    "Official Pipedrive sales CRM contacts next activity activity-based selling pipeline deals automation pricing euros per seat annually",
+    "Official Bitrix24 CRM quotes invoice companies contacts activity planning pricing plans per organization EUR"
+  ],
+  "competitors": [
+    {
+      "id": "odoo",
+      "name": "Odoo",
+      "category": "ERP e suite modulare",
+      "features": [
+        {
+          "feature": "Anagrafica persona/azienda con codice fiscale/Tax ID, indirizzi e condizioni pagamento",
+          "source_ids": [
+            "odoo-contacts"
+          ]
+        },
+        {
+          "feature": "Preventivo precompilato dall'anagrafica cliente",
+          "source_ids": [
+            "odoo-quotes"
+          ]
+        },
+        {
+          "feature": "Conferma preventivo→ordine vendite→fatturazione",
+          "source_ids": [
+            "odoo-quotes"
+          ]
+        }
+      ],
+      "pricing": {
+        "status": "italy_eur_not_verified",
+        "unit": "per utente/mese",
+        "currency_display": "US$ on fetched Italian page",
+        "exact_amount": null,
+        "billing_cycle": null,
+        "vat": null,
+        "promotion": "Sconto limitato ai primi 12 mesi e agli utenti iniziali.",
+        "additional_costs": [
+          "Implementazione",
+          "Odoo.sh per sviluppi custom",
+          "Crediti SMS/OCR/lead generation",
+          "Manutenzione codice custom"
+        ],
+        "source_ids": [
+          "odoo-pricing"
+        ]
+      },
+      "fit_for_filo": "Riutilizzare dati di studio e cliente; evitare di esporre decine di tab fiscali/logistiche a uno studio piccolo.",
+      "complexity_to_avoid": [
+        "ERP completo",
+        "Multi-company",
+        "Listini complessi e varianti prodotto per default"
+      ]
+    },
+    {
+      "id": "zoho-one",
+      "name": "Zoho One (CRM + Flow + Books)",
+      "category": "Suite integrata",
+      "features": [
+        {
+          "feature": "Clienti e documenti condivisi fra vendite e amministrazione",
+          "source_ids": [
+            "zoho-call-to-quote",
+            "zoho-sales-to-invoice"
+          ]
+        },
+        {
+          "feature": "Regole trigger-condizione-azione; reminder per trattative inattive",
+          "source_ids": [
+            "zoho-call-to-quote"
+          ]
+        },
+        {
+          "feature": "Preventivo approvato→fattura generata dai dati già inseriti",
+          "source_ids": [
+            "zoho-sales-to-invoice"
+          ]
+        }
+      ],
+      "pricing": {
+        "status": "amount_not_verified",
+        "currency": null,
+        "exact_amount": null,
+        "billing_cycle": null,
+        "vat": null,
+        "licensing_models": [
+          "Tutti i dipendenti: licenza obbligatoria per tutti gli addetti a libro paga",
+          "Flexible-user: licenze solo per utenti scelti"
+        ],
+        "source_ids": [
+          "zoho-one-pricing"
+        ]
+      },
+      "fit_for_filo": "Flussi guidati predefiniti e dati condivisi, con l'anteprima del risultato prima di ogni operazione esterna.",
+      "complexity_to_avoid": [
+        "Configuratore visuale universale di automazioni",
+        "Decine di app differenti",
+        "Licenziamento o ranking del personale come automatismo"
+      ]
+    },
+    {
+      "id": "zoho-books",
+      "name": "Zoho Books",
+      "category": "Amministrazione e incassi",
+      "features": [
+        {
+          "feature": "Preventivi, fatture, spese e fornitori",
+          "source_ids": [
+            "zoho-books-pricing"
+          ]
+        },
+        {
+          "feature": "Reminder pagamenti e fatture ricorrenti",
+          "source_ids": [
+            "zoho-books-pricing",
+            "zoho-call-to-quote"
+          ]
+        },
+        {
+          "feature": "Portale cliente per preventivi/fatture e pagamenti",
+          "source_ids": [
+            "zoho-call-to-quote"
+          ]
+        }
+      ],
+      "pricing": {
+        "status": "usa_amount_observed_not_italy_quote",
+        "currency": "USD",
+        "observed_standard_amount": 15,
+        "unit": "organizzazione/mese",
+        "included_users": 3,
+        "billing_cycle": "primary price toggle not conclusively extracted",
+        "vat": "Prezzi esclusi imposte locali",
+        "source_ids": [
+          "zoho-books-pricing"
+        ],
+        "limitations": [
+          "Edizione USA: nessuna prova di XML/SDI o conformità fiscale italiana da questa pagina",
+          "Non confrontare direttamente $15 con un prezzo italiano Filo + IVA"
+        ]
+      },
+      "fit_for_filo": "Scadenzario incassi collegato alla bozza e sollecito da rivedere; per studi, rendere immediato il passaggio preventivo→acconto/saldo.",
+      "complexity_to_avoid": [
+        "Contabilità fiscale improvvisata",
+        "Pagamento automatico senza gateway e consenso",
+        "Promesse di liquidità derivanti da dati non acquisiti"
+      ]
+    },
+    {
+      "id": "hubspot",
+      "name": "HubSpot Smart CRM + Sales Hub",
+      "category": "CRM e percorso commerciale",
+      "features": [
+        {
+          "feature": "Smart queue e riepilogo giornaliero delle prossime azioni",
+          "source_ids": [
+            "hubspot-sales"
+          ]
+        },
+        {
+          "feature": "Clienti, aziende, deal e contesto delle interazioni unificati",
+          "source_ids": [
+            "hubspot-starter",
+            "hubspot-sales"
+          ]
+        },
+        {
+          "feature": "Ricerca record per proprietà selezionate e filtri",
+          "source_ids": [
+            "hubspot-search"
+          ]
+        },
+        {
+          "feature": "CPQ/quoting tramite Revenue Hub con seat separato",
+          "source_ids": [
+            "hubspot-sales"
+          ]
+        }
+      ],
+      "pricing": {
+        "status": "global_dollar_promotion_verified_local_eur_not_verified",
+        "currency_display": "$",
+        "unit": "per seat/mese",
+        "starter_promo_annual_equivalent": 7,
+        "starter_promo_monthly": 10,
+        "regular_starter_monthly": 20,
+        "annual_terms": "Pagamento anticipato e impegno annuale per $7",
+        "promotion": "Offerta temporanea condizionata per nuovi clienti; scadenza non verificata. Gli importi promozionali non sono il prezzo base né una proposta disponibile garantita per Filo o per clienti italiani.",
+        "vat": "Non verificata nella pagina",
+        "extra_costs": [
+          "Seat aggiuntive",
+          "Contatti marketing/capacità",
+          "Crediti AI oltre inclusi",
+          "Revenue Hub per CPQ"
+        ],
+        "source_ids": [
+          "hubspot-starter",
+          "hubspot-sales"
+        ]
+      },
+      "fit_for_filo": "Una coda 'cosa fare adesso' con motivo concreto e azione rapida; ricerca indulgente per testo parziale, senza richiedere all'utente il nome interno del campo.",
+      "complexity_to_avoid": [
+        "Scoring AI privo di dati sufficienti",
+        "Molte Hub/seat/crediti nel percorso iniziale",
+        "Automazioni di outreach senza controllo"
+      ]
+    },
+    {
+      "id": "pipedrive",
+      "name": "Pipedrive",
+      "category": "CRM basato sulle attività",
+      "features": [
+        {
+          "feature": "Attività collegate a persone/aziende/trattative/progetti",
+          "source_ids": [
+            "pipedrive-activities"
+          ]
+        },
+        {
+          "feature": "Data prossima attività aperta, data ultima attività conclusa e cronologia",
+          "source_ids": [
+            "pipedrive-activities"
+          ]
+        },
+        {
+          "feature": "Concludere attività da lista, calendario, record o timeline",
+          "source_ids": [
+            "pipedrive-activities"
+          ]
+        },
+        {
+          "feature": "Email sync e sequenze nel piano Growth; contratti/e-signatures nel Premium",
+          "source_ids": [
+            "pipedrive-pricing"
+          ]
+        }
+      ],
+      "pricing": {
+        "status": "global_usd_annual_verified_eur_monthly_not_verified",
+        "currency": "USD",
+        "unit": "seat/mese equivalente con pagamento annuale",
+        "plans": [
+          {
+            "name": "Lite",
+            "monthly_equivalent": 14,
+            "annual_payment_per_seat": 168
+          },
+          {
+            "name": "Growth",
+            "monthly_equivalent": 39,
+            "annual_payment_per_seat": 468
+          },
+          {
+            "name": "Premium",
+            "monthly_equivalent": 59,
+            "annual_payment_per_seat": 708
+          },
+          {
+            "name": "Ultimate",
+            "monthly_equivalent": 79,
+            "annual_payment_per_seat": 948
+          }
+        ],
+        "vat": "Esclusa; applicata secondo regole UE salvo numero IVA valido come precisato dalla fonte",
+        "extra_costs": [
+          "Projects",
+          "Campaigns",
+          "Smart Docs",
+          "LeadBooster e altri add-on"
+        ],
+        "source_ids": [
+          "pipedrive-pricing"
+        ]
+      },
+      "fit_for_filo": "Prossimo passo sempre esplicito e completamento diretto dalla panoramica; data scadenza originale separata dalla data completamento.",
+      "complexity_to_avoid": [
+        "Pipeline commerciale obbligatoria per ogni attività dello studio",
+        "Calendario esterno simulato",
+        "Metriche di rendimento dipendenti inferite da conteggio attività"
+      ]
+    },
+    {
+      "id": "bitrix24",
+      "name": "Bitrix24",
+      "category": "CRM e suite di collaborazione a forfait",
+      "features": [
+        {
+          "feature": "Quote→invoice con riuso cliente/azienda e righe",
+          "source_ids": [
+            "bitrix-invoicing"
+          ]
+        },
+        {
+          "feature": "CRM, attività, progetti, fatture e preventivi in suite",
+          "source_ids": [
+            "bitrix-pricing-de",
+            "bitrix-pricing-eu"
+          ]
+        },
+        {
+          "feature": "Prezzo fisso per organizzazione entro limiti utenti",
+          "source_ids": [
+            "bitrix-pricing-eu",
+            "bitrix-pricing-de"
+          ]
+        }
+      ],
+      "pricing": {
+        "status": "official_eu_list_verified_not_italy_checkout",
+        "currency": "EUR",
+        "unit": "organizzazione/mese",
+        "plans": [
+          {
+            "name": "Basic",
+            "included_users": 5,
+            "monthly_billing": 69,
+            "annual_monthly_equivalent": 49,
+            "annual_payment": 588
+          },
+          {
+            "name": "Standard",
+            "included_users": 50,
+            "monthly_billing": 144,
+            "annual_monthly_equivalent": 99,
+            "annual_payment": 1188
+          },
+          {
+            "name": "Professional",
+            "included_users": 100,
+            "monthly_billing": 289,
+            "annual_monthly_equivalent": 199,
+            "annual_payment": 2388
+          }
+        ],
+        "vat": "Fonte: acquisti possono essere soggetti a IVA/GST secondo paese e partita IVA al checkout; inclusione IVA non confermata",
+        "source_ids": [
+          "bitrix-pricing-eu",
+          "bitrix-pricing-de"
+        ],
+        "limitations": [
+          "Free-users contraddittorio fra intestazione e FAQ",
+          "Listino tedesco/europeo: verificare checkout italiano prima di proposta commerciale",
+          "Promozioni Vibe+ escluse"
+        ]
+      },
+      "fit_for_filo": "Collegare il flusso economico e rendere chiaro il costo per studio, distinguendo utenti inclusi e limiti.",
+      "complexity_to_avoid": [
+        "Feed aziendale, telefonia, HR e social tutti visibili per default",
+        "Claim del fornitore sul risparmio copiati come risultato Filo"
+      ]
+    }
+  ],
+  "recommended_patterns": [
+    {
+      "priority": 1,
+      "feature": "Dati azienda e cliente salvati una volta",
+      "evidence_source_ids": [
+        "odoo-contacts",
+        "odoo-quotes",
+        "zoho-call-to-quote",
+        "bitrix-invoicing"
+      ],
+      "optimized_for_target": "Nome studio, partita IVA/codice fiscale, indirizzo e contatti nei documenti. Cliente riutilizzato nei moduli pertinenti. Campi opzionali e progressivi per ridurre il primo inserimento.",
+      "boundary": "Dati forniti dall'utente, non interrogazione anagrafe o validazione fiscale certificata.",
+      "confidence": "high: convergent official workflow documentation"
+    },
+    {
+      "priority": 2,
+      "feature": "Preventivo→bozza fattura→incasso collegati",
+      "evidence_source_ids": [
+        "odoo-quotes",
+        "zoho-sales-to-invoice",
+        "bitrix-invoicing"
+      ],
+      "optimized_for_target": "Pulsante esplicito, importi e IVA mantenuti, origine visibile e protezione da duplicazione. Solo bozza da verificare; riuso in scadenzario senza reinserire.",
+      "boundary": "Nessuna fattura fiscalmente emessa, invio SDI, invio email o riscossione automatica senza integrazione.",
+      "confidence": "high: workflow supported by three vendors"
+    },
+    {
+      "priority": 3,
+      "feature": "Prossime azioni e completamento immediato",
+      "evidence_source_ids": [
+        "pipedrive-activities",
+        "hubspot-sales"
+      ],
+      "optimized_for_target": "Ritardi e oggi prima, motivo della priorità leggibile, tasto 'Fatto' nella panoramica e collegamento alla scheda. Non imporre Kanban per compiti semplici.",
+      "boundary": "Ordine basato su date/priorità inserite; non previsione della probabilità di successo commerciale.",
+      "confidence": "high for linked activities; daily AI queues are vendor-stated features"
+    },
+    {
+      "priority": 4,
+      "feature": "Ricerca unica fra moduli con risultati comprensibili",
+      "evidence_source_ids": [
+        "hubspot-search",
+        "odoo-contacts"
+      ],
+      "optimized_for_target": "Cercare cliente, numero/riferimento, titolo o contatto senza scegliere prima il modulo; mostrare tipo e prossima azione. Match parziale tollerante anziché codici interni.",
+      "boundary": "Ricerca Filo locale sulle schede disponibili, non ricerca della posta non sincronizzata o documenti mai importati.",
+      "confidence": "medium: optimization is product inference, not demonstrated vendor superiority"
+    },
+    {
+      "priority": 5,
+      "feature": "Ricorrenze e reminder controllati",
+      "evidence_source_ids": [
+        "zoho-call-to-quote",
+        "zoho-books-pricing"
+      ],
+      "optimized_for_target": "Da valutare dopo i collegamenti base: checklist ricorrenti per rinnovi e solleciti con anteprima.",
+      "boundary": "Richiede persistenza/deduplicazione e calendario; non attivato implicitamente da questo report.",
+      "confidence": "high for competitor capability; implementation recommendation"
+    }
+  ],
+  "pricing_implications": [
+    "Per uno studio piccolo il per-seat cresce linearmente con i collaboratori: confrontare numero reale di utenti e funzioni, non solo il prezzo d'ingresso.",
+    "Un forfait chiaro per studio può semplificare la vendita, ma deve dichiarare utenti/workspace inclusi e limiti; oggi Filo isola account e non offre ancora un workspace condiviso multiutente.",
+    "Funzioni solo descritte dai competitor non sono incluse automaticamente nei piani più economici: esempio HubSpot CPQ tramite Revenue Hub e Pipedrive automazioni/quoting su tier superiori.",
+    "Non suggerire un prezzo definitivo Filo da questi listini globali: EUR Italia, IVA, pricing reale, supporto e costi AI/email devono essere validati separatamente.",
+    "Le suite esistenti includono contabilità, telefonia e fiscalità che Filo non può dichiarare di sostituire con bozze locali."
+  ],
+  "sources": [
+    {
+      "id": "odoo-quotes",
+      "url": "https://www.odoo.com/documentation/19.0/applications/sales/sales/sales_quotations/create_quotations.html",
+      "type": "official_help",
+      "title": "Create quotations — Odoo 19.0",
+      "excerpts": [
+        "If the customer's information is already in the database, the Invoice Address and Delivery Address fields auto-populate with the saved information ... based on the data from that customer's contact record.",
+        "Once a quotation has been confirmed, it officially turns into a sales order, which can then be invoiced and paid for."
+      ]
+    },
+    {
+      "id": "odoo-contacts",
+      "url": "https://www.odoo.com/documentation/19.0/applications/essentials/contacts.html",
+      "type": "official_help",
+      "title": "Contacts — Odoo 19.0",
+      "excerpts": [
+        "Odoo supports both Person and Company contacts.",
+        "Tax ID: the identification number used for tax and accounting purposes.",
+        "Certain Payment Terms, or a certain Pricelist, can also be set, if needed."
+      ]
+    },
+    {
+      "id": "odoo-pricing",
+      "url": "https://www.odoo.com/it_IT/pricing",
+      "type": "official_pricing",
+      "title": "Tariffe Odoo",
+      "excerpts": [
+        "/per utente/al mese",
+        "Lo sconto è valido per 12 mesi, per il numero di utenti selezionato inizialmente.",
+        "Costo dell'hosting di Odoo.sh non incluso.",
+        "Servizio di implementazione e accesso ai servizi di un esperto Odoo"
+      ]
+    },
+    {
+      "id": "zoho-call-to-quote",
+      "url": "https://www.zoho.com/one/guides/call-to-quote.html",
+      "type": "official_help",
+      "title": "From Call to Quote with Zoho One",
+      "source_last_updated": "2023-10-13",
+      "excerpts": [
+        "Customer information syncs between CRM and Books so details never have to be entered twice.",
+        "Books stores your estimates, invoices, and other financial documents, but sales reps can create and view these documents from Zoho CRM.",
+        "Any notes or follow-up reminders that reps attach to financial documents in CRM also appear in Books so the billing team can stay in the loop.",
+        "Assigning reminder tasks when deals in negotiation haven't been updated in over two days"
+      ]
+    },
+    {
+      "id": "zoho-sales-to-invoice",
+      "url": "https://www.zoho.com/one/sales-to-invoice-automation.html",
+      "type": "official_features",
+      "title": "Automate Sales-to-Invoice Workflow with Zoho One",
+      "excerpts": [
+        "Zoho CRM and Zoho Books integrate to cause a smooth flow of data between sales and finance.",
+        "Deal and customer info is pulled automatically to eliminate manual data entry errors.",
+        "Zoho Flow is a drag-and-drop tool to build custom workflows across apps"
+      ]
+    },
+    {
+      "id": "zoho-one-pricing",
+      "url": "https://www.zoho.com/it/one/pricing/",
+      "type": "official_pricing",
+      "title": "Zoho One pricing (fetched content in German)",
+      "excerpts": [
+        "Lizenz muss für ALLE Mitarbeiter erworben werden",
+        "Lizenz für beliebige Anzahl der Benutzer erwerben"
+      ],
+      "limitations": [
+        "Dynamic amounts absent; Italian route returned German-language content. No reliable Italy EUR quote verified."
+      ]
+    },
+    {
+      "id": "zoho-books-pricing",
+      "url": "https://www.zoho.com/books/pricing/",
+      "type": "official_pricing",
+      "title": "Pricing | Zoho Books (USA edition)",
+      "excerpts": [
+        "STANDARD ... $15",
+        "3 Users",
+        "Create invoices, quotes, expenses & journals",
+        "Automate payment reminders",
+        "Prices are exclusive of local taxes.",
+        "Join thousands of businesses across USA"
+      ],
+      "limitations": [
+        "USA-specific features include 1099 and ACH. Do not claim Italy fiscal/SDI compliance. Monthly/annual primary amount toggle not unambiguously extracted."
+      ]
+    },
+    {
+      "id": "hubspot-sales",
+      "url": "https://www.hubspot.com/products/sales",
+      "type": "official_features",
+      "title": "AI Sales Software for Pipeline & Closed Deals",
+      "excerpts": [
+        "Guide sellers in a workspace that surfaces leads, deals, tasks, and next best actions with smart queues and daily action summaries.",
+        "Close deals in Sales Hub, then quote, bill, and collect payment in Revenue Hub",
+        "HubSpot customers can access CPQ by purchasing a Revenue Hub seat."
+      ],
+      "limitations": [
+        "Vendor marketing and testimonials do not establish Filo productivity improvements or buyer conversion rates."
+      ]
+    },
+    {
+      "id": "hubspot-starter",
+      "url": "https://www.hubspot.com/products/crm/starter",
+      "type": "official_pricing_and_features",
+      "title": "HubSpot's Starter Plan for Startups & Small Businesses",
+      "excerpts": [
+        "Pay $7/mo per seat, with upfront payment and annual commitment. Or pay month-to-month at $10/month per seat, with no annual commitment.",
+        "Starter is normally priced at $20/month per seat",
+        "Your HubSpot Starter bill can change if you upgrade, add seats, purchase an add-on or capacity pack, or exceed an included limit such as your marketing contact tier.",
+        "Starter includes 500 credits per month"
+      ],
+      "limitations": [
+        "Temporary new-customer offer; global dollar pricing, no Italy EUR/VAT quote captured; bundled features and agent credit limits may change."
+      ]
+    },
+    {
+      "id": "hubspot-search",
+      "url": "https://knowledge.hubspot.com/records/search-your-crm",
+      "type": "official_help",
+      "title": "Search your CRM",
+      "source_last_updated": "2026-06-15",
+      "excerpts": [
+        "The CRM search scans only the following property values in the object index pages to provide search results. Other properties that contain the searched string won't be surfaced.",
+        "The CRM search matches complete words only and doesn't support substring matching within a word.",
+        "This article ... doesn't apply to the global search in the top left corner"
+      ],
+      "limitations": [
+        "Document describes per-object index search, not global cross-object search."
+      ]
+    },
+    {
+      "id": "pipedrive-pricing",
+      "url": "https://www.pipedrive.com/en/pricing",
+      "type": "official_pricing_and_features",
+      "title": "CRM Pricing Plans",
+      "excerpts": [
+        "Lite ... US$14 ... One payment of US$ 168 per seat/year",
+        "Growth ... US$39 ... One payment of US$ 468 per seat/year",
+        "Premium ... US$59 ... One payment of US$ 708 per seat/year",
+        "Ultimate ... US$79 ... One payment of US$ 948 per seat/year",
+        "Our prices are VAT exclusive. VAT will be billed to EU customers ... unless a valid VAT number is provided."
+      ],
+      "limitations": [
+        "Global USD annual quotes; EUR/monthly localized amounts not verified. Add-ons can cost extra."
+      ]
+    },
+    {
+      "id": "pipedrive-activities",
+      "url": "https://support.pipedrive.com/en/article/activities",
+      "type": "official_help",
+      "title": "Activities",
+      "source_last_updated": "2026-09-03",
+      "excerpts": [
+        "You can link activities to people, organizations, leads, deals or projects to keep a clear view of what's next.",
+        "Next activity date – shows the date of the next activity you scheduled that isn't marked as done yet",
+        "The due date field will always show the time and date the activity was originally scheduled for.",
+        "The marked as done field always reflects the time that the activity was marked as done.",
+        "Active calendar sync is required to send activity invites."
+      ]
+    },
+    {
+      "id": "bitrix-pricing-eu",
+      "url": "https://www.bitrix24.eu/prices/",
+      "type": "official_pricing",
+      "title": "Bitrix24 plans and pricing",
+      "excerpts": [
+        "Each of our plans has a fixed price and a user limit.",
+        "The annual subscription has a 12-month billing cycle ... pay a full subscription price every 12 months",
+        "Your purchases ... may be subject to VAT, GST, or other taxes as per the laws and regulations of your locality."
+      ],
+      "limitations": [
+        "Free plan stated as for 1–2 users in header but FAQ says unlimited users; do not rely on free-user limit."
+      ]
+    },
+    {
+      "id": "bitrix-pricing-de",
+      "url": "https://www.bitrix24.de/prices/",
+      "type": "official_pricing",
+      "title": "Bitrix24 Tarife und Preise",
+      "excerpts": [
+        "Basic | schließt 5 Nutzer ein | 24 GB Speicherplatz | 69 € | 49 €",
+        "Standard | schließt 50 Nutzer ein | 100 GB Speicherplatz | 144 € | 99 €",
+        "Professional | schließt 100 Nutzer ein | 1 TB Speicherplatz | 289 € | 199 €",
+        "Rechnungen & Angebote"
+      ],
+      "limitations": [
+        "German/EU official list, not an Italy checkout offer. Annual column is monthly equivalent paid 12 months upfront. Vibe+ launch promotional pricing is excluded from regular-plan comparisons."
+      ]
+    },
+    {
+      "id": "bitrix-invoicing",
+      "url": "https://www.bitrix24.com/tools/crm/features/invoicing.php",
+      "type": "official_features",
+      "title": "CRM with Invoicing",
+      "excerpts": [
+        "Convert the approved quote to an invoice in one click. Bitrix24 pulls contact, company, shipping, and custom fields from the deal automatically.",
+        "Your product catalog, price lists, discounts, and taxes live in the same place as your deals. Line items flow from quote to invoice automatically."
+      ],
+      "limitations": [
+        "Feature description is a vendor marketing page; statements about 8–10 minutes per invoice are not independent measurement and are not used as Filo savings evidence."
+      ]
+    }
+  ]
+}
