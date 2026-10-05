@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 from app import service as service_module
 from app.db import DEFAULT_COMPANY, DEFAULT_CONTACTS
-from app.main import create_app
+from app.main import create_workspace_app as create_app
 
 
 CONTACT = {"name": "Cliente effettivo", "email": "cliente@example.test"}

@@ -1,5 +1,5 @@
 /* Read-only browser check for a fresh FILO_REAL_DATA_ONLY=1 local instance.
- * Requires Playwright/Chromium, no access password and no Google credentials.
+ * Requires Playwright/Chromium, FILO_ACCESS_PASSWORD=real-mode-test and no Google credentials.
  * Run: FILO_PORT=8014 node scripts/real-mode-smoke.cjs
  */
 const { chromium } = require('playwright');
@@ -17,6 +17,12 @@ const sampleText = /Studio Riva|Giulia Conti|Marco Bianchi|Sara Rossi|@example\.
   try {
     for (const width of [1440, 390]) {
       const page = await browser.newPage({ viewport: { width, height: 900 } });
+      const guest = await (await page.request.get(`${origin}/api/auth/session`)).json();
+      const login = await page.request.post(`${origin}/api/auth/login`, {
+        headers: { 'X-CSRF-Token': guest.csrf_token },
+        data: { email: 'filo', password: process.env.FILO_TEST_OWNER_PASSWORD || 'real-mode-test' },
+      });
+      assert.equal(login.status(), 200, 'Use the isolated real-mode-test owner account.');
       const errors = [];
       const mutations = [];
       page.on('pageerror', error => errors.push(error.message));
@@ -28,7 +34,7 @@ const sampleText = /Studio Riva|Giulia Conti|Marco Bianchi|Sara Rossi|@example\.
         }
         return route.continue();
       });
-      await page.goto(origin);
+      await page.goto(`${origin}/app`);
       await page.waitForSelector('#app-content:not([hidden])');
       const state = () => page.evaluate(async () => (await fetch('/api/bootstrap')).json());
       const before = await state();

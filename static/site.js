@@ -1,0 +1,281 @@
+'use strict';
+
+(() => {
+  const page = document.body.dataset.page;
+  const byId = (id) => document.getElementById(id);
+  let csrfToken = '';
+
+  function buttonLabel(element, label) {
+    const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    arrow.setAttribute('class', 'arrow-icon');
+    arrow.setAttribute('viewBox', '0 0 24 24');
+    arrow.setAttribute('aria-hidden', 'true');
+    arrow.setAttribute('focusable', 'false');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', 'M6 18 18 6M6 6h12v12');
+    arrow.appendChild(path);
+    element.replaceChildren(document.createTextNode(label), arrow);
+  }
+
+  function detailMessage(detail, fallback) {
+    if (typeof detail === 'string' && detail.trim()) return detail;
+    if (Array.isArray(detail)) return 'Controlla i dati inseriti e riprova.';
+    return fallback;
+  }
+
+  async function request(path, options = {}) {
+    const method = options.method || 'GET';
+    const headers = { Accept: 'application/json' };
+    if (method !== 'GET') {
+      headers['Content-Type'] = 'application/json';
+      headers['X-CSRF-Token'] = csrfToken;
+    }
+    let response;
+    try {
+      response = await fetch(path, { method, credentials: 'same-origin', headers, ...(method !== 'GET' ? { body: JSON.stringify(options.body || {}) } : {}) });
+    } catch (_) {
+      throw new Error('Non riusciamo a raggiungere Filo. Controlla la connessione e riprova.');
+    }
+    let data = {};
+    try { data = await response.json(); } catch (_) { /* Some server errors have no JSON body. */ }
+    if (!response.ok) {
+      const error = new Error(detailMessage(data.detail, 'Qualcosa non è andato a buon fine. Riprova tra poco.'));
+      error.status = response.status;
+      throw error;
+    }
+    if (data.csrf_token) csrfToken = data.csrf_token;
+    return data;
+  }
+
+  async function session() {
+    const data = await request('/api/auth/session');
+    csrfToken = data.csrf_token || '';
+    return data;
+  }
+
+  function showError(id, error) {
+    const element = byId(id);
+    element.textContent = error.message || 'Qualcosa non è andato a buon fine. Riprova.';
+    element.hidden = false;
+  }
+
+  function localDestination() {
+    const next = new URLSearchParams(window.location.search).get('next');
+    return next === '/account' ? '/account' : '/app';
+  }
+
+  function goToLogin() {
+    window.location.replace(`/login?next=${encodeURIComponent('/account')}`);
+  }
+
+  function clearPendingWizard() {
+    try { sessionStorage.removeItem('filo-pending-wizard'); } catch (_) { /* The app also works when browser storage is disabled. */ }
+  }
+
+  async function initLanding() {
+    try {
+      const data = await session();
+      if (!data.authenticated) return;
+      byId('landing-login').href = '/account';
+      byId('landing-login').textContent = 'Il tuo account';
+      byId('landing-register').href = '/app';
+      buttonLabel(byId('landing-register'), 'Apri il tuo spazio');
+      byId('hero-start').href = '/app';
+      buttonLabel(byId('hero-start'), 'Apri la tua giornata');
+    } catch (_) { /* The public homepage stays usable when account services are unavailable. */ }
+  }
+
+  async function initAuth() {
+    const register = window.location.pathname === '/register';
+    const form = byId('auth-form');
+    const submit = byId('auth-submit');
+    const password = byId('auth-password');
+    const email = byId('auth-email');
+    const name = byId('auth-name');
+    if (register) {
+      document.title = 'Crea il tuo account · Filo';
+      byId('auth-title').textContent = 'Cominciamo da te.';
+      byId('auth-description').textContent = 'Crea il tuo account Filo.';
+      byId('auth-name-field').hidden = false;
+      name.required = true;
+      byId('auth-email-label').textContent = 'Email';
+      email.type = 'email';
+      email.autocomplete = 'email';
+      password.autocomplete = 'new-password';
+      password.minLength = 12;
+      byId('auth-password-hint').textContent = 'Almeno 12 caratteri. Scegli una password che non usi altrove.';
+      byId('register-payment-note').hidden = false;
+      byId('auth-legacy-note').hidden = true;
+      buttonLabel(submit, 'Crea il tuo account');
+      byId('auth-switch-copy').textContent = 'Hai già un account?';
+      byId('auth-switch-link').href = '/login';
+      byId('auth-switch-link').textContent = 'Accedi';
+    }
+    const destination = localDestination();
+    if (destination === '/account') byId('auth-switch-link').href += '?next=%2Faccount';
+    byId('password-toggle').addEventListener('click', () => {
+      const visible = password.type === 'password';
+      password.type = visible ? 'text' : 'password';
+      byId('password-toggle').textContent = visible ? 'Nascondi' : 'Mostra';
+      byId('password-toggle').setAttribute('aria-label', visible ? 'Nascondi password' : 'Mostra password');
+      byId('password-toggle').setAttribute('aria-pressed', String(visible));
+    });
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      byId('auth-error').hidden = true;
+      submit.disabled = true;
+      byId('auth-progress').textContent = register ? 'Creiamo il tuo account…' : 'Accesso in corso…';
+      try {
+        const body = { email: email.value.trim(), password: password.value };
+        if (register) body.name = name.value.trim();
+        await request(register ? '/api/auth/register' : '/api/auth/login', { method: 'POST', body });
+        clearPendingWizard();
+        password.value = '';
+        window.location.assign(destination);
+      } catch (error) {
+        showError('auth-error', error);
+        byId('auth-progress').textContent = '';
+        submit.disabled = false;
+      }
+    });
+    try {
+      const data = await session();
+      if (data.authenticated) {
+        window.location.replace(destination);
+        return;
+      }
+      byId('auth-loading').hidden = true;
+      form.hidden = false;
+    } catch (error) {
+      byId('auth-loading').hidden = true;
+      showError('auth-error', error);
+      // A fresh navigation retries the session and obtains a valid CSRF token.
+      const retry = document.createElement('a');
+      retry.className = 'button secondary full-width';
+      retry.href = `${window.location.pathname}${window.location.search}`;
+      retry.textContent = 'Riprova';
+      byId('auth-loading').insertAdjacentElement('afterend', retry);
+    }
+  }
+
+  const subscriptionLabels = {
+    active: 'Attivo', trialing: 'Periodo di prova', past_due: 'Pagamento da aggiornare',
+    canceled: 'Disdetto', unpaid: 'Pagamento in sospeso', incomplete: 'Da completare',
+    incomplete_expired: 'Non completato', paused: 'In pausa', none: 'Nessun abbonamento', free: 'Nessun abbonamento',
+  };
+
+  function renderBilling(data) {
+    const subscription = data.subscription || {};
+    const plan = data.plan || {};
+    const status = data.subscription_status || subscription.status || 'free';
+    const active = ['active', 'trialing'].includes(status);
+    const hasSubscription = !['free', 'none'].includes(status);
+    byId('plan-name').textContent = plan.name || 'Filo';
+    byId('plan-price').textContent = plan.price_label || (data.configured ? 'Il prezzo sarà indicato nel checkout.' : 'Prezzo in definizione');
+    byId('subscription-status').textContent = subscriptionLabels[status] || 'Stato da verificare';
+    byId('subscription-status').classList.toggle('active', active);
+    byId('subscription-description').textContent = active
+      ? (subscription.cancel_at_period_end ? 'Il tuo abbonamento resta attivo fino alla fine del periodo già pagato.' : 'Il tuo abbonamento è attivo. Puoi consultare pagamenti e impostazioni dal portale.')
+      : status === 'past_due' || status === 'unpaid'
+        ? 'Aggiorna il metodo di pagamento dal portale per regolarizzare l’abbonamento.'
+        : hasSubscription && status !== 'canceled'
+          ? 'Controlla i dettagli dal portale per completare o gestire il tuo abbonamento.'
+          : 'Puoi scegliere il piano quando sei pronta o pronto. Il pagamento richiede la tua conferma.';
+    byId('plan-features').replaceChildren();
+    const features = Array.isArray(plan.features) ? plan.features : [];
+    for (const feature of features) {
+      if (typeof feature !== 'string') continue;
+      const item = document.createElement('li');
+      item.textContent = feature;
+      byId('plan-features').appendChild(item);
+    }
+    byId('plan-features').hidden = features.length === 0;
+    byId('billing-unavailable').hidden = Boolean(data.configured);
+    byId('billing-checkout').hidden = !data.configured || !['free', 'none', 'canceled', 'incomplete_expired'].includes(status);
+    byId('billing-portal').hidden = !data.portal_available;
+    byId('billing-payment-note').hidden = byId('billing-checkout').hidden;
+  }
+
+  async function loadBilling() {
+    byId('billing-error').hidden = true;
+    byId('billing-refresh').disabled = true;
+    byId('billing-progress').textContent = 'Verifichiamo lo stato…';
+    try {
+      renderBilling(await request('/api/billing/status'));
+      byId('billing-progress').textContent = '';
+    } catch (error) {
+      if (error.status === 401) { goToLogin(); return; }
+      showError('billing-error', error);
+      byId('billing-progress').textContent = '';
+    } finally {
+      byId('billing-refresh').disabled = false;
+    }
+  }
+
+  async function openBilling(path, button, progress) {
+    byId('billing-error').hidden = true;
+    button.disabled = true;
+    byId('billing-progress').textContent = progress;
+    try {
+      const data = await request(path, { method: 'POST' });
+      const destination = new URL(data.url);
+      if (destination.protocol !== 'https:') throw new Error('Il collegamento al pagamento non è valido. Riprova tra poco.');
+      window.location.assign(destination.href);
+    } catch (error) {
+      if (error.status === 401) { goToLogin(); return; }
+      showError('billing-error', error);
+      byId('billing-progress').textContent = '';
+      button.disabled = false;
+    }
+  }
+
+  async function initAccount() {
+    byId('billing-refresh').addEventListener('click', loadBilling);
+    byId('billing-checkout').addEventListener('click', () => openBilling('/api/billing/checkout', byId('billing-checkout'), 'Apriamo il checkout…'));
+    byId('billing-portal').addEventListener('click', () => openBilling('/api/billing/portal', byId('billing-portal'), 'Apriamo la gestione dell’abbonamento…'));
+    byId('account-logout').addEventListener('click', async () => {
+      byId('account-logout').disabled = true;
+      try {
+        await request('/api/auth/logout', { method: 'POST' });
+        clearPendingWizard();
+        window.location.assign('/');
+      } catch (error) {
+        showError('account-error', error);
+        byId('account-logout').disabled = false;
+      }
+    });
+    const checkout = new URLSearchParams(window.location.search).get('billing');
+    if (checkout === 'success' || checkout === 'cancelled') {
+      byId('billing-return-notice').textContent = checkout === 'success'
+        ? 'Se hai completato il pagamento, lo stato si aggiornerà dopo la conferma del servizio di pagamento. Puoi usare “Aggiorna stato”.'
+        : 'Hai chiuso il checkout. Puoi riprendere il pagamento quando vuoi.';
+      byId('billing-return-notice').hidden = false;
+    }
+    try {
+      const data = await session();
+      if (!data.authenticated) { goToLogin(); return; }
+      const user = data.user || {};
+      byId('profile-name').textContent = user.name || 'Account Filo';
+      byId('profile-email').textContent = user.email || '—';
+      byId('profile-role').textContent = user.role === 'owner' ? 'Titolare dello spazio' : 'Account Filo';
+      byId('profile-avatar').textContent = (user.name || user.email || 'F').trim().charAt(0).toUpperCase();
+      byId('account-loading').hidden = true;
+      byId('account-content').hidden = false;
+      byId('account-logout').disabled = false;
+      await loadBilling();
+    } catch (error) {
+      byId('account-loading').hidden = true;
+      if (error.status === 401) { goToLogin(); return; }
+      showError('account-error', error);
+      const retry = document.createElement('a');
+      retry.className = 'button secondary';
+      retry.href = '/account';
+      retry.textContent = 'Riprova';
+      byId('account-error').insertAdjacentElement('afterend', retry);
+    }
+  }
+
+  if (page === 'landing') initLanding();
+  if (page === 'auth') initAuth();
+  if (page === 'account') initAccount();
+})();

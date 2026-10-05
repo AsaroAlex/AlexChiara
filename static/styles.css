@@ -75,6 +75,7 @@ summary::marker { color: var(--subtle); }
 .breadcrumb span { margin: 0 10px; color: #96999e; }
 .breadcrumb strong { color: var(--ink); font-weight: 500; }
 .topbar-right { display: flex; align-items: center; gap: 24px; }
+.account-link { min-height: 44px; padding: 10px 16px; font-size: 13px; }
 .demo-chip { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); }
 .demo-chip > span { width: 5px; height: 5px; border-radius: 50%; background: #7c7f85; }
 .today-label { font-size: 12px; color: var(--muted); }
@@ -103,7 +104,7 @@ main { padding: 32px 40px 0; max-width: 1400px; margin: 0 auto; outline: none; }
 .button.ghost { background: transparent; color: var(--muted); padding-left: 10px; padding-right: 10px; }
 .button.ghost:hover:not(:disabled) { background: var(--quiet); color: var(--ink); }
 .button.danger { background: var(--error); color: white; }
-.button.tiny { min-height: 36px; padding: 8px 10px; font-size: 12px; }
+.button.tiny { min-height: 44px; padding: 10px; font-size: 12px; }
 .icon-button { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 50%; background: white; color: var(--muted); }
 .icon-button:hover { background: var(--quiet); }
 .icon-button .icon { width: 18px; height: 18px; }
@@ -184,7 +185,7 @@ main { padding: 32px 40px 0; max-width: 1400px; margin: 0 auto; outline: none; }
 .agenda-event h3 { font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
 .agenda-event .status-pill { font-size: 11px; white-space: normal; margin-top: 6px; }
 .agenda-note { margin-top: 7px; font-size: 13px; overflow-wrap: anywhere; }
-.agenda-event > .button { grid-column: 2; justify-self: start; padding: 4px 0; min-height: 32px; font-size: 12px; font-weight: 500; }
+.agenda-event > .button { grid-column: 2; justify-self: start; padding: 10px 0; min-height: 44px; font-size: 12px; font-weight: 500; }
 .agenda-card > .button { width: 100%; font-size: 13px; }
 #agenda-add, #reply-watch-form-panel { border-top: 1px solid var(--line); margin-top: 16px; padding-top: 4px; }
 #agenda-add > summary, #reply-watch-form-panel > summary { padding: 13px 0; min-height: 44px; font-size: 13px; font-weight: 550; color: var(--ink); }
@@ -211,7 +212,7 @@ main { padding: 32px 40px 0; max-width: 1400px; margin: 0 auto; outline: none; }
 .reply-watch .small-text { margin-top: 5px; font-size: 12px; line-height: 1.6; }
 .reply-watch--matched { border-color: #ffb176; border-left: 3px solid var(--accent); background: var(--accent-wash); }
 .watch-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
-.watch-actions .button { min-height: 36px; padding: 8px 10px; font-size: 12px; }
+.watch-actions .button { min-height: 44px; padding: 10px; font-size: 12px; }
 .reply-watch-form { margin-top: 8px; padding-bottom: 14px; }
 .watch-fields { display: grid; grid-template-columns: minmax(0,1.25fr) minmax(0,1fr); gap: 12px; }
 .watch-fields label { font-size: 13px; margin: 0 0 7px; }
@@ -260,7 +261,7 @@ main { padding: 32px 40px 0; max-width: 1400px; margin: 0 auto; outline: none; }
 .assurance p { margin-top: 6px; font-size: 12px; }
 .page-footer { display: flex; justify-content: space-between; gap: 20px; border-top: 1px solid var(--line); padding: 24px 0; margin-top: 36px; color: var(--muted); font-size: 11px; }
 .demo-controls { max-width: 430px; text-align: right; }
-.demo-controls summary { min-height: 32px; }
+.demo-controls summary { min-height: 44px; }
 .demo-controls p { font-size: 12px; margin: 10px 0; }
 .demo-controls > div { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 7px; }
 .demo-controls[open] { text-align: left; }

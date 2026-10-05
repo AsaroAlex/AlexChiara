@@ -49,6 +49,11 @@ async function api(path, options = {}) {
   catch (_) { throw new Error('Il servizio non è raggiungibile. Controlla la connessione e riprova.'); }
   let result;
   try { result = await response.json(); } catch (_) { result = {}; }
+  if (response.status === 401) {
+    sessionStorage.removeItem('filo-pending-wizard');
+    location.replace('/login?next=/app');
+    throw new Error('Accedi a Filo per continuare.');
+  }
   if (!response.ok) throw new Error(errorText(result.detail || result.error || result.message || `Operazione non riuscita (${response.status}).`));
   return result;
 }
@@ -109,7 +114,6 @@ function render(forceCompany = false) {
   notice('#connection-alert', expired ? 'La connessione alla casella è scaduta. Ricollega Gmail per riprendere i controlli.' : '');
   $('.demo-banner').hidden = Boolean(state.data.real_data_only) || connection.provider !== 'demo';
   $('.demo-controls').hidden = Boolean(state.data.real_data_only);
-  $('.demo-chip').lastChild.textContent = connection.provider === 'gmail' && connection.status === 'connected' ? ' Gmail collegata' : state.data.real_data_only ? ' La tua segreteria' : ' Ambiente di prova';
   $('.form-intro').textContent = company.needs_setup ? 'Inserisci il nome della tua attività e la firma da usare nelle risposte.' : 'Mantieni aggiornati il profilo e la firma usati nelle bozze.';
   const isActive = service.status === 'active';
   const isPaused = service.status === 'paused';
@@ -283,6 +287,10 @@ function renderWatches() {
 function gmailSetupGuide() {
   const guide = el('div', 'boundary-note');
   guide.style.display = 'block';
+  if (state.data.user && state.data.user.role !== 'owner') {
+    guide.append(el('h3', '', 'Il collegamento Gmail è in preparazione.'), el('p', '', 'Quando sarà disponibile, potrai autorizzare la lettura della tua casella qui. Intanto puoi organizzare l’agenda e completare il profilo della tua attività.'), actionButton('Verifica disponibilità', 'check-gmail-setup', 'secondary', 'refresh'));
+    return guide;
+  }
   guide.append(el('h3', '', 'Una sola configurazione, poi collega la tua casella.'));
   const steps = el('ol');
   const first = el('li', '', 'In Google Cloud abilita Gmail API, configura il consenso e aggiungi la tua email tra gli utenti di test. Crea un client OAuth di tipo Applicazione web.');
@@ -533,7 +541,7 @@ async function handleAction(button) {
   if (inWizard) notice('#wizard-error', '');
   await withBusy(button, async () => {
     try {
-      if (action === 'check-gmail-setup') { state.gmail = await api('/api/gmail/status'); renderWizard(); toast(state.gmail.configured ? 'Configurazione pronta. Ora puoi collegare Gmail.' : 'Mancano ancora le credenziali Google nelle variabili del sito.'); }
+      if (action === 'check-gmail-setup') { state.gmail = await api('/api/gmail/status'); renderWizard(); toast(state.gmail.configured ? 'Configurazione pronta. Ora puoi collegare Gmail.' : state.data.user && state.data.user.role !== 'owner' ? 'Il collegamento Gmail è ancora in preparazione.' : 'Mancano ancora le credenziali Google nelle variabili del sito.'); }
       else if (action === 'confirm-watch') { if (!state.watchSuggestion) return; await api('/api/watches', { method: 'POST', body: state.watchSuggestion }); state.watchSuggestion = null; $('#chat-suggestion').hidden = true; await refresh(); toast('Avviso salvato. Lo troverai tra le cose da fare.'); }
       else if (action === 'dismiss-watch') { await api(`/api/watches/${encodeURIComponent(button.dataset.id)}`, { method: 'DELETE' }); await refresh(); toast('Promemoria chiuso.'); }
       else if (action === 'connect-demo') { await api('/api/connection/demo', { method: 'POST', body: {} }); await refresh(); renderWizard(); }

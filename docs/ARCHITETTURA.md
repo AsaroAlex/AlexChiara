@@ -4,14 +4,19 @@ Il prodotto offre funzioni progettate dal gestore. La chat riconosce intenti sup
 
 ```mermaid
 flowchart LR
-    UI[Catalogo e attivazione guidata] --> API[FastAPI: preferenze validate e mandato]
+    HOME[Homepage, login e registrazione] --> AUTH[Sessioni e account persistenti]
+    AUTH --> ACCOUNTS[(SQLite account e sessioni)]
+    AUTH --> UI[Spazio personale e attivazione guidata]
+    UI --> API[FastAPI: preferenze validate e mandato]
     CHAT[Chat con capacità definite] --> API
-    API --> DB[(SQLite: azienda, esecuzioni, bozze)]
+    API --> DB[(SQLite separato per account)]
     WORKER[Scheduler nel processo server] --> DB
     WORKER --> SERVICE[Segreteria email]
     SERVICE --> CONN[Connettore demo oppure Gmail readonly]
     SERVICE --> AI[Analizzatore separato: regole demo o adapter cloud opzionale]
     SERVICE --> DB
+    AUTH --> BILLING[Stripe Checkout e portale]
+    WEBHOOK[Webhook Stripe firmato] --> LEDGER[(SQLite abbonamenti)]
 ```
 
 ## Esecuzione
@@ -30,7 +35,9 @@ Le chiamate HTTP al provider hanno timeout; l'esecuzione applica anche un budget
 
 ## Dati e fornitori
 
-Il database risiede sul server, nella cartella `.runtime` ignorata da Git. I token Gmail sono cifrati con Fernet e una chiave locale separata, non sono mai inviati al frontend. Il database delle email/bozze è protetto dai permessi di filesystem ma non è cifrato integralmente. Conservare la chiave accanto al database non protegge da un amministratore della stessa macchina: serve un secret manager per una distribuzione reale.
+Gli archivi risiedono sul server, nella cartella `.runtime` ignorata da Git oppure nella cartella `ALEXCHIARA_DATA_DIR`. `accounts.sqlite3` conserva account, hash scrypt delle password, hash dei token di sessione e limiti dei tentativi; `billing.sqlite3` conserva identificativi Stripe e stato degli abbonamenti, senza dati delle carte. Lo spazio originale mantiene `alexchiara.sqlite3`; ogni nuovo account ha database e chiave Gmail separati in `workspaces/<id>/`.
+
+I token Gmail sono cifrati con Fernet e una chiave locale separata, non sono mai inviati al frontend. Il database delle email/bozze è protetto dai permessi di filesystem ma non è cifrato integralmente. Conservare la chiave accanto al database non protegge da un amministratore della stessa macchina: serve un secret manager per una distribuzione reale.
 
 Gli input dei provider restano dati esterni. HTML e allegati non vengono eseguiti. Il modello non riceve tool né autorizzazioni di azione; il mandato viene applicato dalla logica applicativa. La validazione limita campi, contatti, orari e risultati riferiti ai messaggi letti. Il frontend inserisce il testo esterno come testo, non come HTML.
 
@@ -38,11 +45,23 @@ In assenza di un fornitore AI configurato il risultato usa regole deterministich
 
 ## Accesso
 
-Questo MVP è per una sola azienda. L’avvio locale ascolta sull’interfaccia locale; Railway usa HTTPS e HTTP Basic con password server obbligatoria. Interfaccia, risorse statiche e API sono protette; solo GET /api/health espone uno stato tecnico minimo. Le mutazioni richiedono anche sessione e CSRF; il cookie è HttpOnly, SameSite e Secure su HTTPS. Il server controlla host e origine. Il log degli accessi è disabilitato per non registrare codici OAuth. L’accesso condiviso non introduce utenti separati o isolamento multiutente.
+`create_app` serve homepage, login, registrazione e risorse statiche pubblici. `/app`, `/account` e le API dei dati richiedono una sessione autenticata; le richieste API anonime ricevono 401 senza `WWW-Authenticate`, quindi non aprono il popup HTTP Basic del browser. GET `/api/health` espone soltanto lo stato tecnico. L’avvio locale ascolta sull’interfaccia locale e Railway usa HTTPS.
+
+Le sessioni persistenti scadono dopo sette giorni, usano cookie HttpOnly, SameSite=Lax e Secure su HTTPS e vengono revocate all'uscita. Login e registrazione ruotano sessione e CSRF; le mutazioni, incluse quelle di autenticazione, richiedono CSRF valido e origine consentita. Il server controlla gli host e limita dimensione delle richieste e tentativi di accesso. Gli errori di validazione dell'autenticazione non ripetono la password inviata. Il log degli accessi è disabilitato per non registrare codici OAuth.
+
+La sessione sceglie lo spazio sul server tramite l'identificativo dell'account, senza fidarsi di un identificativo fornito dal browser. `create_workspace_app` è la fabbrica interna dei servizi per un singolo archivio: i test di dominio la usano direttamente; l'avvio pubblico deve usare `create_app`. Ogni spazio mantiene DB, consenso Google e scheduler separati. Un lock protegge la creazione concorrente degli spazi; il processo riavvia i loro controlli autorizzati e li ferma alla chiusura.
+
+Le credenziali `FILO_ACCESS_USERNAME` e `FILO_ACCESS_PASSWORD` accedono mediante il modulo all'account `owner`, che conserva l'archivio originale. Le registrazioni ricevono uno spazio vuoto distinto, senza dati fittizi o accesso allo spazio esistente. Non sono disponibili condivisione fra colleghi, inviti o gestione di ruoli aziendali.
+
+## Abbonamento
+
+L'integrazione prepara Stripe Checkout e il portale di gestione dell'abbonamento. Prezzo e chiavi sono scelti dal gestore sul server; il browser non può scegliere importo, cliente o account da addebitare. Lo stato degli abbonamenti viene aggiornato solo dai webhook firmati, con controllo della finestra temporale, degli identificativi e degli eventi duplicati. La pagina di ritorno dal checkout non prova il pagamento.
+
+Senza configurazione Stripe completa il checkout è disabilitato e la registrazione non effettua addebiti. Il prezzo è ancora da definire e nessun collegamento o pagamento reale Stripe è stato collaudato. Lo stato è presentato nell'area personale: questa versione non applica restrizioni alle funzioni in base al piano. I dettagli di configurazione sono in [BILLING.md](BILLING.md).
 
 ## Limiti prima del pilota reale
 
-Account reali, consenso/verifica OAuth e qualità AI non sono collaudati. Mancano isolamento multiutente per azienda, account individuali, cifratura dell'intero archivio, cancellazione/retention automatica, backup operativi, monitoraggio centralizzato, billing e supervisione continua. Prima del pilota con email reali occorre completare questi passaggi e gli accordi di trattamento. Il pilota iniziale può usare dati sintetici o anonimizzati; nessun cliente deve confondere questo MVP con un servizio già disponibile in produzione.
+Il collegamento a un account Google reale, il consenso/verifica OAuth, la qualità AI e i pagamenti reali Stripe non sono collaudati. Mancano recupero password e verifica email, cifratura dell'intero archivio, cancellazione/retention automatica, backup operativi, monitoraggio centralizzato e condivisione fra colleghi. Prima del pilota continuativo con email reali occorre completare i controlli operativi e gli accordi di trattamento. L'isolamento dei dati per account e i flussi di pagamento sono verificabili con test locali, che non dimostrano l'operatività dei fornitori esterni.
 
 ## Riepilogo e agenda
 

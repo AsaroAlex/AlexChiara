@@ -12,12 +12,16 @@ const fs = require('node:fs/promises');
   await anonymous.dispose();
   const browser = await chromium.launch({ executablePath: process.env.FILO_CHROMIUM_PATH || '/usr/bin/chromium', headless: true, args: ['--no-sandbox'] });
   try {
-    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'it-IT', timezoneId: 'America/Los_Angeles', httpCredentials: { username: 'filo', password: 'morning-test' } });
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: 'it-IT', timezoneId: 'America/Los_Angeles' });
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
-    await page.goto(baseURL);
+    await page.goto(`${baseURL}/login`);
+    await page.locator('#auth-form:not([hidden])').waitFor();
+    await page.locator('#auth-email').fill('filo');
+    await page.locator('#auth-password').fill('morning-test');
+    await page.locator('#auth-submit').click();
     await page.waitForSelector('#app-content:not([hidden])');
     const state = () => page.evaluate(async () => (await fetch('/api/bootstrap')).json());
     const click = action => page.locator(`[data-action="${action}"]:visible`).first().click();

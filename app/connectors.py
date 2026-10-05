@@ -315,7 +315,7 @@ def create_router(db):
                         conn.execute("INSERT INTO kv(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (key, json.dumps(value)))
         except ConnectorError as exc:
             raise HTTPException(502, exc.message) from exc
-        return RedirectResponse("/?gmail=connected", status_code=303)
+        return RedirectResponse("/app?gmail=connected" if getattr(request.state, "filo_user", None) else "/?gmail=connected", status_code=303)
 
     @router.post("/disconnect")
     def disconnect():

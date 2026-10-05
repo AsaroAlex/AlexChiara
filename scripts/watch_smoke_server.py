@@ -36,7 +36,7 @@ scratch_root = PROJECT_ROOT / ".runtime"
 scratch_root.mkdir(parents=True, exist_ok=True, mode=0o700)
 scratch = tempfile.TemporaryDirectory(prefix="watch-smoke-fixture-", dir=scratch_root)
 runtime = scratch.name
-app = main_module.create_app(data_dir=runtime, start_worker=False)
+app = main_module.create_workspace_app(data_dir=runtime, start_worker=False)
 db = app.state.db
 contacts = [{"name": "Elena Prova", "email": "elena@watch-smoke.test"},
             {"name": "Luca Prova", "email": "luca@watch-smoke.test"}]

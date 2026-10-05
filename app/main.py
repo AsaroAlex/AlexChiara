@@ -1,17 +1,15 @@
-"""Local single-workspace email service. No API or provider can send email."""
+"""Public Filo site and authenticated, isolated workspaces."""
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
-import base64
-import binascii
 import json
 import os
 from pathlib import Path
 import re
-import secrets
+import threading
 from urllib.parse import urlsplit
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import ai
@@ -30,7 +28,8 @@ CATALOG = [
 ]
 
 
-def create_app(data_dir=None, start_worker=True):
+def create_workspace_app(data_dir=None, start_worker=True):
+    """Internal workspace application; the public factory adds account auth."""
     runtime = Path(data_dir or os.environ.get("ALEXCHIARA_DATA_DIR") or Path(__file__).resolve().parent.parent / ".runtime")
     db = Database(runtime / "alexchiara.sqlite3")
     scheduler = Scheduler(db)
@@ -52,8 +51,6 @@ def create_app(data_dir=None, start_worker=True):
     app.include_router(create_watches_router(db))
     allowed_hosts = {"127.0.0.1", "localhost", "::1", "testserver"}
     allowed_hosts.update(host.strip().lower() for host in os.environ.get("ALEXCHIARA_ALLOWED_HOSTS", "").split(",") if host.strip())
-    access_password = os.environ.get("FILO_ACCESS_PASSWORD", "").encode("utf-8")
-    access_username = os.environ.get("FILO_ACCESS_USERNAME", "filo").encode("utf-8")
 
     @app.middleware("http")
     async def local_session_boundary(request: Request, call_next):
@@ -63,27 +60,6 @@ def create_app(data_dir=None, start_worker=True):
             host = None
         if not host or host.lower() not in allowed_hosts:
             return JSONResponse({"detail": "Host non autorizzato per questo spazio locale."}, status_code=400)
-        is_health_check = request.method == "GET" and request.url.path == "/api/health"
-        if access_password and not is_health_check:
-            scheme, _, encoded = request.headers.get("authorization", "").partition(" ")
-            username, password = b"", b""
-            valid_format = False
-            if scheme.lower() == "basic":
-                try:
-                    decoded = base64.b64decode(encoded, validate=True).decode("utf-8")
-                    user, separator, secret = decoded.partition(":")
-                    username, password = user.encode("utf-8"), secret.encode("utf-8")
-                    valid_format = bool(separator)
-                except (binascii.Error, UnicodeError, ValueError):
-                    pass
-            username_valid = secrets.compare_digest(username, access_username)
-            password_valid = secrets.compare_digest(password, access_password)
-            if not (valid_format and username_valid and password_valid):
-                return JSONResponse(
-                    {"detail": "Autenticazione richiesta."},
-                    status_code=401,
-                    headers={"WWW-Authenticate": 'Basic realm="Filo", charset="UTF-8"'},
-                )
         origin = request.headers.get("origin")
         if origin:
             try:
@@ -94,7 +70,7 @@ def create_app(data_dir=None, start_worker=True):
             if not same_origin:
                 return JSONResponse({"detail": "Origine non autorizzata."}, status_code=403)
         if request.method not in ("GET", "HEAD", "OPTIONS") and request.url.path.startswith("/api/"):
-            if not db.csrf_valid(request.cookies.get("alexchiara_session"), request.headers.get("x-csrf-token")):
+            if not getattr(request.state, "filo_session", None) and not db.csrf_valid(request.cookies.get("alexchiara_session"), request.headers.get("x-csrf-token")):
                 return JSONResponse({"detail": "Sessione non valida. Ricarica la pagina prima di continuare."}, status_code=403)
         if request.method not in ("GET", "HEAD", "OPTIONS"):
             chunks, total = [], 0
@@ -126,9 +102,10 @@ def create_app(data_dir=None, start_worker=True):
         company, service, connection, runs, approvals, briefing = workspace_data(db)
         ai_status = ai.ai_status() if hasattr(ai, "ai_status") else {"mode": "deterministic", "configured": False, "enabled": False, "label": "Analisi locale deterministica"}
         result = {
+            "user": getattr(request.state, "filo_user", None),
             "company": company, "service": service, "connection": connection,
             "runs": runs, "approvals": approvals, "actions": [] if real_data_only() else db.list_actions(), "catalog": CATALOG,
-            "csrf_token": session["csrf"], "mode": "real-mail" if real_data_only() else "local-test", "analysis_mode": "deterministic", "ai": ai_status,
+            "csrf_token": getattr(request.state, "filo_session", {}).get("csrf_token", session["csrf"]), "mode": "real-mail" if real_data_only() else "local-test", "analysis_mode": "deterministic", "ai": ai_status,
             "demo_failure": None if real_data_only() else db.get_setting("demo_failure"),
             "briefing": briefing,
             "briefing_example": None,
@@ -136,7 +113,7 @@ def create_app(data_dir=None, start_worker=True):
             "watches": build_watch_summary(db),
             "agenda": agenda_summary(db),
             "limitations": [
-                "Spazio dedicato a una sola attività: il server deve restare attivo per i controlli programmati.",
+                "Ogni account ha uno spazio separato: il server deve restare attivo per i controlli programmati.",
                 "Gmail legge solo i messaggi con consenso OAuth e non può inviare email.",
                 "Le bozze richiedono revisione umana: approvarle le segna come verificate, senza inviarle.",
                 "Le bozze Gmail usano regole locali e richiedono revisione umana.",
@@ -341,6 +318,164 @@ def create_app(data_dir=None, start_worker=True):
             return FileResponse(index_path)
         return JSONResponse({"name": "Filo", "message": "Interfaccia in preparazione. Le API sono disponibili.", "bootstrap": "/api/bootstrap"})
 
+    return app
+
+
+def create_app(data_dir=None, start_worker=True):
+    """Serve a public site and resolve private data from the signed-in account."""
+    from .accounts import AccountStore, OWNER_ID, create_account_router
+    from .billing import BillingStore, create_billing_router
+
+    runtime = Path(data_dir or os.environ.get("ALEXCHIARA_DATA_DIR") or Path(__file__).resolve().parent.parent / ".runtime")
+    static = Path(__file__).resolve().parent.parent / "static"
+    accounts = AccountStore(runtime / "accounts.sqlite3")
+    billing = BillingStore(runtime / "billing.sqlite3")
+    workspaces = {}
+    workspace_lock = threading.Lock()
+    running = False
+
+    def workspace(user_id):
+        with workspace_lock:
+            if user_id in workspaces:
+                return workspaces[user_id]
+            if user_id != OWNER_ID and not re.fullmatch(r"[a-f0-9]{32}", user_id):
+                raise ValueError("Identificativo dello spazio non valido.")
+            directory = runtime if user_id == OWNER_ID else runtime / "workspaces" / user_id
+            fresh = not (directory / "alexchiara.sqlite3").exists()
+            private_app = create_workspace_app(directory, start_worker=False)
+            if fresh and user_id != OWNER_ID:
+                private_app.state.db.set_setting("company", {"name": "", "sector": "", "description": "", "signature": "", "demo": False})
+                service = private_app.state.db.get_setting("service")
+                service["priority_contacts"] = []
+                private_app.state.db.set_setting("service", service)
+            workspaces[user_id] = private_app
+            if running and start_worker:
+                private_app.state.scheduler.start()
+            return private_app
+
+    # This remains the original workspace; registering never grants access to it.
+    owner_workspace = workspace(OWNER_ID)
+
+    @asynccontextmanager
+    async def lifespan(app):
+        nonlocal running
+        for user in accounts.list_users():
+            if (runtime / "workspaces" / user["id"] / "alexchiara.sqlite3").exists():
+                workspace(user["id"])
+        running = True
+        if start_worker:
+            for private_app in list(workspaces.values()):
+                private_app.state.scheduler.start()
+        try:
+            yield
+        finally:
+            running = False
+            for private_app in list(workspaces.values()):
+                private_app.state.scheduler.stop()
+
+    app = FastAPI(title="Filo", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+    app.state.accounts = accounts
+    app.state.billing = billing
+    app.state.workspaces = workspaces
+    app.state.runtime = runtime
+    app.state.db = owner_workspace.state.db
+    app.state.scheduler = owner_workspace.state.scheduler
+    allowed_hosts = {"127.0.0.1", "localhost", "::1", "testserver"}
+    allowed_hosts.update(host.strip().lower() for host in os.environ.get("ALEXCHIARA_ALLOWED_HOSTS", "").split(",") if host.strip())
+    public_pages = {"/", "/login", "/register"}
+    auth_paths = {"/api/auth/session", "/api/auth/login", "/api/auth/register", "/api/auth/logout"}
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_error(request, exc):
+        # Validation payloads must never echo a submitted password or token.
+        errors = [{"loc": error["loc"], "msg": error["msg"], "type": error["type"]} for error in exc.errors()]
+        return JSONResponse({"detail": errors}, status_code=422)
+
+    @app.middleware("http")
+    async def account_boundary(request: Request, call_next):
+        try:
+            host = urlsplit("//" + request.headers.get("host", "")).hostname
+        except ValueError:
+            host = None
+        if not host or host.lower() not in allowed_hosts:
+            return JSONResponse({"detail": "Host non autorizzato."}, status_code=400)
+        path = request.url.path
+        webhook = path == "/api/billing/webhook" and request.method == "POST"
+        origin = request.headers.get("origin")
+        if origin and not webhook:
+            try:
+                parsed = urlsplit(origin)
+                same_origin = parsed.scheme in ("http", "https") and parsed.netloc.lower() == request.headers.get("host", "").lower() and not parsed.path and not parsed.query and not parsed.fragment
+            except ValueError:
+                same_origin = False
+            if not same_origin:
+                return JSONResponse({"detail": "Origine non autorizzata."}, status_code=403)
+        session = accounts.resolve_session(request.cookies.get("filo_session"))
+        user = session.get("user") if session and session.get("authenticated") else None
+        request.state.filo_session = session
+        request.state.filo_user = user
+        is_public = path in public_pages or path in auth_paths or path.startswith("/static/") or webhook or (path == "/api/health" and request.method in ("GET", "HEAD"))
+        if not is_public and not user:
+            if path in ("/app", "/app/", "/account", "/account/") and request.method in ("GET", "HEAD"):
+                response = RedirectResponse("/login?next=" + ("/account" if path.startswith("/account") else "/app"), status_code=303)
+                response.headers["Cache-Control"] = "no-store"
+                return response
+            return JSONResponse({"detail": "Accedi a Filo per continuare.", "login_url": "/login"}, status_code=401, headers={"Cache-Control": "no-store"})
+        if request.method not in ("GET", "HEAD", "OPTIONS"):
+            if not webhook and path.startswith("/api/") and not accounts.csrf_valid(request.cookies.get("filo_session"), request.headers.get("x-csrf-token")):
+                return JSONResponse({"detail": "Sessione non valida. Ricarica la pagina prima di continuare."}, status_code=403, headers={"Cache-Control": "no-store"})
+            limit = 512 * 1024 if webhook else 64 * 1024
+            chunks, total = [], 0
+            async for chunk in request.stream():
+                total += len(chunk)
+                if total > limit:
+                    return JSONResponse({"detail": "Richiesta troppo grande."}, status_code=413)
+                chunks.append(chunk)
+            request._body = b"".join(chunks)
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "same-origin"
+        if path.startswith("/api/") or path in ("/login", "/register", "/app", "/app/", "/account", "/account/"):
+            response.headers["Cache-Control"] = "no-store"
+        return response
+
+    app.include_router(create_account_router(accounts))
+    app.include_router(create_billing_router(billing))
+    app.mount("/static", StaticFiles(directory=static), name="static")
+
+    @app.get("/")
+    def home():
+        return FileResponse(static / "landing.html")
+
+    @app.get("/login")
+    @app.get("/register")
+    def auth_page():
+        return FileResponse(static / "auth.html")
+
+    @app.get("/app")
+    @app.get("/app/")
+    def private_home():
+        return FileResponse(static / "index.html")
+
+    @app.get("/account")
+    @app.get("/account/")
+    def account_page():
+        return FileResponse(static / "account.html")
+
+    @app.get("/api/health")
+    def health():
+        return {"status": "ok", "scheduler": "running" if running and start_worker else "disabled", "persistence": "sqlite", "can_send": False}
+
+    class WorkspaceDispatcher:
+        async def __call__(self, scope, receive, send):
+            user = scope.get("state", {}).get("filo_user")
+            if not user:
+                await JSONResponse({"detail": "Accedi a Filo per continuare."}, status_code=401)(scope, receive, send)
+                return
+            await workspace(user["id"])(scope, receive, send)
+
+    app.mount("/", WorkspaceDispatcher())
     return app
 
 

@@ -12,13 +12,21 @@ bash scripts/setup.sh
 bash scripts/start.sh
 ```
 
-Il server locale ascolta sulla porta 8000 dell'interfaccia locale. Apri l'interfaccia con il browser dell'ambiente o con un tunnel privato della tua piattaforma. Per l'accesso online usa l'avvio Railway descritto sotto, che richiede una password; lo spazio resta dedicato a una sola azienda, senza login multiutente.
+Il server locale ascolta sulla porta 8000 dell'interfaccia locale. Apri l'interfaccia con il browser dell'ambiente o con un tunnel privato della tua piattaforma. La homepage è pubblica; `/login` e `/register` portano allo spazio personale `/app` e all'area `/account`. Per l'accesso online usa l'avvio Railway descritto sotto.
 
 ```bash
 bash scripts/check.sh
 ```
 
 `requirements.lock` blocca anche le dipendenze transitive. Le istruzioni di installazione non modificano codice, test o file delle dipendenze. L'ambiente cloud è già isolato: usa il checkout esistente, senza creare worktree.
+
+## Account e abbonamento
+
+L'accesso usa un modulo nella pagina, senza popup HTTP Basic. La sessione persistente usa un cookie HttpOnly, SameSite=Lax e Secure su HTTPS; l'uscita la revoca sul server. Le password degli account registrati sono salvate con scrypt e le mutazioni richiedono un token CSRF. La registrazione crea un nuovo spazio vuoto: azienda, Gmail, contatti, agenda e bozze sono separati dagli altri account.
+
+L'account già esistente accede con il nome e la password configurati dal gestore in `FILO_ACCESS_USERNAME` e `FILO_ACCESS_PASSWORD`, mantenendo i dati precedenti. La creazione di un nuovo account non concede accesso a questo spazio.
+
+L'area personale include il percorso di abbonamento Stripe Checkout e il portale di gestione. **Prezzo da definire: i pagamenti restano disattivati finché il gestore non configura Stripe.** Registrarsi non avvia un addebito; il server sceglie il prezzo e aggiorna lo stato solo tramite webhook firmati. Questa versione non applica un blocco delle funzioni in base all'abbonamento. Il collegamento e gli addebiti reali Stripe non sono stati collaudati. Vedi [configurazione dei pagamenti](docs/BILLING.md).
 
 ## Il tuo buongiorno, già in ordine
 
@@ -37,7 +45,7 @@ Gli avvisi “oggi/domani se risponde questo contatto dimmelo subito” si posso
 Questo percorso è disponibile solo con `FILO_REAL_DATA_ONLY` disabilitato, in un’istanza isolata.
 
 1. Dal catalogo scegli **Segreteria email** o chiedi nella chat di seguire le email dei clienti importanti.
-2. Collega la **casella dimostrativa**. L'azienda fittizia Studio Riva e i contatti di esempio sono modificabili.
+2. Collega la **casella dimostrativa** e compila un'azienda e contatti fittizi per la prova. Lo spazio originale locale può conservare Studio Riva; i nuovi account partono vuoti.
 3. Imposta da uno a quattro clienti prioritari e l'orario quotidiano in Italia.
 4. Guarda l'anteprima: messaggi di esempio, richieste e bozze locali.
 5. Autorizza lettura e preparazione di bozze; l'applicazione non prevede l'invio di email.
@@ -50,19 +58,19 @@ L'adapter AI cloud è implementato e verificato con risposte simulate. Per prova
 
 ## Stato persistente e disponibilità
 
-SQLite e le credenziali locali risiedono nella cartella ignorata `.runtime/`; puoi scegliere un'altra cartella con `ALEXCHIARA_DATA_DIR`. Il processo server controlla la pianificazione indipendentemente dalla pagina e dalla chat. Per la demo basta un unico processo Uvicorn.
+SQLite e le credenziali locali risiedono nella cartella ignorata `.runtime/`; puoi scegliere un'altra cartella con `ALEXCHIARA_DATA_DIR`. Gli account e le sessioni sono in `accounts.sqlite3`, lo stato degli abbonamenti in `billing.sqlite3`. Lo spazio originale conserva `alexchiara.sqlite3`; gli account registrati hanno archivi separati in `workspaces/<id>/`. Il processo server controlla la pianificazione indipendentemente dalla pagina e dalla chat. L'applicazione usa un unico processo Uvicorn.
 
 Database, preferenze, mandati, cronologia e tentativi sopravvivono al riavvio se la cartella dati resta disponibile. I processi non sopravvivono alla pubblicazione di un ambiente cloud o allo spegnimento: riavvia il server. Il servizio riprende il lavoro pendente e recupera un controllo dovuto, senza inventare esecuzioni durante il fermo o produrre in massa tutti gli arretrati. Connessioni interrotte producono errori e tentativi limitati; un consenso revocato richiede un nuovo collegamento.
 
-Prima dell'uso continuativo reale servono backup e ripristino verificato della cartella dati e della chiave locale e isolamento per azienda. Il deploy Railway aggiunge HTTPS, supervisione del processo e un accesso condiviso protetto da password; non introduce account separati o isolamento multiutente. La cifratura dei token non cifra l'intero database delle email.
+Prima dell'uso continuativo reale servono backup e ripristino verificato dell'intera cartella dati e delle chiavi locali. Il deploy Railway aggiunge HTTPS e supervisione del processo; l'applicazione separa i dati per account, senza condivisione o ruoli di squadra. La cifratura dei token non cifra l'intero database delle email.
 
 ## Pubblicazione Railway
 
 `railway.toml` configura Railpack, le dipendenze bloccate, l'avvio su `0.0.0.0:$PORT`, un solo processo e il controllo `/api/health`. Seleziona Python 3.12 tramite `RAILPACK_PYTHON_VERSION=3.12` e collega un volume persistente a `/data` con `ALEXCHIARA_DATA_DIR=/data`. Mantieni una sola replica e disabilita la sospensione automatica: il processo gestisce i controlli programmati.
 
-Prima del deploy imposta nelle variabili Railway `FILO_ACCESS_PASSWORD` con una password robusta; `FILO_ACCESS_USERNAME` è facoltativo e vale `filo` per impostazione predefinita. L'avvio cloud si interrompe se manca la password. Il browser chiede le credenziali prima di mostrare l'interfaccia, le risorse statiche o i dati. Il controllo di salute restituisce solo lo stato tecnico e rimane accessibile a Railway. Puoi cambiare la password nelle variabili e ridistribuire il servizio.
+Prima del deploy imposta nelle variabili Railway `FILO_ACCESS_PASSWORD` con una password robusta; `FILO_ACCESS_USERNAME` è facoltativo e vale `filo` per impostazione predefinita. L'avvio cloud si interrompe se manca la password dell'account esistente. Homepage, login, registrazione e risorse statiche sono pubblici; lo spazio personale e le sue API richiedono una sessione autenticata. Il controllo di salute restituisce solo lo stato tecnico e rimane accessibile a Railway. Cambiare la password del gestore e ridistribuire il servizio revoca le sue sessioni precedenti.
 
-Genera il dominio HTTPS Railway prima del deploy. Lo script include automaticamente `RAILWAY_PUBLIC_DOMAIN`, `RAILWAY_PRIVATE_DOMAIN` e `healthcheck.railway.app` tra gli host consentiti; per un dominio personalizzato aggiungilo a `ALEXCHIARA_ALLOWED_HOSTS`. Il deploy parte con dati nuovi: la cartella locale `.runtime/`, le chiavi e le credenziali non vanno in Git. Gmail e AI rimangono facoltativi e richiedono le loro variabili dedicate. Il volume conserva lo stato fra i deploy; un redeploy con volume può causare una breve interruzione.
+Genera il dominio HTTPS Railway prima del deploy. Lo script include automaticamente `RAILWAY_PUBLIC_DOMAIN`, `RAILWAY_PRIVATE_DOMAIN` e `healthcheck.railway.app` tra gli host consentiti; per un dominio personalizzato aggiungilo a `ALEXCHIARA_ALLOWED_HOSTS`. Un volume nuovo parte senza dati locali; un volume esistente conserva lo spazio precedente. La cartella locale `.runtime/`, le chiavi e le credenziali non vanno in Git. Gmail e AI rimangono facoltativi e richiedono le loro variabili dedicate. Il volume conserva lo stato fra i deploy; un redeploy con volume può causare una breve interruzione.
 
 ## Account e AI reali
 
@@ -72,12 +80,14 @@ La progettazione del prodotto, il confronto dei moduli, le fonti e la proposta c
 
 ## Ambito
 
-Questo è un MVP verificabile, disponibile anche su Railway con accesso protetto. Non include pagamenti, invio email, sincronizzazione delle bozze Gmail o dei calendari esterni, telefonia, campagne o gestione multiutente. Non modifica account esterni e non impegna budget pubblicitario.
+Questo è un MVP verificabile, disponibile anche su Railway con homepage pubblica e account separati. Include il percorso Stripe da configurare, ma non un prezzo attivo o un paywall. Non include invio email, sincronizzazione delle bozze Gmail o dei calendari esterni, telefonia, campagne, condivisione dello spazio fra colleghi o recupero password tramite email. Non impegna budget pubblicitario.
 
-La prova browser facoltativa `node scripts/browser-smoke.cjs` richiede Playwright e Chromium, già presenti nell'ambiente cloud ma non necessari all'app. Usala contro un'istanza dimostrativa inizialmente inattiva con dati nuovi: modifica soltanto l'azienda fittizia e la sua configurazione. Per isolare la prova puoi avviare il server con `ALEXCHIARA_DATA_DIR` in una cartella temporanea e `FILO_PORT=8001`; imposta anche `FILO_PORT=8001` per il comando del test. Il controllo parte dalla configurazione guidata e verifica risultati, revisione, preferenze, errori, recupero e chat. Le prove API di `scripts/check.sh` isolano automaticamente i dati.
+La prova browser facoltativa `node scripts/browser-smoke.cjs` richiede Playwright e Chromium, già presenti nell'ambiente cloud ma non necessari all'app. Usala contro un'istanza dimostrativa inizialmente inattiva con dati nuovi: modifica soltanto l'azienda fittizia e la sua configurazione. Per isolare la prova avvia il server con `ALEXCHIARA_DATA_DIR` in una cartella temporanea, `FILO_PORT=8001` e `FILO_ACCESS_PASSWORD=browser-test`; imposta anche `FILO_PORT=8001` per il comando del test. Il controllo accede tramite modulo e verifica configurazione guidata, risultati, revisione, preferenze, errori, recupero e chat. Una password di prova diversa si può indicare al test con `FILO_TEST_OWNER_PASSWORD`. Le prove API di `scripts/check.sh` isolano automaticamente i dati e includono il confine di autenticazione e l'isolamento fra account.
 
-La prova `node scripts/morning-smoke.cjs` usa una nuova istanza isolata sulla porta 8002, con `FILO_ACCESS_PASSWORD=morning-test`; imposta `ALEXCHIARA_DATA_DIR` a una cartella temporanea e avvia Uvicorn con `.venv/bin/python`. Verifica l’accesso protetto, il riepilogo prima e dopo il controllo, la persistenza delle bozze aperte, la revisione senza duplicati, l’agenda con browser in un altro fuso, il download e il layout desktop/mobile. Non usarla sul servizio Railway o su dati reali.
+La prova `FILO_PORT=8002 node scripts/morning-smoke.cjs` usa una nuova istanza isolata sulla porta 8002, con `FILO_ACCESS_PASSWORD=morning-test`; imposta `ALEXCHIARA_DATA_DIR` a una cartella temporanea e avvia `app.main:create_app` con `.venv/bin/python`, oppure usa `scripts/start.sh` con la porta scelta. Verifica l’accesso con modulo, il riepilogo prima e dopo il controllo, la persistenza delle bozze aperte, la revisione senza duplicati, l’agenda con browser in un altro fuso, il download e il layout desktop/mobile. Non usarla sul servizio Railway o su dati reali.
 
-La prova `FILO_PORT=8014 node scripts/real-mode-smoke.cjs` verifica un’istanza nuova con `FILO_REAL_DATA_ONLY=1`: pagina vuota senza dati dimostrativi, accesso alla guida Google, callback corretta e layout mobile. Non configura credenziali né legge email.
+La prova `FILO_PORT=8014 node scripts/real-mode-smoke.cjs` verifica un’istanza nuova con `FILO_REAL_DATA_ONLY=1` e `FILO_ACCESS_PASSWORD=real-mode-test`: accesso tramite sessione, pagina vuota senza dati dimostrativi, guida Google, callback corretta e layout mobile. Una password diversa si può indicare con `FILO_TEST_OWNER_PASSWORD`. La prova non modifica i dati dello spazio, non configura credenziali e non legge email.
+
+La prova `node scripts/account-smoke.cjs` avvia autonomamente un server temporaneo isolato e verifica homepage, login, registrazione, persistenza della sessione dopo refresh, uscita, area personale e pagamenti non configurati. Le schermate sono controllate su desktop e telefono; nessun addebito o collegamento a provider reale viene effettuato.
 
 La prova completa degli avvisi usa un server fixture riproducibile: in un terminale avvia `.venv/bin/python scripts/watch_smoke_server.py`, nell’altro `FILO_PORT=8016 node scripts/watch-smoke.cjs`. Il server ascolta solo su localhost, disabilita worker e chiamate ai provider e usa un database temporaneo eliminato all’arresto. Verifica form, proposta in chat, conferma, arrivo osservato in cima alle priorità, link alla casella corretta e chiusura persistente.

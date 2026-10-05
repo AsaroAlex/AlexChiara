@@ -19,7 +19,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app import ai, connectors, demo
-from app.main import create_app
+from app.main import create_workspace_app as create_app
 
 
 UTC = timezone.utc
@@ -92,68 +92,6 @@ def disable_external_ai_by_default(monkeypatch):
 def disable_deployment_access_by_default(monkeypatch):
     monkeypatch.delenv("FILO_ACCESS_PASSWORD", raising=False)
     monkeypatch.delenv("FILO_ACCESS_USERNAME", raising=False)
-
-
-@pytest.mark.parametrize("path", ["/", "/static/app.js", "/api/bootstrap"])
-def test_deployment_password_protects_interface_and_data(tmp_path, monkeypatch, path):
-    monkeypatch.setenv("FILO_ACCESS_PASSWORD", "deployment-secret")
-    app = create_app(data_dir=tmp_path, start_worker=False)
-    with TestClient(app) as client:
-        response = client.get(path)
-        assert response.status_code == 401
-        assert response.headers["www-authenticate"] == 'Basic realm="Filo", charset="UTF-8"'
-        assert response.json() == {"detail": "Autenticazione richiesta."}
-        assert "alexchiara_session" not in response.cookies
-
-
-@pytest.mark.parametrize(
-    "authorization",
-    [
-        "Basic " + base64.b64encode(b"other:deployment-secret").decode(),
-        "Basic " + base64.b64encode(b"filo:wrong-secret").decode(),
-        "Basic " + base64.b64encode(b"filo").decode(),
-        "Basic invalid-base64!",
-        "Basic " + base64.b64encode(b"filo:\xff").decode(),
-        "Bearer deployment-secret",
-    ],
-)
-def test_deployment_password_rejects_invalid_credentials(tmp_path, monkeypatch, authorization):
-    monkeypatch.setenv("FILO_ACCESS_PASSWORD", "deployment-secret")
-    app = create_app(data_dir=tmp_path, start_worker=False)
-    with TestClient(app) as client:
-        response = client.get("/api/bootstrap", headers={"Authorization": authorization})
-        assert response.status_code == 401
-
-
-@pytest.mark.parametrize("username", ["filo", "proprietario"])
-def test_deployment_password_allows_authenticated_use(tmp_path, monkeypatch, username):
-    password = "segreto-con-accento-è"
-    monkeypatch.setenv("FILO_ACCESS_PASSWORD", password)
-    if username == "filo":
-        monkeypatch.delenv("FILO_ACCESS_USERNAME", raising=False)
-    else:
-        monkeypatch.setenv("FILO_ACCESS_USERNAME", username)
-    encoded = base64.b64encode(f"{username}:{password}".encode("utf-8")).decode()
-    app = create_app(data_dir=tmp_path, start_worker=False)
-    with TestClient(app, headers={"Authorization": "Basic " + encoded}) as client:
-        assert client.get("/").status_code == 200
-        assert client.get("/static/app.js").status_code == 200
-        browser = Browser(client)
-        assert browser.state()["company"]["name"] == "Studio Riva"
-        assert browser.ok("POST", "/api/connection/demo")["connection"]["status"] == "connected"
-        # Password access keeps the existing session/CSRF boundary in force.
-        assert client.post("/api/connection/demo").status_code == 403
-
-
-def test_deployment_health_remains_public_but_options_requires_auth(tmp_path, monkeypatch):
-    monkeypatch.setenv("FILO_ACCESS_PASSWORD", "deployment-secret")
-    app = create_app(data_dir=tmp_path, start_worker=False)
-    with TestClient(app) as client:
-        response = client.get("/api/health")
-        assert response.status_code == 200
-        assert response.json() == {"status": "ok", "scheduler": "disabled", "persistence": "sqlite", "can_send": False}
-        assert client.options("/api/bootstrap").status_code == 401
-        assert client.options("/api/health").status_code == 401
 
 
 def test_local_access_is_unchanged_without_deployment_password(tmp_path, monkeypatch):

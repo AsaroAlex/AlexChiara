@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-# The hosted workspace requires authentication before it can serve any data.
+# Preserve the existing owner login while every private workspace requires an account.
 : "${FILO_ACCESS_PASSWORD:?Imposta FILO_ACCESS_PASSWORD nelle variabili Railway.}"
 export ALEXCHIARA_DATA_DIR="${ALEXCHIARA_DATA_DIR:-/data}"
 export ALEXCHIARA_ALLOWED_HOSTS="${ALEXCHIARA_ALLOWED_HOSTS:+${ALEXCHIARA_ALLOWED_HOSTS},}${RAILWAY_PUBLIC_DOMAIN:-},${RAILWAY_PRIVATE_DOMAIN:-},healthcheck.railway.app"

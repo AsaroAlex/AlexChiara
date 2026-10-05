@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#fafafa">
+  <meta name="robots" content="noindex">
+  <title>Accedi · Filo</title>
+  <link rel="stylesheet" href="/static/site.css">
+  <script src="/static/site.js" defer></script>
+</head>
+<body data-page="auth">
+  <a class="skip-link" href="#main-content">Vai al contenuto</a>
+  <header class="site-header"><div class="header-inner"><a class="brand" href="/" aria-label="Filo, homepage"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span>filo<span class="brand-dot">.</span></span></a><a class="text-link" href="/">Torna al sito <svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M6 6h12v12"/></svg></a></div></header>
+  <main id="main-content" class="auth-layout content-width" tabindex="-1">
+    <div class="auth-intro"><p class="eyebrow">Il tuo spazio, con Filo.</p><h1>La tua giornata,<br>con più spazio<span class="accent-dot">.</span></h1><p>Priorità chiare, risposte da rivedere e la giornata davanti a te.</p><div class="auth-assurance"><svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M6 6h12v12"/></svg><p>Accedi e riprendi da dove eri rimasta o rimasto.</p></div></div>
+    <section class="auth-card" aria-labelledby="auth-title">
+      <div class="auth-heading"><h2 id="auth-title">Accedi a Filo.</h2><p id="auth-description">La tua giornata ti aspetta.</p></div>
+      <div id="auth-error" class="notice error" role="alert" hidden></div>
+      <div id="auth-loading" class="notice quiet" role="status">Prepariamo l’accesso…</div>
+      <form id="auth-form" hidden>
+        <div id="auth-name-field" class="field" hidden><label for="auth-name">Il tuo nome</label><input id="auth-name" name="name" autocomplete="name" maxlength="120" placeholder="Come ti chiami?"></div>
+        <div class="field"><label id="auth-email-label" for="auth-email">Email o nome utente</label><input id="auth-email" name="email" type="text" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false" maxlength="254" placeholder="La tua email" required></div>
+        <div class="field"><label for="auth-password">Password</label><div class="password-field"><input id="auth-password" name="password" type="password" autocomplete="current-password" maxlength="128" required aria-describedby="auth-password-hint"><button id="password-toggle" type="button" class="password-toggle" aria-label="Mostra password" aria-pressed="false">Mostra</button></div><p id="auth-password-hint" class="field-hint">Usa le credenziali del tuo account Filo.</p></div>
+        <p id="auth-legacy-note" class="field-hint legacy-note">Hai già l’accesso iniziale? Usa <strong>filo</strong> e la stessa password.</p>
+        <p id="register-payment-note" class="registration-note" hidden>Creare l’account non attiva un pagamento. Potrai scegliere l’abbonamento dal tuo account.</p>
+        <button id="auth-submit" class="button primary full-width" type="submit">Accedi <svg class="arrow-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 18 18 6M6 6h12v12"/></svg></button>
+        <p id="auth-progress" class="field-hint" role="status" aria-live="polite"></p>
+      </form>
+      <p class="auth-switch"><span id="auth-switch-copy">Non hai un account?</span> <a id="auth-switch-link" class="text-link" href="/register">Registrati</a></p>
+    </section>
+  </main>
+  <footer class="auth-footer content-width"><span>filo.</span><p>Una cosa alla volta.</p></footer>
+</body>
+</html>
