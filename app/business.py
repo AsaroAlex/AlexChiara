@@ -12,9 +12,10 @@ from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, HTTPException, Path, Query
 from fastapi.responses import Response
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, ValidationError, field_validator
 
 from .business_catalog import get_service, list_services
+from .business_playbooks import get_playbook
 from .company import get_document_company
 
 
@@ -68,6 +69,7 @@ class RecordInput(BaseModel):
     priority: Priority = "normal"
     notes: str = Field(default="", max_length=2000)
     details: dict[str, Any] = Field(default_factory=dict, max_length=24)
+    steps: dict[str, StrictBool] = Field(default_factory=dict, max_length=6)
     saved_minutes: int = Field(default=0, ge=0, le=100000, strict=True)
 
     @field_validator("title", "contact", "notes")
@@ -91,6 +93,7 @@ class RecordPatch(BaseModel):
     priority: Priority | None = None
     notes: str | None = Field(default=None, max_length=2000)
     details: dict[str, Any] | None = Field(default=None, max_length=24)
+    steps: dict[str, StrictBool] | None = Field(default=None, max_length=6)
     saved_minutes: int | None = Field(default=None, ge=0, le=100000, strict=True)
 
     @field_validator("title", "contact", "notes")
@@ -131,6 +134,33 @@ class ConversionInput(BaseModel):
         return _calendar_date(value)
 
 
+class RepetitionInput(BaseModel):
+    """A reviewed new activity; progress and source authority are never copied."""
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    next_date: str
+    title: str | None = Field(default=None, min_length=1, max_length=160)
+    contact: str | None = Field(default=None, max_length=200)
+    priority: Priority | None = None
+    notes: str | None = Field(default=None, max_length=2000)
+    details: dict[str, Any] | None = Field(default=None, max_length=24)
+
+    @field_validator("title", "contact", "notes")
+    @classmethod
+    def validate_text(cls, value, info):
+        if value is None:
+            return value
+        return _readable_text(value, multiline=info.field_name == "notes")
+
+    @field_validator("next_date", mode="before")
+    @classmethod
+    def validate_date(cls, value):
+        parsed = _calendar_date(value)
+        if parsed is None:
+            raise ValueError("Indica la data della prossima attività.")
+        return parsed
+
+
 def _initialize(db):
     with db.connection() as conn:
         conn.executescript("""
@@ -144,6 +174,7 @@ def _initialize(db):
                 priority TEXT NOT NULL DEFAULT 'normal',
                 notes TEXT NOT NULL DEFAULT '',
                 details TEXT NOT NULL DEFAULT '{}',
+                steps TEXT NOT NULL DEFAULT '{}',
                 saved_minutes INTEGER NOT NULL DEFAULT 0,
                 source TEXT NOT NULL DEFAULT 'manual',
                 created_at TEXT NOT NULL,
@@ -157,7 +188,18 @@ def _initialize(db):
                 target_service_id TEXT NOT NULL,
                 PRIMARY KEY (source_record_id, target_service_id)
             );
+            CREATE TABLE IF NOT EXISTS business_repeats (
+                source_record_id TEXT NOT NULL REFERENCES business_records(id) ON DELETE CASCADE,
+                target_record_id TEXT NOT NULL UNIQUE REFERENCES business_records(id) ON DELETE CASCADE,
+                next_date TEXT NOT NULL,
+                PRIMARY KEY (source_record_id, next_date)
+            );
         """)
+        # A serialized additive migration preserves every existing activity.
+        conn.execute("BEGIN IMMEDIATE")
+        columns = {row["name"] for row in conn.execute("PRAGMA table_info(business_records)")}
+        if "steps" not in columns:
+            conn.execute("ALTER TABLE business_records ADD COLUMN steps TEXT NOT NULL DEFAULT '{}'")
 
 
 def _service(service_id, *, writable=False):
@@ -271,6 +313,69 @@ def _measurement(item):
     }
 
 
+def _validated_steps(service_id, values):
+    playbook = get_playbook(service_id) or {"steps": []}
+    allowed = {step["id"] for step in playbook["steps"]}
+    if any(step_id not in allowed for step_id in values):
+        raise ValueError("Sono presenti passaggi non previsti per questo servizio.")
+    if any(not isinstance(value, bool) for value in values.values()):
+        raise ValueError("Indica completato o da fare per ogni passaggio.")
+    return dict(values)
+
+
+def _record_playbook(item):
+    definition = get_playbook(item["service_id"]) or {"steps": []}
+    steps = [{"id": step["id"], "label": step["label"], "checked": item["steps"].get(step["id"]) is True}
+             for step in definition["steps"]]
+    pending = next((step for step in steps if not step["checked"]), None)
+    return {"steps": steps, "completed": sum(step["checked"] for step in steps), "total": len(steps),
+            "next_step": {"id": pending["id"], "label": pending["label"]} if pending else None}
+
+
+def _effective_due(item):
+    if item.get("due_date"):
+        return item["due_date"], {"type": "record", "label": "Scadenza dell’attività"}
+    definition = get_playbook(item["service_id"]) or {"due_fields": []}
+    fields = {field["id"]: field for field in _service(item["service_id"])["fields"]}
+    for field_id in definition["due_fields"]:
+        value = item.get("details", {}).get(field_id)
+        if value:
+            return value, {"type": "field", "label": fields[field_id]["label"]}
+    return None, None
+
+
+def _metadata_projection():
+    """Extract only scheduling/stock/financial metadata, never every document."""
+    clauses = []
+    for service in list_services():
+        if service["kind"] != "business":
+            continue
+        playbook = get_playbook(service["id"]) or {"due_fields": []}
+        due_fields = playbook["due_fields"]
+        if due_fields:
+            # Identifiers are fixed by the trusted catalog, never query input.
+            parts = [f"NULLIF(json_extract(details, '$.{field_id}'),'')" for field_id in due_fields]
+            expression = parts[0] if len(parts) == 1 else "COALESCE(" + ",".join(parts) + ")"
+            clauses.append(f"WHEN '{service['id']}' THEN {expression}")
+    derived = "CASE service_id " + " ".join(clauses) + " ELSE NULL END" if clauses else "NULL"
+    return f"""id, status, priority, due_date, created_at, saved_minutes, service_id,
+        COALESCE(NULLIF(due_date,''),{derived}) AS effective_due_date,
+        CASE WHEN service_id='inventory' THEN details ELSE NULL END AS inventory_details,
+        CASE WHEN service_id IN ('receivables','expenses') THEN json_extract(details,'$.amount') ELSE NULL END AS finance_amount"""
+
+
+def _stock_reorder(item):
+    if item["service_id"] != "inventory":
+        return None
+    details = item["details"]
+    if "quantity" not in details or "reorder_level" not in details:
+        return None
+    quantity = Decimal(str(details["quantity"]))
+    minimum = Decimal(str(details["reorder_level"]))
+    return {"quantity": format(quantity, "f"), "minimum": format(minimum, "f"),
+            "suggested_quantity": format(max(minimum - quantity, Decimal(0)), "f")}
+
+
 def _stock_below_minimum(item):
     if item["service_id"] != "inventory":
         return False
@@ -320,6 +425,8 @@ def _document(item, service, company=None):
         lines.append(f'Referente: {item["contact"]}')
     if item["due_date"]:
         lines.append(f'Scadenza inserita: {date.fromisoformat(item["due_date"]).strftime("%d/%m/%Y")}')
+    elif item.get("effective_due_date"):
+        lines.append(f'Scadenza da «{item["due_source"]["label"]}»: {date.fromisoformat(item["effective_due_date"]).strftime("%d/%m/%Y")}')
     lines.append(f'Stato: {labels[item["status"]]}')
     for field in service.get("fields", []):
         value = item["details"].get(field["id"])
@@ -355,6 +462,12 @@ def _document(item, service, company=None):
         origin = item["links"]["source"]
         lines.extend(["", f'Origine interna: {_service(origin["service_id"])["name"]} — {origin["title"]}',
                       "I dati sono stati copiati alla creazione e possono essere modificati separatamente."])
+    if item.get("playbook", {}).get("steps"):
+        lines.extend(["", "Passaggi operativi — stato segnato manualmente da te:"])
+        lines.extend(f'{"[x]" if step["checked"] else "[ ]"} {step["label"]}' for step in item["playbook"]["steps"])
+    if item.get("stock_reorder"):
+        lines.extend(["", f'Quantità suggerita per raggiungere la soglia: {item["stock_reorder"]["suggested_quantity"]}.',
+                      "Calcolo sulle quantità inserite; nessun movimento di magazzino o acquisto eseguito."])
     if item["attention_reason"] == "stock_below_minimum":
         lines.extend(["", "Prossimo passo:", item["next_action"]])
     if service.get("output_footer"):
@@ -366,11 +479,24 @@ def _document(item, service, company=None):
 def _item(row, *, company=None, links=None):
     item = dict(row)
     item["details"] = json.loads(item["details"])
+    item["steps"] = json.loads(item.get("steps") or "{}")
     service = _service(item["service_id"])
     item["service_name"] = service["name"]
     item["totals"] = _totals(item)
     item["measurement"] = _measurement(item)
+    item["playbook"] = _record_playbook(item)
+    item["effective_due_date"], item["due_source"] = _effective_due(item)
+    item["stock_reorder"] = _stock_reorder(item)
     item["next_action"] = service.get("next_action", "Verifica i dati e completa l’attività.")
+    if item["status"] in OPEN_STATUSES:
+        if item["playbook"]["next_step"]:
+            item["next_action"] = item["playbook"]["next_step"]["label"]
+        elif item["playbook"]["total"]:
+            item["next_action"] = "Hai segnato tutti i passaggi. Se hai finito, completa l’attività."
+    elif item["status"] == "done":
+        item["next_action"] = "Attività completata. Puoi consultare il documento o ripartire con una nuova attività."
+    elif item["status"] == "cancelled":
+        item["next_action"] = "Attività annullata. Puoi consultarla o riaprirla."
     item["attention_reason"] = _attention_reason(item)
     item["attention"] = item["attention_reason"] is not None
     if item["attention_reason"] == "stock_below_minimum":
@@ -406,6 +532,21 @@ def _record_links(conn, record_ids):
             result[row["source_record_id"]]["targets"].append({"id": row["target_record_id"], "title": row["target_title"], "service_id": row["target_service_id"]})
         if row["target_record_id"] in result:
             result[row["target_record_id"]]["source"] = {"id": row["source_record_id"], "title": row["source_title"], "service_id": row["source_service_id"]}
+    repeat_rows = conn.execute(f"""
+        SELECT l.source_record_id,l.target_record_id,
+               s.title AS source_title,s.service_id AS source_service_id,
+               t.title AS target_title,t.service_id AS target_service_id
+        FROM business_repeats l
+        JOIN business_records s ON s.id=l.source_record_id
+        JOIN business_records t ON t.id=l.target_record_id
+        WHERE l.source_record_id IN ({placeholders}) OR l.target_record_id IN ({placeholders})
+        ORDER BY t.created_at,t.id
+    """, [*ids, *ids]).fetchall()
+    for row in repeat_rows:
+        if row["source_record_id"] in result:
+            result[row["source_record_id"]]["targets"].append({"id": row["target_record_id"], "title": row["target_title"], "service_id": row["target_service_id"], "kind": "repeat"})
+        if row["target_record_id"] in result:
+            result[row["target_record_id"]]["source"] = {"id": row["source_record_id"], "title": row["source_title"], "service_id": row["source_service_id"], "kind": "repeat"}
     return result
 
 
@@ -435,20 +576,45 @@ def _conversion_proposal(row, target_service_id):
             "details": mapped, "saved_minutes": 0}
 
 
+def _repetition_date(value):
+    try:
+        parsed = _calendar_date(value)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if not parsed or parsed <= _today():
+        raise HTTPException(status_code=422, detail="Scegli una data successiva a oggi per la prossima attività (fuso Europe/Rome).")
+    return parsed
+
+
+def _repetition_proposal(row, next_date):
+    service = _service(row["service_id"], writable=True)
+    details = json.loads(row["details"])
+    for field in service["fields"]:
+        if field["type"] == "date":
+            details.pop(field["id"], None)
+    due_fields = (get_playbook(row["service_id"]) or {"due_fields": []})["due_fields"]
+    if due_fields:
+        details[due_fields[0]] = next_date
+    return {"service_id": row["service_id"], "title": row["title"], "contact": row["contact"],
+            "due_date": next_date, "status": "todo", "priority": row["priority"], "notes": row["notes"],
+            "details": details, "saved_minutes": 0, "steps": {}}
+
+
 def _insert_record(conn, payload, *, source="manual"):
     """Validate and insert within the caller's write transaction."""
     try:
         service = _service(payload.service_id, writable=True)
         details = _validated_details(service, payload.details)
+        steps = _validated_steps(payload.service_id, payload.steps)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     if conn.execute("SELECT COUNT(*) FROM business_records").fetchone()[0] >= MAX_RECORDS:
         raise HTTPException(status_code=409, detail="Hai raggiunto il limite di attività salvate. Elimina quelle non più necessarie.")
     values = payload.model_dump()
-    values.update({"id": uuid4().hex, "details": json.dumps(details, ensure_ascii=False), "source": source,
+    values.update({"id": uuid4().hex, "details": json.dumps(details, ensure_ascii=False), "steps": json.dumps(steps, ensure_ascii=False), "source": source,
                    "created_at": datetime.now(UTC).isoformat(timespec="microseconds")})
     values["updated_at"] = values["created_at"]
-    conn.execute("INSERT INTO business_records(id,service_id,title,contact,due_date,status,priority,notes,details,saved_minutes,source,created_at,updated_at) VALUES (:id,:service_id,:title,:contact,:due_date,:status,:priority,:notes,:details,:saved_minutes,:source,:created_at,:updated_at)", values)
+    conn.execute("INSERT INTO business_records(id,service_id,title,contact,due_date,status,priority,notes,details,steps,saved_minutes,source,created_at,updated_at) VALUES (:id,:service_id,:title,:contact,:due_date,:status,:priority,:notes,:details,:steps,:saved_minutes,:source,:created_at,:updated_at)", values)
     return conn.execute("SELECT * FROM business_records WHERE id=?", (values["id"],)).fetchone()
 
 
@@ -460,7 +626,7 @@ def _today(now=None):
 
 
 def _urgency(item, today):
-    due = item["due_date"]
+    due = item.get("effective_due_date", item["due_date"])
     if due and due < today:
         return "overdue"
     if due == today:
@@ -470,6 +636,26 @@ def _urgency(item, today):
     return "upcoming" if due else "undated"
 
 
+def _financial_summary(open_items, today):
+    summary = {"currency": "EUR", "source": "Importi inseriti dall’utente; non collegati alla banca e non verificati automaticamente."}
+    for service_id, group in (("receivables", "receivables"), ("expenses", "payables")):
+        totals = {"open_amount": Decimal(0), "overdue_amount": Decimal(0), "today_amount": Decimal(0), "count": 0}
+        for item in open_items:
+            amount = item.get("finance_amount")
+            if item["service_id"] != service_id or amount is None:
+                continue
+            value = Decimal(str(amount))
+            totals["open_amount"] += value
+            totals["count"] += 1
+            due = item.get("effective_due_date")
+            if due and due < today:
+                totals["overdue_amount"] += value
+            elif due == today:
+                totals["today_amount"] += value
+        summary[group] = {key: format(value, ".2f") if isinstance(value, Decimal) else value for key, value in totals.items()}
+    return summary
+
+
 def business_summary(db, now=None):
     """Prioritize only recorded work using the Rome calendar day."""
     today = _today(now)
@@ -477,13 +663,13 @@ def business_summary(db, now=None):
     with db.connection() as conn:
         # One read snapshot keeps counts and documents consistent with concurrent edits.
         conn.execute("BEGIN")
-        rows = conn.execute("SELECT id, status, priority, due_date, created_at, saved_minutes, service_id, CASE WHEN service_id='inventory' THEN details ELSE NULL END AS inventory_details FROM business_records").fetchall()
+        rows = conn.execute("SELECT " + _metadata_projection() + " FROM business_records").fetchall()
         items = [dict(row) for row in rows]
         open_items = [item for item in items if item["status"] in OPEN_STATUSES]
         for item in open_items:
             item["urgency"] = _urgency(item, today)
         ranks = {"overdue": 0, "today": 1, "attention": 2, "upcoming": 3, "undated": 4}
-        open_items.sort(key=lambda item: (ranks[item["urgency"]], PRIORITY_VALUES.index(item["priority"]), item["due_date"] or "9999-12-31", item["created_at"], item["id"]))
+        open_items.sort(key=lambda item: (ranks[item["urgency"]], PRIORITY_VALUES.index(item["priority"]), item["effective_due_date"] or "9999-12-31", item["created_at"], item["id"]))
         next_actions = []
         links = _record_links(conn, [metadata["id"] for metadata in open_items[:12]])
         for metadata in open_items[:12]:
@@ -495,6 +681,7 @@ def business_summary(db, now=None):
         "date": today, "timezone": "Europe/Rome", "source": SOURCE,
         "totals": {"total": len(items), "open": len(open_items), "overdue": sum(item["urgency"] == "overdue" for item in open_items), "today": sum(item["urgency"] == "today" for item in open_items), "done": counts["done"], "waiting": counts["waiting"]},
         "counts": counts, "next_actions": next_actions,
+        "financial_summary": _financial_summary(open_items, today),
         "attention_count": sum(bool(_attention_reason(item)) for item in open_items),
         "declared_saved_minutes": sum(item["saved_minutes"] for item in items if item["status"] == "done"),
         "savings_source": "Minuti dichiarati dall’utente per attività completate; non misurati automaticamente.",
@@ -504,12 +691,14 @@ def business_summary(db, now=None):
 def business_services(db, now=None):
     today = _today(now)
     with db.connection() as conn:
-        rows = conn.execute("SELECT service_id, status, due_date FROM business_records").fetchall()
+        rows = conn.execute("SELECT " + _metadata_projection() + " FROM business_records").fetchall()
     services = list_services()
     for service in services:
         records = [row for row in rows if row["service_id"] == service["id"]]
         counts = {status: sum(row["status"] == status for row in records) for status in STATUS_VALUES}
-        service.update({"record_count": len(records), "open_count": sum(counts[status] for status in OPEN_STATUSES), "overdue_count": sum(row["status"] in OPEN_STATUSES and bool(row["due_date"]) and row["due_date"] < today for row in records), "counts": counts})
+        service.update({"record_count": len(records), "open_count": sum(counts[status] for status in OPEN_STATUSES), "overdue_count": sum(row["status"] in OPEN_STATUSES and bool(row["effective_due_date"]) and row["effective_due_date"] < today for row in records), "counts": counts})
+        if service["kind"] == "business":
+            service["playbook"] = get_playbook(service["id"])
     return {"services": services, "source": SOURCE, "date": today, "timezone": "Europe/Rome"}
 
 
@@ -601,12 +790,19 @@ def create_business_router(db):
                 except ValueError as exc:
                     raise HTTPException(status_code=422, detail=str(exc)) from exc
                 changes["details"] = json.dumps(normalized, ensure_ascii=False)
+            if "steps" in changes:
+                merged_steps = {**json.loads(item.get("steps") or "{}"), **changes["steps"]}
+                try:
+                    normalized_steps = _validated_steps(item["service_id"], merged_steps)
+                except ValueError as exc:
+                    raise HTTPException(status_code=422, detail=str(exc)) from exc
+                changes["steps"] = json.dumps(normalized_steps, ensure_ascii=False)
             for key in ("contact", "notes"):
                 if key in changes and changes[key] is None:
                     changes[key] = ""
             item.update(changes)
             item["updated_at"] = datetime.now(UTC).isoformat(timespec="microseconds")
-            conn.execute("UPDATE business_records SET title=:title,contact=:contact,due_date=:due_date,status=:status,priority=:priority,notes=:notes,details=:details,saved_minutes=:saved_minutes,updated_at=:updated_at WHERE id=:id", item)
+            conn.execute("UPDATE business_records SET title=:title,contact=:contact,due_date=:due_date,status=:status,priority=:priority,notes=:notes,details=:details,steps=:steps,saved_minutes=:saved_minutes,updated_at=:updated_at WHERE id=:id", item)
             updated = _item(conn.execute("SELECT * FROM business_records WHERE id=?", (record_id,)).fetchone(), company=company, links=_record_links(conn, [record_id])[record_id])
         return {"item": updated}
 
@@ -661,6 +857,54 @@ def create_business_router(db):
                 raise HTTPException(status_code=422, detail="Controlla i campi della bozza: alcuni valori non sono validi.") from exc
             target = _insert_record(conn, validated, source="conversion")
             conn.execute("INSERT INTO business_links(source_record_id,target_record_id,target_service_id) VALUES(?,?,?)", (record_id, target["id"], payload.target_service_id))
+            item = _item(target, company=company, links=_record_links(conn, [target["id"]])[target["id"]])
+        return {"item": item, "created": True, "source": _record_identity(row)}
+
+    @router.get("/records/{record_id}/repetition")
+    def repetition_proposal(next_date: str = Query(min_length=10, max_length=10), record_id: str = Path(pattern=r"^[a-f0-9]{32}$")):
+        next_date = _repetition_date(next_date)
+        company = get_document_company(db)
+        with db.connection() as conn:
+            conn.execute("BEGIN")
+            row = conn.execute("SELECT * FROM business_records WHERE id=?", (record_id,)).fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Attività non trovata.")
+            proposal = _repetition_proposal(row, next_date)
+            existing_row = conn.execute("SELECT r.* FROM business_repeats l JOIN business_records r ON r.id=l.target_record_id WHERE l.source_record_id=? AND l.next_date=?", (record_id, next_date)).fetchone()
+            existing = _item(existing_row, company=company, links=_record_links(conn, [existing_row["id"]])[existing_row["id"]]) if existing_row else None
+        return {"proposal": proposal, "existing": existing, "source": _record_identity(row)}
+
+    @router.post("/records/{record_id}/repeat")
+    def repeat_record(payload: RepetitionInput, record_id: str = Path(pattern=r"^[a-f0-9]{32}$")):
+        next_date = _repetition_date(payload.next_date)
+        company = get_document_company(db)
+        with db.connection() as conn:
+            # A date has one successor; repeated clicks return the first reviewed copy.
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute("SELECT * FROM business_records WHERE id=?", (record_id,)).fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Attività non trovata.")
+            existing = conn.execute("SELECT r.* FROM business_repeats l JOIN business_records r ON r.id=l.target_record_id WHERE l.source_record_id=? AND l.next_date=?", (record_id, next_date)).fetchone()
+            if existing:
+                item = _item(existing, company=company, links=_record_links(conn, [existing["id"]])[existing["id"]])
+                return {"item": item, "created": False, "source": _record_identity(row)}
+            proposal = _repetition_proposal(row, next_date)
+            changes = payload.model_dump(exclude_unset=True, exclude={"next_date"})
+            for key, value in changes.items():
+                if value is None and key not in ("contact", "notes"):
+                    raise HTTPException(status_code=422, detail="Questo campo non può essere vuoto.")
+            if "details" in changes:
+                changes["details"] = {**proposal["details"], **changes["details"]}
+            for key in ("contact", "notes"):
+                if key in changes and changes[key] is None:
+                    changes[key] = ""
+            proposal.update(changes)
+            try:
+                validated = RecordInput(**proposal)
+            except ValidationError as exc:
+                raise HTTPException(status_code=422, detail="Controlla i campi della prossima attività: alcuni valori non sono validi.") from exc
+            target = _insert_record(conn, validated, source="repeat")
+            conn.execute("INSERT INTO business_repeats(source_record_id,target_record_id,next_date) VALUES(?,?,?)", (record_id, target["id"], next_date))
             item = _item(target, company=company, links=_record_links(conn, [target["id"]])[target["id"]])
         return {"item": item, "created": True, "source": _record_identity(row)}
 

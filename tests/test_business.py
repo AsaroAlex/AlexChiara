@@ -9,6 +9,7 @@ import pytest
 
 from app.business import business_services, business_summary, create_business_router
 from app.business_catalog import get_service, list_services
+from app.business_playbooks import get_playbook
 from app.db import Database
 
 
@@ -78,7 +79,7 @@ def test_each_available_module_has_functional_persistent_record_and_download(bus
     assert item["source"] == "manual"
     assert item["document"].startswith("Filo — " + service["output_title"])
     assert "Scheda compilata" in item["document"]
-    assert item["next_action"] == service["next_action"]
+    assert item["next_action"] == get_playbook(service["id"])["steps"][0]["label"]
     assert client.get("/api/business/records/" + item["id"]).json()["item"] == item
     download = client.get("/api/business/records/" + item["id"] + "/export")
     assert download.status_code == 200
@@ -335,7 +336,7 @@ def test_inventory_below_user_selected_minimum_generates_reorder_attention_witho
     updated = client.patch("/api/business/records/" + item["id"], json={"details": {"quantity": 5}}).json()["item"]
     assert updated["attention"] is False
     assert updated["attention_reason"] is None
-    assert updated["next_action"] == get_service("inventory")["next_action"]
+    assert updated["next_action"] == get_playbook("inventory")["steps"][0]["label"]
     assert business_summary(db)["attention_count"] == 0
 
 
@@ -348,7 +349,7 @@ def test_inventory_at_or_above_threshold_or_without_threshold_never_has_false_st
     item = add(client, "inventory", details={"sku": "A-1", "item": "Articolo", **details})
     assert item["attention"] is False
     assert item["attention_reason"] is None
-    assert item["next_action"] == get_service("inventory")["next_action"]
+    assert item["next_action"] == get_playbook("inventory")["steps"][0]["label"]
 
 
 def test_explicit_high_and_urgent_undated_work_outranks_ordinary_future_after_today_and_overdue(business):

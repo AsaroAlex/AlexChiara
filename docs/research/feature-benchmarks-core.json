@@ -1,0 +1,751 @@
+{
+  "schema_version": 1,
+  "research_date": "2026-10-05",
+  "workstream": "Benchmark delle funzioni trasversali di Filo",
+  "target_segment": "Studi e imprese di servizi italiane",
+  "scope": "11 funzioni di base fuori dai33 moduli del catalogo; capacità presenti, lacune e pattern da adattare con implementazione originale.",
+  "methodology": {
+    "provider": "Exa",
+    "search_calls": 2,
+    "sources_reviewed": 12,
+    "search_results_requested": 12,
+    "sources_reviewed_definition": "Somma dei numResults richiesti nei due web_search_exa (6+6). Non equivale a12 pagine lette o a12 fonti validate.",
+    "queries": [
+      {
+        "query": "Official Stripe documentation hosted Checkout subscriptions customer portal manage billing invoices cancellation webhook payment status",
+        "numResults": 6
+      },
+      {
+        "query": "Official Auth0 Universal Login sign up password reset dedicated login page email password authentication documentation",
+        "numResults": 6
+      }
+    ],
+    "search_urls_returned": 12,
+    "search_urls_returned_unique": 12,
+    "fetch_url_requests": 11,
+    "fetch_urls_successful": 10,
+    "fetch_urls_successful_unique": 10,
+    "fetched_pages_cited_unique": 9,
+    "reused_sources_cited_unique": 6,
+    "cited_source_urls_unique": 15,
+    "fetch_failures": [
+      {
+        "url": "https://www.notion.com/help/create-a-notion-account",
+        "error": "CRAWL_NOT_FOUND",
+        "handling": "Scartata; nessuna asserzione basata su questa pagina."
+      }
+    ],
+    "fetched_but_not_cited": [
+      {
+        "url": "https://docs.stripe.com/billing/subscriptions/build-subscriptions?platform=web&ui=stripe-hosted",
+        "reason": "Restituisce indice varianti con contenuto limitato; fonte Checkout più specifica usata per le asserzioni."
+      }
+    ],
+    "ranking_criteria": [
+      "Aderenza al singolo compito dello studio/impresa di servizi",
+      "Riduzione di passaggi e chiarezza della prossima azione",
+      "Pattern documentato da fonte ufficiale",
+      "Adattamento possibile con dati realmente disponibili e revisione esplicita"
+    ],
+    "ranking_limit": "Riferimento scelto per task fit; non graduatoria universale, leadership di mercato misurata o superiorità verificata mediante prove d’uso.",
+    "source_quality": "Documentazione ufficiale vendor per comportamento. Marketing trattato come descrizione di capacità, non evidenza di aumento ricavi/risparmio. Nessun codice o asset proprietario copiato.",
+    "filo_verification": "Ispezione delle route, store e componenti attuali; baseline delle funzioni core al commit 485155b. Le migliorie del turno su panoramica/report sono dichiarate in validazione e lo stato finale va aggiornato dal responsabile del rilascio.",
+    "new_external_actions": "Nessuna attivazione di provider, addebito, invio email o pubblicazione esterna da questo workstream."
+  },
+  "features": [
+    {
+      "feature_id": "homepage-onboarding",
+      "name": "Homepage e primo avvio",
+      "references": [
+        {
+          "product": "Zucchetti Tieni il Conto PRO",
+          "pattern": "Primo accesso guidato, passaggi chiari, dati necessari al momento utile",
+          "source_ids": [
+            "tic-pro-help"
+          ]
+        },
+        {
+          "product": "Auth0 Universal Login",
+          "pattern": "Destinazione di registrazione esplicita e distinta dall’accesso",
+          "source_ids": [
+            "core-auth0-universal"
+          ]
+        }
+      ],
+      "fit_reason": "Chi entra per la prima volta deve capire il lavoro che Filo svolge e compiere un primo passo senza configurare ogni servizio.",
+      "filo_verified": [
+        {
+          "behavior": "Homepage pubblica con promessa “La tua giornata, con più spazio”, anteprima illustrativa del prodotto, tre passi, link Crea account e Accedi. La registrazione dichiara che non attiva pagamenti.",
+          "evidence": [
+            "static/landing.html:hero,come-funziona,piano",
+            "app/main.py:create_app.home"
+          ],
+          "verification": "ispezione del codice, non prova del competitor o pagamento reale"
+        },
+        {
+          "behavior": "Account già autenticato vede collegamenti al proprio spazio; configurazione email usa wizard a passaggi e anteprima prima dell’attivazione.",
+          "evidence": [
+            "static/site.js:initLanding",
+            "static/app.js:startWizard,renderWizard"
+          ],
+          "verification": "ispezione del codice, non prova del competitor o pagamento reale"
+        }
+      ],
+      "improvement": {
+        "status": "already_matching",
+        "description": "Percorso pubblico → registrazione → spazio privato e attivazione guidata già presenti. I nuovi passaggi suggeriti per ciascun servizio migliorano l’avvio operativo; non aggiungere un altro tutorial generale obbligatorio."
+      },
+      "constraints": [
+        "L’anteprima della homepage è illustrativa, non contiene dati del cliente. Non esiste importazione anagrafiche CSV; non trasferire la relativa promessa dal competitor."
+      ],
+      "readiness": "available_local"
+    },
+    {
+      "feature_id": "login-register",
+      "name": "Accesso e registrazione",
+      "references": [
+        {
+          "product": "Auth0 Universal Login",
+          "pattern": "Pagina di accesso stabile, campi compatibili con password manager e percorsi distinti di registrazione/recupero",
+          "source_ids": [
+            "core-auth0-universal"
+          ]
+        }
+      ],
+      "fit_reason": "Una pagina prevedibile evita il popup che scompare al refresh e permette ai clienti di riaprire il proprio lavoro dal browser.",
+      "filo_verified": [
+        {
+          "behavior": "Pagine /login e /register dedicate; controllo sessione precede la visualizzazione del form e reindirizza chi è già autenticato. Password mostra/nascondi; autocomplete current-password o new-password; registrazione nome/email/password almeno 12 caratteri.",
+          "evidence": [
+            "app/main.py:auth_page",
+            "static/auth.html:auth-form",
+            "static/site.js:initAuth"
+          ],
+          "verification": "ispezione del codice, non prova del competitor o pagamento reale"
+        },
+        {
+          "behavior": "Sessione in cookie HttpOnly/SameSite, Secure su HTTPS, CSRF per mutazioni, password scrypt, limiti ai tentativi; la registrazione crea account proprio.",
+          "evidence": [
+            "app/accounts.py:_password_hash,AccountStore.login,AccountStore.register,create_account_router"
+          ],
+          "verification": "ispezione del codice, non prova del competitor o pagamento reale"
+        }
+      ],
+      "improvement": {
+        "status": "requires_configuration_and_implementation",
+        "description": "Aggiungere recupero password e verifica email con token monouso, scadenza e canale email transazionale verificato; il pattern del competitor rende concreta una lacuna prima dell’apertura commerciale."
+      },
+      "constraints": [
+        "Filo non usa Auth0. Non sono implementati recupero password, verifica email, MFA/passkey o social login per l’account Filo. OAuth casella Gmail/Outlook è distinto dal login Filo. Nessuna nuova certificazione di sicurezza è dedotta dal confronto."
+      ],
+      "readiness": "available_local_with_commercial_gap"
+    },
+    {
+      "feature_id": "private-workspace-account",
+      "name": "Spazio privato e account",
+      "references": [
+        {
+          "product": "Notion",
+          "pattern": "Contenuti privati accessibili solo all’identità autorizzata",
+          "source_ids": [
+            "core-notion-sharing"
+          ]
+        },
+        {
+          "product": "Stripe Customer Portal",
+          "pattern": "Area account separata dalla superficie operativa",
+          "source_ids": [
+            "core-stripe-portal"
+          ]
+        }
+      ],
+      "fit_reason": "La PMI deve ritrovare dati e profilo senza esporli agli altri account e separare il lavoro quotidiano dalla gestione economica dell’abbonamento.",
+      "filo_verified": [
+        {
+          "behavior": "Dispatcher server risolve lo spazio dall’utente autenticato; owner mantiene il database originale, membri nuovi ricevono database separato e vuoto. /app e /account protetti; navigazione anonima conduce al login.",
+          "evidence": [
+            "app/main.py:create_app.workspace,WorkspaceDispatcher,account_boundary"
+          ],
+          "verification": "ispezione del codice, non prova del competitor o pagamento reale"
+        },
+        {
+          "behavior": "Area account mostra identità, stato abbonamento, aggiornamento stato e uscita; nessun account nuovo condivide automaticamente lo spazio del gestore.",
+          "evidence": [
+            "static/account.html",
+            "static/site.js:initAccount",
+            "app/accounts.py:AccountStore.resolve_session"
+          ],
+          "verification": "ispezione del codice, non prova del competitor o pagamento reale"
+        }
+      ],
+      "improvement": {
+        "status": "already_matching",
+        "description": "Separazione degli spazi e account personale già coerenti con il pattern minimo di riservatezza. Ruoli/inviti di squadra richiedono un modello esplicito prima di presentare il prodotto come spazio condiviso."
+      },
+      "constraints": [
+        "Il ruolo member descrive un account con spazio separato, non un collega invitato nella stessa azienda. Non sono disponibili inviti, ruoli per record o più aziende nello stesso account."
+      ],
+      "readiness": "available_local_single_account_workspace"
+    },
+    {
+      "feature_id": "subscription-checkout",
+      "name": "Abbonamento e pagamenti",
+      "references": [
+        {
+          "product": "Stripe Checkout",
+          "pattern": "Checkout ospitato per conferma esplicita del pagamento",
+          "source_ids": [
+            "core-stripe-checkout"
+          ]
+        },
+        {
+          "product": "Stripe Customer Portal e webhooks",
+          "pattern": "Gestione autonoma e stato ricevuto dal provider, non dalla pagina di ritorno",
+          "source_ids": [
+            "core-stripe-portal",
+            "core-stripe-webhooks"
+          ]
+        }
+      ],
+      "fit_reason": "Per una piccola impresa un solo checkout e un portale noto riducono lavoro di assistenza e non richiedono a Filo di raccogliere numeri di carta.",
+      "filo_verified": [
+        {
+          "behavior": "POST checkout crea sessione Stripe mode=subscription per l’utente e prezzo configurato; tentativi riusati in modo idempotente, abbonamento live impedisce nuovo checkout. Redirect limitato a host Stripe; portale temporaneo per il proprio customer.",
+          "evidence": [
+            "app/billing.py:create_billing_router.checkout,portal"
+          ],
+          "verification": "ispezione del codice, non prova del competitor o pagamento reale"
+        },
+        {
+          "behavior": "Webhook firma verificata, eventi deduplicati e stato abbonamento associato all’account; ritorno success non attiva da solo l’abbonamento. UI espone Prezzo in definizione e nasconde acquisto quando configurazione assente.",
+          "evidence": [
+            "app/billing.py:_verify_signature,BillingStore.apply_event,billing_status,webhook",
+            "static/site.js:renderBilling,initAccount"
+          ],
+          "verification": "ispezione del codice, non prova del competitor o pagamento reale"
+        }
+      ],
+      "improvement": {
+        "status": "already_matching_pending_configuration",
+        "description": "Adottati direttamente hosted Checkout, portale e conferma via webhook. Prima degli addebiti servono prezzo, chiavi, webhook e configurazione del portale; validare il percorso in modalità test."
+      },
+      "constraints": [
+        "Prezzo non definito; Stripe non configurato nella produzione nota. Nessun pagamento reale verificato o attivato dalla ricerca. Le opzioni portale dipendono da impostazioni Stripe; non risulta una barriera ai servizi basata sull’abbonamento."
+      ],
+      "readiness": "implementation_present_provider_unconfigured"
+    },
+    {
+      "feature_id": "company-profile",
+      "name": "Profilo della tua azienda",
+      "references": [
+        {
+          "product": "Fattura24",
+          "pattern": "Profilo fatturazione riutilizzato nei documenti",
+          "source_ids": [
+            "f24-quote-help"
+          ]
+        },
+        {
+          "product": "Odoo Contacts",
+          "pattern": "Identità azienda/persona e informazioni fiscali conservate una volta",
+          "source_ids": [
+            "odoo-contacts"
+          ]
+        }
+      ],
+      "fit_reason": "Inserire una volta ragione sociale, recapiti e firma evita ricopiare l’intestazione in ogni bozza per uno studio di servizi.",
+      "filo_verified": [
+        {
+          "behavior": "Nome, settore, descrizione e firma, più 11 dati amministrativi facoltativi: ragione sociale, PIVA, CF, indirizzo, CAP, città, provincia, email, telefono, PEC, SDI. Campi strutturali normalizzati, campi opzionali omessi da vecchi client preservati.",
+          "evidence": [
+            "app/company.py:COMPANY_FIELDS,normalize_company_field",
+            "app/models.py:CompanyInput; app/main.py:company"
+          ],
+          "verification": "ispezione del codice, non prova del competitor o pagamento reale"
+        },
+        {
+          "behavior": "Documenti locali leggono il profilo corrente dello spazio; identità demo esclusa. UI spiega il riuso e consente lavorare con il solo nome, senza render obbligatori tutti i dati fiscali.",
+          "evidence": [
+            "app/company.py:get_document_company",
+            "app/business.py:_document",
+            "static/app.js:render,company-form submit"
+          ],
+          "verification": "ispezione del codice, non prova del competitor o pagamento reale"
+        }
+      ],
+      "improvement": {
+        "status": "already_matching",
+        "description": "Profilo riutilizzabile già applicato. La prossima estensione utile è selezionare clienti e fornitori dalle anagrafiche nei form, con revisione, anziché creare altre copie testuali."
+      },
+      "constraints": [
+        "Validazione solo del formato, non verifica camerale/fiscale. I documenti usano il profilo corrente e non una fotografia storica dell’emittente. PEC e SDI nel profilo non attivano invii."
+      ],
+      "readiness": "available_local"
+    },
+    {
+      "feature_id": "global-search",
+      "name": "Ricerca delle attività",
+      "references": [
+        {
+          "product": "Notion Search",
+          "pattern": "Ricerca rapida da tastiera senza attraversare ogni area",
+          "source_ids": [
+            "core-notion-search"
+          ]
+        }
+      ],
+      "fit_reason": "Trovare una parola, un cliente o un documento in pochi gesti è più utile di moltiplicare i menu per chi gestisce molti compiti.",
+      "filo_verified": [
+        {
+          "behavior": "Dialog di ricerca aperto da Ctrl/CmdK, autofocus, richieste debounce annullabili; risultati da tutti i moduli aziendali con titolo, cliente, note e valori dei dettagli. Apertura del record trovato, contatore totale e primi 20 risultati.",
+          "evidence": [
+            "static/app.js:openBusinessSearch,searchBusinessRecords,key handlers",
+            "app/business.py:records"
+          ],
+          "verification": "ispezione del codice, non prova del competitor o pagamento reale"
+        },
+        {
+          "behavior": "Ricerca server con query SQL parametrizzata e caratteri LIKE escapati; cerca valori details, non nomi chiavi o JSON serializzato. Risultati resi con textContent.",
+          "evidence": [
+            "app/business.py:records search q",
+            "static/app.js:el,searchBusinessRecords"
+          ],
+          "verification": "ispezione del codice, non prova del competitor o pagamento reale"
+        }
+      ],
+      "improvement": {
+        "status": "already_matching_with_scope_gap",
+        "description": "Ricerca rapida aziendale già presente. Per avvicinarsi al pattern completo: scorciatoie alle sezioni e record recenti quando la query è vuota; includere agenda/email solo con indici e permessi verificati."
+      },
+      "constraints": [
+        "Ricerca oggi limitata alle schede dei 23 servizi aziendali; non ricerca email, conversazioni, eventi agenda o integrazioni esterne. Non è una ricerca semantica AI."
+      ],
+      "readiness": "available_local_business_records"
+    },
+    {
+      "feature_id": "assistant-chat",
+      "name": "Assistente e proposta del servizio",
+      "references": [
+        {
+          "product": "Google Gmail con Gemini",
+          "pattern": "Richiesta in linguaggio naturale, riepilogo e aiuto alla bozza",
+          "source_ids": [
+            "google-gmail-help"
+          ]
+        },
+        {
+          "product": "HubSpot Sales Workspace",
+          "pattern": "Proporre il prossimo passo utile al lavoro",
+          "source_ids": [
+            "hubspot-sales"
+          ]
+        }
+      ],
+      "fit_reason": "Chi non vuole configurare una procedura deve poter descrivere un bisogno e ricevere un percorso concreto, con revisione prima dell’azione.",
+      "filo_verified": [
+        {
+          "behavior": "POST chat propone un modulo aziendale dal messaggio o un avviso risposta, oppure preferenze della segreteria email; il frontend mostra Apri servizio, Segui questa risposta o configurazione guidata. La proposta non crea da sola record né autorizza invii/pagamenti.",
+          "evidence": [
+            "app/main.py:chat",
+            "app/business_chat.py:propose_business_service",
+            "static/app.js:chat-form submit"
+          ],
+          "verification": "ispezione del codice, non prova del competitor o pagamento reale"
+        },
+        {
+          "behavior": "Classificazione e proposte operative basate su espressioni e regole locali; integrazioni non disponibili dichiarano il prerequisito. Messaggi della chat visualizzati come testo.",
+          "evidence": [
+            "app/business_chat.py:propose_business_service",
+            "static/app.js:addChatMessage"
+          ],
+          "verification": "ispezione del codice, non prova del competitor o pagamento reale"
+        }
+      ],
+      "improvement": {
+        "status": "material_opportunity_not_implemented",
+        "description": "Prossimo passo: precompilare una bozza di attività dai dati riconoscibili del messaggio, con evidenza dei campi estratti, conferma umana e nessuna scrittura prima del salvataggio."
+      },
+      "constraints": [
+        "Non è l’assistente generativo di Gmail, non possiede ragionamento universale sul business, non interroga liberamente tutti i dati e non esegue azioni esterne. La chat non conserva una cronologia conversazionale stabile."
+      ],
+      "readiness": "available_local_deterministic_proposals"
+    },
+    {
+      "feature_id": "morning-overview",
+      "name": "Panoramica del mattino",
+      "references": [
+        {
+          "product": "HubSpot Sales Workspace",
+          "pattern": "Coda di azioni e riepilogo quotidiano per iniziare dal prossimo compito",
+          "source_ids": [
+            "hubspot-sales"
+          ]
+        },
+        {
+          "product": "Notion Home",
+          "pattern": "Impegni e contenuti che richiedono attenzione accessibili da un punto unico",
+          "source_ids": [
+            "core-notion-home"
+          ]
+        },
+        {
+          "product": "Pipedrive Activities",
+          "pattern": "Prossima attività ancora aperta, distinta dai compiti completati",
+          "source_ids": [
+            "pipedrive-activities"
+          ]
+        }
+      ],
+      "fit_reason": "Segreteria e titolare devono vedere subito risposte, scadenze e agenda senza aprire una serie di schermate.",
+      "filo_verified": [
+        {
+          "behavior": "Email ordinate con soggetto, estratto, motivo della priorità e prossimo passo; contatti hanno stato scritto/non trovato/non verificato, periodo e ultimo controllo. Report compatto laterale e agenda della giornata separati.",
+          "evidence": [
+            "static/app.js:renderMorning,renderAgenda",
+            "app/briefing.py:build_briefing"
+          ],
+          "verification": "ispezione del codice, non prova del competitor o pagamento reale"
+        },
+        {
+          "behavior": "Le attività aziendali aperte vengono classificate per scadenza, urgenza e scorte sotto minimo; dashboard permette aprire o completare con annullamento.",
+          "evidence": [
+            "app/business.py:business_summary",
+            "static/app.js:renderBusinessSummary,handleBusinessAction"
+          ],
+          "verification": "ispezione del codice, non prova del competitor o pagamento reale"
+        }
+      ],
+      "improvement": {
+        "status": "improvements_under_validation_current_turn",
+        "description": "Aggiungere prossimo passaggio specifico per servizio, scadenza derivata dai dati inseriti, progressi manuali e importi aperti/scaduti di incassi e pagamenti. La verifica finale del rilascio deve confermare il funzionamento, prima di attribuire stato pubblicato."
+      },
+      "constraints": [
+        "Il riepilogo posta riguarda soltanto messaggi effettivamente controllati, non copertura illimitata di notte/weekend. I pagamenti sono importi inseriti, non un saldo bancario. Priorità a regole, non previsione probabilistica di valore economico."
+      ],
+      "readiness": "available_local_with_current_turn_improvements"
+    },
+    {
+      "feature_id": "activity-history",
+      "name": "Attività e storico",
+      "references": [
+        {
+          "product": "Notion Version History",
+          "pattern": "Rendere consultabili le modifiche e distinguere una vista corrente dallo storico",
+          "source_ids": [
+            "core-notion-history"
+          ]
+        },
+        {
+          "product": "Pipedrive Activities",
+          "pattern": "Separare data prevista e completamento reale dell’attività",
+          "source_ids": [
+            "pipedrive-activities"
+          ]
+        }
+      ],
+      "fit_reason": "Ritrovare il risultato di un controllo e capire un errore permette alla PMI di non ripetere lavoro o scambiare una bozza verificata per un messaggio inviato.",
+      "filo_verified": [
+        {
+          "behavior": "Sezione Attività mostra esecuzioni email con data, stato, sintesi, bozze, errore e passaggio interrotto; esecuzioni fallite riprovabili e retry programmato visibile. Pausa/disattivazione conserva lo storico.",
+          "evidence": [
+            "static/app.js:renderRuns,openRun,renderRunDetail",
+            "app/main.py:get_run,retry_run"
+          ],
+          "verification": "ispezione del codice, non prova del competitor o pagamento reale"
+        },
+        {
+          "behavior": "Bozza rivista registrata con approved_at e azione draft_approved, dichiarata sent:false. Record aziendali hanno created_at/updated_at, stato e collegamenti origine/derivati.",
+          "evidence": [
+            "app/main.py:approve_draft",
+            "app/business.py:_item,_record_links",
+            "app/db.py:drafts schema"
+          ],
+          "verification": "ispezione del codice, non prova del competitor o pagamento reale"
+        }
+      ],
+      "improvement": {
+        "status": "material_opportunity_not_implemented",
+        "description": "Una cronologia delle modifiche delle schede, con prima/dopo e ripristino esplicito, sarebbe un’estensione utile. La vista attuale delle esecuzioni non va chiamata versioning completo."
+      },
+      "constraints": [
+        "Nessun audit immutabile o attribuzione multiutente per record aziendali. Eliminare una scheda non equivale al cestino recuperabile di Notion; le versioni storiche non sono conservate."
+      ],
+      "readiness": "available_local_execution_history"
+    },
+    {
+      "feature_id": "local-document-exports",
+      "name": "Documenti da copiare e scaricare",
+      "references": [
+        {
+          "product": "Notion Export",
+          "pattern": "Uscita portabile e accesso limitato ai propri contenuti",
+          "source_ids": [
+            "core-notion-export"
+          ]
+        },
+        {
+          "product": "Fattura24",
+          "pattern": "Documento costruito usando informazioni del profilo e cliente",
+          "source_ids": [
+            "f24-quote-help"
+          ]
+        }
+      ],
+      "fit_reason": "La bozza deve poter essere riutilizzata subito in email o condivisa dopo revisione, senza riscrivere dati e senza lock-in.",
+      "filo_verified": [
+        {
+          "behavior": "Ogni scheda prepara testo coerente con il servizio, profilo aziendale, dati specifici e totali IVA/importi dove applicabile; dettaglio permette leggere il testo e scaricarlo TXT, endpoint nel proprio spazio autenticato.",
+          "evidence": [
+            "app/business.py:_document,export_record",
+            "static/app.js:renderBusinessDetail"
+          ],
+          "verification": "ispezione del codice, non prova del competitor o pagamento reale"
+        },
+        {
+          "behavior": "Agenda della data scelta esporta l’ordine del giorno TXT con orari e note degli appuntamenti locali.",
+          "evidence": [
+            "app/agenda.py:create_agenda_router export",
+            "static/app.js:renderAgenda"
+          ],
+          "verification": "ispezione del codice, non prova del competitor o pagamento reale"
+        }
+      ],
+      "improvement": {
+        "status": "material_opportunity_for_current_turn",
+        "description": "Aggiungere “Copia il documento” accanto al download permette riuso immediato in email e documenti. PDF stampabile e CSV di schede selezionate restano estensioni da costruire con identità e accesso dello spazio."
+      },
+      "constraints": [
+        "Fatture sono bozze interne: niente XML SDI, numerazione fiscale automatica o trasmissione. Export non è backup completo e non include allegati caricati. Non affermare parità con esportazioni PDF/HTML/CSV di Notion.",
+        "Nella baseline non esiste pulsante copia della scheda: il testo è selezionabile. Le bozze email hanno invece già il comando copia."
+      ],
+      "readiness": "available_local_text_exports"
+    },
+    {
+      "feature_id": "protected-market-report",
+      "name": "Ricerca di prodotto riservata",
+      "references": [
+        {
+          "product": "Notion Sharing & permissions",
+          "pattern": "Condivisione esplicita solo ai destinatari autorizzati",
+          "source_ids": [
+            "core-notion-sharing"
+          ]
+        },
+        {
+          "product": "Notion Search",
+          "pattern": "Consultazione filtrabile senza cercare in un lungo documento",
+          "source_ids": [
+            "core-notion-search"
+          ]
+        }
+      ],
+      "fit_reason": "Fonti e scelta dei pattern devono restare verificabili dal gestore, senza esporre strategia, listino ipotetico o roadmap ai nuovi clienti.",
+      "filo_verified": [
+        {
+          "behavior": "HTML autonomo con fonti ufficiali, criteri, limiti dei prezzi e filtro confronto; servito dalla route autenticata /api/research/market-review con owner-only e 403 per altri utenti e no-store, fuori da static.",
+          "evidence": [
+            "scripts/build-market-review.py",
+            "app/main.py:market_review",
+            "tests/test_market_report.py"
+          ],
+          "verification": "ispezione del codice, non prova del competitor o pagamento reale"
+        }
+      ],
+      "improvement": {
+        "status": "improvements_under_validation_current_turn",
+        "description": "Estendere il report con matrice per ogni modulo e funzione trasversale: riferimento, pattern utile, adattamento reale e requisito esterno. Tenere opportunità separate da ciò che è implementato e verificato."
+      },
+      "constraints": [
+        "Report di strategia per il gestore; non un pannello pubblicitario del cliente. Confronto basato su guide pubbliche, non accesso ai prodotti competitor o prova comparativa di prestazioni."
+      ],
+      "readiness": "available_owner_only_report"
+    }
+  ],
+  "sources": [
+    {
+      "id": "tic-pro-help",
+      "url": "https://help.zucchetti.it/dms/ticpro/help/sam/ticpro_standard/pages/intro_ticpro.html",
+      "title": "Tieni il Conto PRO - introduzione",
+      "source_date": null,
+      "quality": "official_help",
+      "excerpt": "Al primo accesso, una procedura guidata accompagna passo passo l'utente ... è possibile importare facilmente le anagrafiche clienti, fornitori e articoli direttamente da un foglio di calcolo. ... ricerca diretta della funzionalità desiderata ... cronologia delle scelte più utilizzate.",
+      "reused_from": "italian-competitors.json"
+    },
+    {
+      "id": "f24-quote-help",
+      "url": "https://www.fattura24.com/manuale/vendite/preventivi/",
+      "title": "Preventivi - manuale",
+      "source_date": null,
+      "quality": "official_help",
+      "excerpt": "La prima operazione da fare è quella di inserire all’interno del Profilo fatturazione ... i dati principali necessari alla creazione del documento. ... Ricerca avanzata in rubrica: consente di richiamare il cliente dalla rubrica.",
+      "reused_from": "italian-competitors.json"
+    },
+    {
+      "id": "odoo-contacts",
+      "url": "https://www.odoo.com/documentation/19.0/applications/essentials/contacts.html",
+      "type": "official_help",
+      "title": "Contacts — Odoo 19.0",
+      "excerpts": [
+        "Odoo supports both Person and Company contacts.",
+        "Tax ID: the identification number used for tax and accounting purposes.",
+        "Certain Payment Terms, or a certain Pricelist, can also be set, if needed."
+      ],
+      "reused_from": "suite-competitors.json"
+    },
+    {
+      "id": "pipedrive-activities",
+      "url": "https://support.pipedrive.com/en/article/activities",
+      "type": "official_help",
+      "title": "Activities",
+      "source_last_updated": "2026-09-03",
+      "excerpts": [
+        "You can link activities to people, organizations, leads, deals or projects to keep a clear view of what's next.",
+        "Next activity date – shows the date of the next activity you scheduled that isn't marked as done yet",
+        "The due date field will always show the time and date the activity was originally scheduled for.",
+        "The marked as done field always reflects the time that the activity was marked as done.",
+        "Active calendar sync is required to send activity invites."
+      ],
+      "reused_from": "suite-competitors.json"
+    },
+    {
+      "id": "hubspot-sales",
+      "url": "https://www.hubspot.com/products/sales",
+      "type": "official_features",
+      "title": "AI Sales Software for Pipeline & Closed Deals",
+      "excerpts": [
+        "Guide sellers in a workspace that surfaces leads, deals, tasks, and next best actions with smart queues and daily action summaries.",
+        "Close deals in Sales Hub, then quote, bill, and collect payment in Revenue Hub",
+        "HubSpot customers can access CPQ by purchasing a Revenue Hub seat."
+      ],
+      "limitations": [
+        "Vendor marketing and testimonials do not establish Filo productivity improvements or buyer conversion rates."
+      ],
+      "reused_from": "suite-competitors.json"
+    },
+    {
+      "id": "google-gmail-help",
+      "url": "https://support.google.com/mail/answer/14199860?hl=it",
+      "type": "official_help",
+      "excerpt": "Riassumi: sintetizza lunghi thread di email in elenchi puntati concisi. Cerca: trova dettagli specifici.",
+      "reused_from": "productivity-competitors.json"
+    },
+    {
+      "id": "core-auth0-universal",
+      "url": "https://auth0.com/docs/authenticate/login/auth0-universal-login/universal-login-vs-classic-login/universal-experience",
+      "title": "Universal Login experience — Auth0",
+      "type": "official_help",
+      "excerpts": [
+        "Auth0 Universal Login is the hosted login page that handles every authentication flow for your applications, from signup and password reset through MFA, without manually writing the UI."
+      ],
+      "limitations": [
+        "Filo adotta il pattern di navigazione e campi; non usa Auth0 e non eredita le sue garanzie di sicurezza, MFA, recupero password o verifica email. Gli attributi autocomplete sono riportati senza le virgolette/backtick tipografiche originali."
+      ]
+    },
+    {
+      "id": "core-stripe-checkout",
+      "url": "https://docs.stripe.com/payments/checkout",
+      "title": "Stripe Checkout",
+      "type": "official_help",
+      "excerpts": [
+        "Full page: Customers enter their payment details in a fully-featured payment page, either embedded on your site or via a redirect to a Stripe-hosted page.",
+        "Create a payments page with prebuilt UIs using the Checkout Sessions API."
+      ]
+    },
+    {
+      "id": "core-stripe-portal",
+      "url": "https://docs.stripe.com/customer-management",
+      "title": "Provide a customer portal to your customers — Stripe",
+      "type": "official_help",
+      "excerpts": [
+        "A customer portal allows your customers to manage their payment details, invoices, and subscriptions in one place.",
+        "Cancel subscriptions immediately or at the end of the current billing period"
+      ],
+      "limitations": [
+        "Le opzioni disponibili dipendono dalla configurazione del portale Stripe; il codice Filo non abilita tutte le opzioni da solo."
+      ]
+    },
+    {
+      "id": "core-stripe-webhooks",
+      "url": "https://docs.stripe.com/billing/subscriptions/webhooks",
+      "title": "Using webhooks with subscriptions — Stripe",
+      "type": "official_help",
+      "excerpts": [
+        "You receive notifications from Stripe in your app through webhook events.",
+        "Be sure to verify that incoming events are from Stripe."
+      ],
+      "limitations": [
+        "La documentazione del provider descrive il funzionamento, non prova che la produzione Filo sia già configurata o che un pagamento reale sia stato eseguito."
+      ]
+    },
+    {
+      "id": "core-notion-search",
+      "url": "https://www.notion.com/help/search",
+      "title": "Search for pages & content in Notion",
+      "type": "official_help",
+      "excerpts": [
+        "You can also open search with shortcut cmd/ctrl + P, or cmd/ctrl + K if your cursor is not focused on a block.",
+        "You'll also see your recently viewed pages listed below so you can click to jump to one of them right away."
+      ],
+      "limitations": [
+        "La fonte include anche ricerca AI e app collegate; Filo copre soltanto i record operativi del proprio spazio. Backtick tipografici rimossi dagli estratti."
+      ]
+    },
+    {
+      "id": "core-notion-sharing",
+      "url": "https://www.notion.com/help/sharing-and-permissions",
+      "title": "Sharing & permissions settings in Notion",
+      "type": "official_help",
+      "excerpts": [
+        "Our permission levels ensure that your collaborators access your content exactly the way you want them to.",
+        "See and change who has access to the page, and what level of permissions they have."
+      ],
+      "limitations": [
+        "La separazione degli account e la riserva al gestore in Filo sono più semplici delle autorizzazioni collaborative per pagina di Notion. Non sono ruoli di squadra."
+      ]
+    },
+    {
+      "id": "core-notion-export",
+      "url": "https://www.notion.com/help/export-your-content",
+      "title": "Export your Notion content",
+      "type": "official_help",
+      "excerpts": [
+        "You can export a Notion page, database, or entire workspace at any time.",
+        "Pages that the exporter doesn't have access to, such as private pages of other users, will not be included in the export."
+      ],
+      "limitations": [
+        "Filo scarica singoli documenti TXT e ordine del giorno. PDF, CSV, esportazione completa dello spazio e allegati non sono equivalenti disponibili."
+      ]
+    },
+    {
+      "id": "core-notion-home",
+      "url": "https://www.notion.com/help/home-and-my-tasks",
+      "title": "Navigating with the sidebar — Notion Help",
+      "type": "official_help",
+      "excerpts": [
+        "Home: Click to see the pages and tasks that need your attention.",
+        "Your Home tab is organized in sections, including Upcoming events, Recents, Favorites, Agents, Teamspaces, Shared pages, Private pages, and Notion apps."
+      ],
+      "limitations": [
+        "URL storico Home and My Tasks restituisce la guida alla navigazione/sidebar. La fonte prova raggruppamento e accesso a impegni e attività, non un algoritmo universale di urgenza."
+      ]
+    },
+    {
+      "id": "core-notion-history",
+      "url": "https://www.notion.com/help/duplicate-delete-and-restore-content",
+      "title": "Delete & restore content in Notion",
+      "type": "official_help",
+      "excerpts": [
+        "Version history gives more detail about what changed on a page or database. You can review highlighted changes, see clear info about who made each change, and preview what will be affected before you restore an earlier version."
+      ],
+      "limitations": [
+        "La cronologia delle esecuzioni di Filo non è una cronologia delle versioni di ogni record né un audit immutabile."
+      ]
+    }
+  ],
+  "significant_gaps": [
+    "Recupero password e verifica email mancanti: serve invio email transazionale con token sicuri e prove prima del lancio commerciale.",
+    "Ricerca rapida limitata alle schede aziendali; email e agenda escluse.",
+    "Collaborazione multiutente nello stesso spazio, audit di ogni modifica e export PDF/CSV non sono capacità disponibili.",
+    "Stripe predisposto ma prezzo/credenziali/configurazione non impostati; confronto non autorizza addebiti."
+  ]
+}

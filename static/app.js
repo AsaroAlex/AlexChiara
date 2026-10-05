@@ -9,6 +9,8 @@ let businessSearchTimer;
 let businessSearchController;
 let businessSearchRequest = 0;
 let businessConversion = null;
+let businessRepetition = null;
+let businessRepeatingSource = null;
 let businessFormService = null;
 let businessUndo = null;
 const businessPending = new Set();
@@ -191,13 +193,17 @@ const businessPriorityLabels = { low: 'Bassa', normal: 'Normale', high: 'Alta', 
 function businessService(id) { return state.businessServices.find(service => service.id === id); }
 function businessOpen(record) { return !['done', 'cancelled'].includes(record.status); }
 function businessDay() { return state.businessSummary?.date || new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()); }
+function businessEffectiveDate(record) { return record.effective_due_date || record.due_date || null; }
+function businessTomorrow() { const date = new Date(`${businessDay()}T12:00:00Z`); date.setUTCDate(date.getUTCDate() + 1); return date.toISOString().slice(0, 10); }
+function businessProgress(record) { return record.playbook?.total ? `${record.playbook.completed}/${record.playbook.total} passaggi segnati da te` : ''; }
 function businessDue(record) {
   const active = businessOpen(record);
-  const date = record.due_date ? prettyDate(`${record.due_date}T12:00:00+02:00`, false) : '';
-  if (active && record.due_date && record.due_date < businessDay()) return { label: `Scaduta · ${date}`, style: 'error' };
-  if (active && record.due_date === businessDay()) return { label: 'Da fare oggi', style: 'warning' };
+  const effectiveDate = businessEffectiveDate(record);
+  const date = effectiveDate ? prettyDate(`${effectiveDate}T12:00:00+02:00`, false) : '';
+  if (active && effectiveDate && effectiveDate < businessDay()) return { label: `Scaduta · ${date}`, style: 'error' };
+  if (active && effectiveDate === businessDay()) return { label: 'Da fare oggi', style: 'warning' };
   if (active && (record.urgency === 'attention' || record.attention)) return { label: 'Da controllare', style: 'warning' };
-  if (!record.due_date) return { label: 'Senza scadenza', style: 'neutral' };
+  if (!effectiveDate) return { label: 'Senza scadenza', style: 'neutral' };
   return { label: active ? `Entro ${date}` : date, style: 'neutral' };
 }
 
@@ -255,6 +261,7 @@ function renderBusinessSummary() {
   if (signature === state.businessSummarySignature) return;
   state.businessSummarySignature = signature;
   const totals = summary?.totals || {};
+  renderBusinessFinancialSummary(summary?.financial_summary);
   $('#business-priorities-summary').textContent = totals.overdue ? `${totals.overdue} ${totals.overdue === 1 ? 'attività scaduta' : 'attività scadute'}${totals.today ? ` · ${totals.today} per oggi` : ''}. Scadenze aggiunte da te.` : totals.today ? `${totals.today} ${totals.today === 1 ? 'attività per oggi' : 'attività per oggi'}. Scadenze aggiunte da te.` : 'Scadenze e attività aggiunte da te, in ordine.';
   const actions = summary?.next_actions || [];
   if (!actions.length) { const empty = el('div', 'business-summary-empty'); empty.append(el('h3', '', totals.total ? 'Le tue attività sono in ordine.' : 'Da quale attività vuoi partire?'), el('p', '', totals.total ? 'Le attività completate restano nei tuoi servizi.' : 'Aggiungi un incasso, un preventivo o una scadenza. Le priorità arriveranno qui.'), actionButton('Scegli un servizio', 'business-open-catalog', 'secondary', 'arrow')); replace('#business-next-actions', empty); return; }
@@ -265,11 +272,24 @@ function renderBusinessSummary() {
     content.append(meta, el('h3', '', record.title));
     if (record.contact) content.append(el('p', 'small-text', record.contact));
     content.append(el('p', 'business-next-step', record.next_action || businessService(record.service_id)?.next_action || 'Rivedi le informazioni e completa il prossimo passo.'));
+    if (businessProgress(record)) content.append(el('p', 'business-progress-caption', businessProgress(record)));
     const actions = el('div', 'business-next-action-buttons');
     actions.append(actionButton('Apri attività', 'business-open-record', 'secondary', 'arrow', { id: record.id, service: record.service_id }), actionButton('Completa', 'business-quick-done', 'ghost', 'check', { id: record.id }));
     if (businessPending.has(record.id)) $$('button', actions).forEach(button => { button.disabled = true; });
     row.append(content, actions); return row;
   }));
+}
+function renderBusinessFinancialSummary(financial) {
+  const target = $('#business-financial-summary');
+  target.replaceChildren(); target.hidden = !financial || !(financial.receivables?.count || financial.payables?.count);
+  if (target.hidden) return;
+  const money = value => new Intl.NumberFormat('it-IT', { style: 'currency', currency: financial.currency || 'EUR' }).format(Number(value || 0));
+  for (const [key, label] of [['receivables', 'Incassi da seguire'], ['payables', 'Pagamenti da seguire']]) {
+    const amounts = financial[key] || {};
+    const box = el('div', 'business-financial-item'); box.dataset.financial = key;
+    box.append(el('h3', '', label), el('strong', '', money(amounts.open_amount)), el('p', 'small-text', `Scaduti ${money(amounts.overdue_amount)} · Oggi ${money(amounts.today_amount)}`)); target.append(box);
+  }
+  target.append(el('p', 'business-financial-source', financial.source || 'Importi inseriti da te. Nessun collegamento a un conto bancario.'));
 }
 async function loadBusinessRecords(serviceId, renderNow = true) {
   const request = ++state.businessRequest;
@@ -302,13 +322,21 @@ function renderBusinessRecords() {
   if (state.businessOffset > 0) pages.push(actionButton('Attività precedenti', 'business-record-page', 'secondary', undefined, { offset: String(Math.max(0, state.businessOffset - state.businessPageSize)) }));
   if (state.businessOffset + state.businessPageSize < state.businessTotal) pages.push(actionButton('Attività successive', 'business-record-page', 'secondary', 'arrow', { offset: String(state.businessOffset + state.businessPageSize) }));
   replace('#business-record-pages', ...pages);
-  if (!records.length) { const empty = el('div', 'card business-empty'); empty.append(icon('check'), el('h3', '', state.businessRecords.length ? 'Nessuna attività con questo filtro.' : `Inizia con ${service.name.toLocaleLowerCase('it')}.`), el('p', '', state.businessRecords.length ? 'Scegli tutte le attività per consultare lo storico.' : 'Inserisci la prima attività reale. Filo prepara il riepilogo e ti mostra le scadenze.'), actionButton('Aggiungi attività', 'business-new', 'primary', 'arrow')); replace('#business-record-list', empty); return; }
+  if (!records.length) {
+    const hasHistory = service.record_count > 0;
+    const empty = el('div', 'card business-empty'); empty.append(icon('check'), el('h3', '', hasHistory ? 'Nessuna attività con questo filtro.' : `Inizia con ${service.name.toLocaleLowerCase('it')}.`), el('p', '', hasHistory ? 'Le attività salvate restano nello storico. Scegli tutte le attività per consultarle.' : 'Inserisci i dati della prima attività. Ti aiutiamo a seguirla, un passo alla volta.'));
+    if (!hasHistory && service.playbook?.steps?.length) { const recipe = el('ol', 'business-empty-recipe'); for (const step of service.playbook.steps) recipe.append(el('li', '', step.label)); empty.append(recipe); }
+    if (hasHistory && state.businessFilter !== 'all') empty.append(actionButton('Mostra tutte le attività', 'business-show-history', 'secondary', 'arrow'));
+    empty.append(actionButton('Aggiungi attività', 'business-new', 'primary', 'arrow')); replace('#business-record-list', empty); return;
+  }
   replace('#business-record-list', ...records.map(record => {
     const card = el('article', 'card business-record'); card.dataset.recordId = record.id;
     const content = el('div'); const meta = el('div', 'business-record-meta'); const due = businessDue(record);
     meta.append(businessRecordStatus(record), el('span', `status-pill ${due.style}`, due.label));
     if (['urgent', 'high'].includes(record.priority)) meta.append(el('span', 'status-pill warning', `Priorità ${businessPriorityLabels[record.priority].toLocaleLowerCase('it')}`));
     content.append(meta, el('h3', '', record.title)); if (record.contact) content.append(el('p', 'small-text', record.contact));
+    if (record.next_action) content.append(el('p', 'business-next-step', record.next_action));
+    if (businessProgress(record)) content.append(el('p', 'business-progress-caption', businessProgress(record)));
     const actions = el('div', 'card-actions'); actions.append(actionButton('Apri attività', 'business-open-record', 'secondary', 'arrow', { id: record.id, service: record.service_id }));
     if (businessOpen(record)) actions.append(actionButton('Segna completata', 'business-status', 'ghost', 'check', { id: record.id, status: 'done' }));
     card.append(content, actions); return card;
@@ -327,19 +355,20 @@ function businessFormField(field, value = '') {
   if (field.min !== undefined) input.min = field.min; if (field.max !== undefined) input.max = field.max;
   input.value = value ?? ''; container.append(label, input); return container;
 }
-function openBusinessForm(record = null, conversion = null) {
+function openBusinessForm(record = null, conversion = null, repetition = null) {
   const service = businessService(record?.service_id || state.businessService);
   if (!service) return;
   businessConversion = conversion;
-  state.businessEditing = conversion ? null : record; businessFormService = service.id;
-  if (!conversion) state.businessService = service.id;
-  $('#business-form-module').textContent = service.name; $('#business-form-title').textContent = conversion ? (service.id === 'invoices' ? 'Rivedi la bozza fattura' : 'Rivedi l’incasso') : record ? 'Modifica attività' : 'Aggiungi attività';
-  $('#business-form-intro').textContent = conversion ? 'Abbiamo ripreso i dati dal documento precedente. Controlla importi, riferimenti e scadenza prima di salvare.' : 'Inserisci le informazioni che hai. Filo prepara un riepilogo e ordina le tue scadenze.';
-  $('#business-conversion-note').hidden = !conversion;
-  $('#business-conversion-note').textContent = conversion ? `Da “${conversion.source.title}”. ${service.id === 'invoices' ? 'Questa è una bozza interna: non è una fattura elettronica e non viene inviata allo SDI.' : 'Il salvataggio prepara un promemoria: non registra un pagamento né invia un sollecito.'}` : '';
-  $('#business-savings-fields').hidden = Boolean(conversion);
-  $('.business-form-extra > summary').textContent = conversion ? 'Note facoltative' : 'Note e tempo risparmiato';
-  $('#business-record-form button[type="submit"]').firstChild.textContent = conversion ? (service.id === 'invoices' ? 'Salva bozza fattura ' : 'Salva incasso ') : 'Salva attività ';
+  businessRepetition = repetition;
+  state.businessEditing = conversion || repetition ? null : record; businessFormService = service.id;
+  if (!conversion && !repetition) state.businessService = service.id;
+  $('#business-form-module').textContent = service.name; $('#business-form-title').textContent = repetition ? 'Rivedi la prossima attività' : conversion ? (service.id === 'invoices' ? 'Rivedi la bozza fattura' : 'Rivedi l’incasso') : record ? 'Modifica attività' : 'Aggiungi attività';
+  $('#business-form-intro').textContent = repetition ? 'Abbiamo ripreso le informazioni utili e azzerato i passaggi. Controlla e modifica i dati prima di creare la prossima attività.' : conversion ? 'Abbiamo ripreso i dati dal documento precedente. Controlla importi, riferimenti e scadenza prima di salvare.' : 'Inserisci le informazioni che hai. Filo prepara un riepilogo e ordina le tue scadenze.';
+  $('#business-conversion-note').hidden = !conversion && !repetition;
+  $('#business-conversion-note').textContent = repetition ? `Da “${repetition.source.title}” · Prossima scadenza: ${prettyDate(`${repetition.next_date}T12:00:00+02:00`, false)}. L’attività originale resta invariata. Le altre date vanno verificate o reinserite.` : conversion ? `Da “${conversion.source.title}”. ${service.id === 'invoices' ? 'Questa è una bozza interna: non è una fattura elettronica e non viene inviata allo SDI.' : 'Il salvataggio prepara un promemoria: non registra un pagamento né invia un sollecito.'}` : '';
+  $('#business-savings-fields').hidden = Boolean(conversion || repetition);
+  $('.business-form-extra > summary').textContent = conversion || repetition ? 'Note facoltative' : 'Note e tempo risparmiato';
+  $('#business-record-form button[type="submit"]').firstChild.textContent = repetition ? 'Crea la prossima attività ' : conversion ? (service.id === 'invoices' ? 'Salva bozza fattura ' : 'Salva incasso ') : 'Salva attività ';
   const fields = [
     { id: 'title', label: 'Titolo dell’attività', type: 'text', required: true, max_length: 160 },
     { id: 'contact', label: 'Cliente, referente o fornitore', type: 'text', max_length: 160 },
@@ -347,8 +376,14 @@ function openBusinessForm(record = null, conversion = null) {
     { id: 'status', label: 'Stato', type: 'select', required: true, options: Object.entries(businessStatusLabels).map(([value, label]) => ({ value, label })) },
     { id: 'priority', label: 'Priorità', type: 'select', required: true, options: Object.entries(businessPriorityLabels).map(([value, label]) => ({ value, label })) },
   ];
-  replace('#business-common-fields', ...fields.filter(field => !conversion || field.id !== 'status').map(field => businessFormField(field, record?.[field.id] ?? (field.id === 'status' ? 'todo' : field.id === 'priority' ? 'normal' : ''))));
+  replace('#business-common-fields', ...fields.filter(field => !(conversion || repetition) || field.id !== 'status').map(field => businessFormField(field, record?.[field.id] ?? (field.id === 'status' ? 'todo' : field.id === 'priority' ? 'normal' : ''))));
   replace('#business-detail-fields', ...(service.fields || []).map(field => businessFormField(field, record?.details?.[field.id])));
+  const dueField = $('#business-field-due_date');
+  if (repetition) { dueField.readOnly = true; dueField.setAttribute('aria-describedby', 'business-conversion-note'); const primaryDueField = service.playbook?.due_fields?.[0]; const primary = primaryDueField ? $(`#business-field-${primaryDueField}`) : null; if (primary && primary.value === repetition.next_date) primary.readOnly = true; }
+  else if (service.playbook?.due_fields?.length) {
+    const labels = service.playbook.due_fields.map(id => service.fields.find(field => field.id === id)?.label).filter(Boolean);
+    if (labels.length) { const hint = el('p', 'helper-text', `Se lasci vuota questa scadenza, usiamo ${labels.map(label => `“${label}”`).join(', ')} quando compilata.`); hint.id = 'business-due-helper'; dueField.setAttribute('aria-describedby', hint.id); dueField.parentElement.append(hint); }
+  }
   $('#business-record-notes').value = record?.notes || ''; $('#business-record-saved-minutes').value = record?.saved_minutes || 0;
   notice('#business-form-error', ''); openDialog('#business-form-dialog'); $('#business-field-title').focus();
 }
@@ -363,9 +398,23 @@ function renderBusinessDetail(record) {
   const title = el('h2', '', record.title); title.id = 'business-detail-title'; const meta = el('div', 'business-record-meta'); const due = businessDue(record);
   meta.append(businessRecordStatus(record), el('span', `status-pill ${due.style}`, due.label));
   body.append(title, meta); if (record.contact) body.append(el('p', 'business-detail-contact', record.contact));
+  if (record.due_source?.type === 'field') body.append(el('p', 'business-due-source', `Scadenza ripresa da “${record.due_source.label}”.`));
   const actions = el('div', 'card-actions');
   actions.append(actionButton(businessOpen(record) ? 'Segna completata' : 'Riapri attività', 'business-status', 'primary', 'check', { id: record.id, status: businessOpen(record) ? 'done' : 'todo' }), actionButton('Modifica', 'business-edit', 'secondary', undefined, { id: record.id }));
-  const download = el('a', 'button secondary', 'Scarica il documento'); download.href = `/api/business/records/${encodeURIComponent(record.id)}/export`; download.setAttribute('download', ''); download.append(icon('arrow')); actions.append(download, actionButton('Elimina', 'business-delete', 'ghost', undefined, { id: record.id })); body.append(actions);
+  const download = el('a', 'button secondary', 'Scarica il documento'); download.href = `/api/business/records/${encodeURIComponent(record.id)}/export`; download.setAttribute('download', ''); download.append(icon('arrow')); actions.append(actionButton('Copia il documento', 'business-copy-document', 'secondary', undefined, { id: record.id }), download, actionButton('Ripeti attività', 'business-repeat', 'secondary', undefined, { id: record.id }), actionButton('Elimina', 'business-delete', 'ghost', undefined, { id: record.id })); body.append(actions);
+  if (record.playbook?.steps?.length) {
+    const section = el('section', 'business-playbook'); section.setAttribute('aria-labelledby', 'business-playbook-title');
+    const heading = el('div', 'business-playbook-heading'); const title = el('h3', '', 'Passaggi da seguire'); title.id = 'business-playbook-title';
+    const progress = el('span', 'business-progress-caption', `${record.playbook.completed}/${record.playbook.total} segnati da te`); progress.id = 'business-playbook-progress'; progress.setAttribute('role', 'status'); heading.append(title, progress); section.append(heading, el('p', 'helper-text', 'Segna tu ciò che hai fatto. Filo conserva il progresso; i passaggi non vengono verificati automaticamente.'));
+    for (const step of record.playbook.steps) {
+      const label = el('label', 'business-playbook-step'); const checkbox = el('input'); checkbox.type = 'checkbox'; checkbox.id = `business-step-${step.id}`; checkbox.dataset.businessStep = step.id; checkbox.dataset.recordId = record.id; checkbox.checked = Boolean(step.checked); label.htmlFor = checkbox.id; label.append(checkbox, el('span', '', step.label)); section.append(label);
+    }
+    const error = el('div', 'notice error'); error.id = 'business-step-error'; error.setAttribute('role', 'alert'); error.hidden = true; section.append(error); body.append(section);
+  }
+  if (record.stock_reorder) {
+    const stock = el('section', 'business-stock-reorder'); const number = value => new Intl.NumberFormat('it-IT', { maximumFractionDigits: 6 }).format(Number(value));
+    stock.append(el('h3', '', 'Riordino da valutare'), el('p', '', `${number(record.stock_reorder.suggested_quantity)} ${record.details?.unit || 'unità'} per raggiungere la soglia indicata.`), el('p', 'helper-text', `Disponibili ${number(record.stock_reorder.quantity)} · Soglia ${number(record.stock_reorder.minimum)}. Calcolo dai tuoi dati: nessun ordine viene inviato.`)); body.append(stock);
+  }
   if (['quotes', 'invoices'].includes(record.service_id)) {
     const target = record.service_id === 'quotes' ? 'invoices' : 'receivables';
     const workflow = el('div', 'business-commercial-step');
@@ -373,8 +422,8 @@ function renderBusinessDetail(record) {
   }
   const links = record.links || { source: null, targets: [] };
   if (links.source || links.targets?.length) {
-    const connections = el('section', 'business-document-links'); connections.append(el('h3', '', 'Documenti collegati'));
-    for (const link of [...(links.source ? [{ ...links.source, role: 'Origine' }] : []), ...(links.targets || []).map(item => ({ ...item, role: 'Passo successivo' }))]) {
+    const connections = el('section', 'business-document-links'); connections.append(el('h3', '', 'Attività collegate'));
+    for (const link of [...(links.source ? [{ ...links.source, role: links.source.kind === 'repeat' ? 'Attività precedente' : 'Origine' }] : []), ...(links.targets || []).map(item => ({ ...item, role: item.kind === 'repeat' ? 'Prossima attività' : 'Passo successivo' }))]) {
       const button = actionButton('', 'business-linked-record', 'ghost', 'arrow', { id: link.id, service: link.service_id });
       const description = el('span'); description.append(el('small', '', `${link.role} · ${businessService(link.service_id)?.name || 'Attività'}`), el('strong', '', link.title)); button.prepend(description); connections.append(button);
     }
@@ -388,20 +437,22 @@ async function saveBusinessRecord(event) {
   event.preventDefault(); const form = event.currentTarget; if (!form.reportValidity()) return;
   const service = businessService(businessFormService || state.businessService); if (!service) return;
   const values = new FormData(form); const details = {};
-  for (const field of service.fields || []) { const value = String(values.get(field.id) || '').trim(); if (value) details[field.id] = ['number', 'money'].includes(field.type) ? Number(value) : value; else if ((state.businessEditing || businessConversion) && !field.required) details[field.id] = null; }
+  for (const field of service.fields || []) { const value = String(values.get(field.id) || '').trim(); if (value) details[field.id] = ['number', 'money'].includes(field.type) ? Number(value) : value; else if ((state.businessEditing || businessConversion || businessRepetition) && !field.required) details[field.id] = null; }
   const body = { title: String(values.get('title') || '').trim(), contact: String(values.get('contact') || '').trim(), due_date: values.get('due_date') || null, status: values.get('status'), priority: values.get('priority'), notes: String(values.get('notes') || '').trim(), saved_minutes: Number(values.get('saved_minutes') || 0), details };
   const conversion = businessConversion;
-  if (conversion) { delete body.status; delete body.saved_minutes; body.target_service_id = service.id; }
+  const repetition = businessRepetition;
+  if (repetition) { delete body.status; delete body.saved_minutes; delete body.due_date; body.next_date = repetition.next_date; }
+  else if (conversion) { delete body.status; delete body.saved_minutes; body.target_service_id = service.id; }
   else if (!state.businessEditing) body.service_id = service.id;
   notice('#business-form-error', '');
   await withBusy($('button[type="submit"]', form), async () => {
     try {
-      const editing = state.businessEditing; const path = conversion ? `/api/business/records/${encodeURIComponent(conversion.source.id)}/convert` : editing ? `/api/business/records/${encodeURIComponent(editing.id)}` : '/api/business/records';
-      const result = await api(path, { method: editing ? 'PATCH' : 'POST', body }); closeDialog('#business-form-dialog'); state.businessEditing = null; businessConversion = null;
+      const editing = state.businessEditing; const path = repetition ? `/api/business/records/${encodeURIComponent(repetition.source.id)}/repeat` : conversion ? `/api/business/records/${encodeURIComponent(conversion.source.id)}/convert` : editing ? `/api/business/records/${encodeURIComponent(editing.id)}` : '/api/business/records';
+      const result = await api(path, { method: editing ? 'PATCH' : 'POST', body }); closeDialog('#business-form-dialog'); state.businessEditing = null; businessConversion = null; businessRepetition = null;
       await refresh();
-      if (conversion && result.item) { if ($('#business-detail-dialog').open) closeDialog('#business-detail-dialog'); await openBusinessModule(result.item.service_id); await openBusinessRecord(result.item.id, result.item.service_id); }
+      if ((conversion || repetition) && result.item) { if ($('#business-detail-dialog').open) closeDialog('#business-detail-dialog'); await openBusinessModule(result.item.service_id); await openBusinessRecord(result.item.id, result.item.service_id); }
       else if (result.item && $('#business-detail-dialog').open) { state.businessRecord = result.item; renderBusinessDetail(result.item); }
-      toast(conversion ? result.created ? 'Passo successivo salvato e collegato al documento di origine.' : 'Il documento collegato è già presente. Lo abbiamo aperto.' : editing ? 'Attività aggiornata. Il documento è pronto da rivedere.' : 'Attività salvata. Il documento e le scadenze sono pronti.');
+      toast(repetition ? result.created ? 'Prossima attività creata. I passaggi ripartono da zero.' : 'Questa prossima attività esiste già. Abbiamo mantenuto i dati salvati.' : conversion ? result.created ? 'Passo successivo salvato e collegato al documento di origine.' : 'Il documento collegato è già presente. Lo abbiamo aperto.' : editing ? 'Attività aggiornata. Il documento è pronto da rivedere.' : 'Attività salvata. Il documento e le scadenze sono pronti.');
     }
     catch (error) { notice('#business-form-error', error.message); }
   });
@@ -417,6 +468,14 @@ async function handleBusinessAction(button) {
       if (result.existing) { closeDialog('#business-detail-dialog'); await openBusinessModule(result.existing.service_id); await openBusinessRecord(result.existing.id, result.existing.service_id); }
       else openBusinessForm(result.proposal, { source: result.source, target: button.dataset.target });
     }); return;
+  }
+  if (action === 'business-repeat') {
+    businessRepeatingSource = { id: button.dataset.id, title: state.businessRecord?.title || 'Attività' }; $('#business-repeat-description').textContent = `Riparti da “${businessRepeatingSource.title}” senza cambiare l’attività originale.`; $('#business-repeat-date').min = businessTomorrow(); $('#business-repeat-date').value = ''; notice('#business-repeat-error', ''); openDialog('#business-repeat-dialog'); $('#business-repeat-date').focus(); return;
+  }
+  if (action === 'business-close-repeat') { closeDialog('#business-repeat-dialog'); return; }
+  if (action === 'business-copy-document') {
+    const record = state.businessRecord; if (record?.id !== button.dataset.id || !record.document) throw new Error('Apri di nuovo l’attività per copiare il documento aggiornato.');
+    await withBusy(button, async () => { try { if (!navigator.clipboard?.writeText) throw new Error('Clipboard non disponibile'); await navigator.clipboard.writeText(record.document); toast('Documento copiato. Rivedilo prima di utilizzarlo.'); } catch (_) { toast('Il browser non ha permesso di copiare il documento. Puoi scaricarlo dal pulsante accanto.', true); } }); return;
   }
   if (action === 'business-quick-done') {
     const id = button.dataset.id; if (businessPending.has(id)) return; businessPending.add(id);
@@ -435,6 +494,7 @@ async function handleBusinessAction(button) {
   if (action === 'business-clear-filters') { state.businessCategory = 'all'; state.businessSearch = ''; state.businessScope = 'all'; state.businessLimit = 6; $('#business-service-search').value = ''; $('#business-service-scope').value = 'all'; renderBusinessCatalog(); return; }
   if (action === 'business-more') { state.businessLimit += 6; renderBusinessCatalog(); return; }
   if (action === 'business-record-page') { state.businessOffset = Number(button.dataset.offset); await withBusy(button, () => loadBusinessRecords(state.businessService)); return; }
+  if (action === 'business-show-history') { state.businessFilter = 'all'; state.businessOffset = 0; $('#business-record-filter').value = 'all'; await withBusy(button, () => loadBusinessRecords(state.businessService)); return; }
   if (action === 'business-new') { openBusinessForm(); return; }
   if (action === 'business-close-form') { closeDialog('#business-form-dialog'); return; }
   if (action === 'business-close-detail') { closeDialog('#business-detail-dialog'); return; }
@@ -931,8 +991,9 @@ document.addEventListener('keydown', event => {
 $$('dialog').forEach(dialog => dialog.addEventListener('close', () => {
   if (dialog.id === 'business-search-dialog') stopBusinessSearch();
   if (dialog.id === 'business-form-dialog') {
-    businessConversion = null; businessFormService = null;
+    businessConversion = null; businessRepetition = null; businessFormService = null;
   }
+  if (dialog.id === 'business-repeat-dialog') businessRepeatingSource = null;
   const previous = dialogFocus.get(dialog); const current = $('dialog[open]');
   if (previous?.isConnected && (!current || current.contains(previous)) && previous.getClientRects().length) previous.focus({ preventScroll: true });
 }));
@@ -948,6 +1009,32 @@ document.addEventListener('change', event => {
   if ($('#activate-button')) $('#activate-button').disabled = !state.wizard.authorizedRead || !state.wizard.authorizedDraft;
 });
 $('#business-record-form').addEventListener('submit', saveBusinessRecord);
+$('#business-repeat-form').addEventListener('submit', async event => {
+  event.preventDefault(); const form = event.currentTarget; if (!form.reportValidity() || !businessRepeatingSource) return;
+  const source = businessRepeatingSource; const nextDate = $('#business-repeat-date').value; notice('#business-repeat-error', '');
+  await withBusy($('button[type="submit"]', form), async () => {
+    try {
+      const result = await api(`/api/business/records/${encodeURIComponent(source.id)}/repetition?next_date=${encodeURIComponent(nextDate)}`);
+      closeDialog('#business-repeat-dialog');
+      if (result.existing) { if ($('#business-detail-dialog').open) closeDialog('#business-detail-dialog'); await openBusinessModule(result.existing.service_id); await openBusinessRecord(result.existing.id, result.existing.service_id); toast('Questa prossima attività esiste già. Abbiamo aperto quella salvata.'); }
+      else openBusinessForm(result.proposal, null, { source: result.source, next_date: nextDate });
+    } catch (error) { notice('#business-repeat-error', error.message); }
+  });
+});
+document.addEventListener('change', async event => {
+  const checkbox = event.target.closest('[data-business-step]'); if (!checkbox) return;
+  const recordId = checkbox.dataset.recordId; const stepId = checkbox.dataset.businessStep; const checked = checkbox.checked;
+  if (businessPending.has(recordId)) { checkbox.checked = !checked; return; }
+  const setBusy = busy => $$('[data-business-step],[data-action="business-status"],[data-action="business-edit"],[data-action="business-convert"],[data-action="business-delete"],[data-action="business-repeat"]', $('#business-detail-body')).forEach(control => { control.disabled = busy; });
+  businessPending.add(recordId); setBusy(true); notice('#business-step-error', '');
+  try {
+    const result = await api(`/api/business/records/${encodeURIComponent(recordId)}`, { method: 'PATCH', body: { steps: { [stepId]: checked } } });
+    if ($('#business-detail-dialog').open && state.businessRecord?.id === recordId) { state.businessRecord = result.item; renderBusinessDetail(result.item); setBusy(true); }
+    try { await refresh(); }
+    catch (error) { if ($('#business-detail-dialog').open && state.businessRecord?.id === recordId) notice('#business-step-error', `Il passaggio è salvato. La panoramica non si è aggiornata: ${error.message}`); else toast('Il passaggio è salvato. La panoramica si aggiornerà al prossimo controllo.', true); }
+  } catch (error) { if ($('#business-detail-dialog').open && state.businessRecord?.id === recordId) { checkbox.checked = !checked; notice('#business-step-error', `Il passaggio non è stato salvato. ${error.message}`); } else toast(error.message, true); }
+  finally { businessPending.delete(recordId); if ($('#business-detail-dialog').open && state.businessRecord?.id === recordId) { setBusy(false); $(`#business-step-${stepId}`)?.focus({ preventScroll: true }); } state.businessSummarySignature = null; renderBusinessSummary(); }
+});
 $('#business-global-search').addEventListener('input', event => {
   stopBusinessSearch(); const request = businessSearchRequest; const query = event.target.value.trim(); replace('#business-search-results'); notice('#business-search-error', '');
   if (!query) { $('#business-search-status').textContent = 'Scrivi una parola per trovare un’attività, un cliente o un documento.'; return; }

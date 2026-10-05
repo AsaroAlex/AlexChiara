@@ -1,0 +1,805 @@
+{
+  "schema_version": 1,
+  "research_date": "2026-10-05",
+  "language": "it",
+  "target_segment": "Studi e imprese di servizi italiane",
+  "workstream": "Benchmark specialistici per ogni funzione e integrazione del catalogo Filo",
+  "selection_policy": "Il riferimento preferito è scelto per idoneità al compito, semplicità, possibilità di applicare il pattern nello stato attuale di Filo e verificabilità manuale. 'Migliore' non indica un primato di quota di mercato, prestazioni misurate o una prova d’uso dei vendor. Si adattano pattern pubblici, senza riprodurre codice o materiali proprietari.",
+  "methodology": {
+    "provider": "Exa",
+    "search_calls": 4,
+    "sources_reviewed": 24,
+    "sources_reviewed_definition": "Somma numResults richiesti (4×6), non fonti uniche lette o validate.",
+    "queries": [
+      {
+        "query": "Official Zendesk help center ticket views priority status pending solved customer support organize work next reply queue",
+        "numResults": 6,
+        "objective": "Prefer zendesk.com official product and help; capture verified queue/status/next response workflow, exclude affiliates and claims of measured savings."
+      },
+      {
+        "query": "Official Process Street workflow checklist tasks recurring scheduled workflows and SafetyCulture inspection checklist corrective actions documentation",
+        "numResults": 6,
+        "objective": "Find official process.st and safetyculture.com help/product sources for checklists, manual task steps, recurring reviews and assigned corrective actions; avoid unverified efficiency numbers."
+      },
+      {
+        "query": "Official Factorial Personio leave absence handover training onboarding checklist SAP Concur Pleo expense reimbursement receipt approval product documentation",
+        "numResults": 6,
+        "objective": "Prefer official factorialhr.com personio.com concur.com pleo.io sources for absence cover, onboarding checklists and receipt review. Capture actual workflow evidence, do not claim payroll/legal validity or external verification from user entries."
+      },
+      {
+        "query": "Official Buffer publish approval calendar Mailchimp email campaign checklist Sendcloud tracking shipments delivery notifications features",
+        "numResults": 6,
+        "objective": "Prefer buffer.com mailchimp.com sendcloud.com official docs/product; capture calendar/approval checklist/tracking provenance. External publication and email sending need integrations; avoid third party price lists."
+      }
+    ],
+    "fetch_calls": 5,
+    "url_fetch_count": 22,
+    "unique_urls_requested": 21,
+    "successful_unique_fetched_pages": 20,
+    "failed_or_empty_urls": [
+      "https://mailchimp.com/help/create-a-regular-email/"
+    ],
+    "fetched_but_not_cited_urls": [
+      "https://mailchimp.com/developer/marketing/api/campaign-checklist/",
+      "https://help.safetyculture.com/en-US/000176/"
+    ],
+    "cited_sources": 23,
+    "cited_unique_urls": 23,
+    "reused_existing_sources": 6,
+    "source_policy": "Documentazione ufficiale di prodotto/API; riuso di estratti già validati nella ricerca del 5 ottobre 2026. Le pagine promozionali descrivono funzioni, non garantiscono produttività o superiorità.",
+    "scope_limits": [
+      "Nessun accesso a demo/account dei vendor e nessun benchmark pratico comparativo.",
+      "Nessuna nuova tariffa commerciale o addebito attivato.",
+      "current_filo descrive la versione pubblicata prima di questa revisione; optimized_local_recipe è la proposta da verificare con l’implementazione e i test.",
+      "Passaggi spuntati, date, importi e consensi annotati restano dichiarazioni dell’utente; non sono approvazioni di un altro utente o verifiche esterne.",
+      "Non esiste ancora uno spazio condiviso con assegnazioni effettive tra membri."
+    ],
+    "fetched_urls": [
+      "https://support.zendesk.com/hc/en-us/articles/4408829483930-Accessing-your-views-of-tickets",
+      "https://buffer.com/publish",
+      "https://mailchimp.com/developer/marketing/api/campaign-checklist/",
+      "https://www.process.st/help/docs/getting-started-running-workflows/",
+      "https://www.process.st/help/docs/scheduled-workflow-runs/",
+      "https://support.personio.de/hc/en-us/articles/115002474325-Common-onboarding-templates-and-steps",
+      "https://help.factorialhr.com/en_US/time-off-settings/how-to-create-and-assign-time-off-policies",
+      "https://help.pleo.io/en/support/solutions/articles/103000403267-month-end-checklist",
+      "https://support.sendcloud.com/hc/en-us/articles/360024841232-Send-branded-Tracking-emails-to-your-customers",
+      "https://help.safetyculture.com/005645",
+      "https://www.notion.com/help/ai-meeting-notes",
+      "https://developers.google.com/calendar/api/guides/overview",
+      "https://www.pec.it/posta-elettronica-certificata.aspx",
+      "https://www.odoo.com/documentation/19.0/developer/reference/external_api.html",
+      "https://www.twilio.com/docs/voice/twiml",
+      "https://developers.facebook.com/docs/whatsapp/cloud-api/overview",
+      "https://mailchimp.com/developer/marketing/api/campaign-checklist/get-campaign-send-checklist/",
+      "https://help.safetyculture.com/en-US/000176/",
+      "https://developers.google.com/calendar/api/guides/auth",
+      "https://mailchimp.com/help/create-a-regular-email/",
+      "https://www.fattureincloud.it/software-fatturazione/caratteristiche/",
+      "https://mailchimp.com/developer/marketing/api/campaign-checklist/get-campaign-send-checklist/"
+    ]
+  },
+  "coverage": {
+    "feature_count": 20,
+    "business_modules": 10,
+    "existing_modules": 2,
+    "pending_integrations": 8
+  },
+  "features": [
+    {
+      "service_id": "support",
+      "reference_product": "Zendesk",
+      "reference_pattern": "Coda di richieste raggruppata per stato, priorità e prossimo passo, con anteprima della richiesta.",
+      "source_ids": [
+        "zendesk-views"
+      ],
+      "selection_criteria": {
+        "task_fit": "Alto: gli studi gestiscono richieste e risposte aperte ogni giorno.",
+        "simplicity": "Usare pochi stati e mostrare subito richiesta, referente e azione.",
+        "readiness": "Schede, stato e priorità sono locali; canali e assegnazioni a utenti reali richiedono altro.",
+        "manual_verifiability": "Utente può registrare quali passaggi ha svolto; la spunta non prova che il cliente abbia ricevuto la risposta."
+      },
+      "current_filo": "Scheda con cliente, richiesta, referente annotato e risposta; stato, scadenza, priorità e documento TXT. Nessun helpdesk collegato né spazio condiviso tra operatori.",
+      "optimized_local_recipe": [
+        "Mostrare il primo controllo non completato: comprendere richiesta → confermare referente → preparare soluzione → rivedere risposta → annotare chiusura.",
+        "Mantenere 'In attesa' visibile e spiegare se si aspetta il cliente o un referente.",
+        "Registrare completamento manuale e consentire di riaprire; non inviare risposte o notifiche di assegnazione."
+      ],
+      "provider_dependencies": [],
+      "status": "local_available_with_proposed_optimization"
+    },
+    {
+      "service_id": "content",
+      "reference_product": "Buffer",
+      "reference_pattern": "Bozza per canale, coda di revisione e data di pubblicazione scelta.",
+      "source_ids": [
+        "buffer-publish"
+      ],
+      "selection_criteria": {
+        "task_fit": "Medio-alto: contenuti di studio e comunicazioni di servizio.",
+        "simplicity": "Una bozza con canale, pubblico e prossimo controllo.",
+        "readiness": "Preparazione e date locali; pubblicazione esterna ancora assente.",
+        "manual_verifiability": "Fatti, materiali, tono e data possono essere controllati dall’utente; nessuna pubblicazione dedotta."
+      },
+      "current_filo": "Scheda canale/pubblico/messaggio/bozza/publication_date, export TXT e stato locale.",
+      "optimized_local_recipe": [
+        "Checklist: confermare pubblico e obiettivo → verificare fatti/materiali → rivedere testo per il canale → scegliere data → pubblicare manualmente nel provider.",
+        "Usare publication_date nelle priorità operative con etichetta esplicita, senza inventare una data.",
+        "Separare 'bozza pronta' da pubblicazione realmente effettuata."
+      ],
+      "provider_dependencies": [],
+      "status": "local_available_with_proposed_optimization"
+    },
+    {
+      "service_id": "newsletter",
+      "reference_product": "Mailchimp",
+      "reference_pattern": "Checklist pre-invio per risolvere i problemi prima della spedizione, pubblico e testo riconoscibili.",
+      "source_ids": [
+        "mailchimp-checklist"
+      ],
+      "selection_criteria": {
+        "task_fit": "Alto: comunicazioni periodiche a clienti di studi e servizi.",
+        "simplicity": "Quattro controlli concreti invece di un campaign builder esteso.",
+        "readiness": "Oggetto, pubblico, testo e riferimenti ai consensi si possono organizzare localmente.",
+        "manual_verifiability": "Verifica manuale dichiarata; una spunta non certifica consensi, recapiti o consegna."
+      },
+      "current_filo": "Scheda con audience, subject, message e consent_source, testo da rivedere. Non possiede liste native, disiscrizioni, bounce, invio o analytics.",
+      "optimized_local_recipe": [
+        "Checklist: controllare gruppo e riferimento ai consensi → rivedere oggetto/testo → eseguire prova nel proprio strumento → confermare manualmente invio.",
+        "Conservare il riferimento alla prova e non segnare 'inviata' automaticamente.",
+        "Usare una due_date scelta dall’utente se occorre seguire l’attività."
+      ],
+      "provider_dependencies": [
+        "Invio vero: provider campagne, account e API, elenco destinatari, gestione consensi/disiscrizioni, esiti e permessi."
+      ],
+      "status": "local_available_with_proposed_optimization"
+    },
+    {
+      "service_id": "procedures",
+      "reference_product": "Process Street",
+      "reference_pattern": "Separare procedura modello e singola esecuzione, mostrando completati e prossimo passo; ripetizione configurabile.",
+      "source_ids": [
+        "process-runs",
+        "process-schedule"
+      ],
+      "selection_criteria": {
+        "task_fit": "Alto: attività ripetute di amministrazione e studio.",
+        "simplicity": "Checklist di pochi passaggi, primo incompleto in evidenza.",
+        "readiness": "Checklist ed esecuzione locali; nuove occorrenze solo con azione e data dell’utente.",
+        "manual_verifiability": "Passaggi segnati dall’utente con stato modificabile; nessuna esecuzione del processo esterno provata."
+      },
+      "current_filo": "Passaggi, controlli finali, referente e frequenza sono oggi campi testuali nella scheda; export TXT.",
+      "optimized_local_recipe": [
+        "Mostrare 3–5 controlli manuali e prossimo incompleto, preservando il testo della procedura.",
+        "Proporre una nuova revisione con data esplicita e conferma dell’utente; evitare nuovi record duplicati al secondo clic.",
+        "Tenere la nuova attività separata dall’esecuzione completata, senza trasformare 'ogni mese' in una scadenza legale."
+      ],
+      "provider_dependencies": [],
+      "status": "local_available_with_proposed_optimization"
+    },
+    {
+      "service_id": "meetings",
+      "reference_product": "Notion AI Meeting Notes",
+      "reference_pattern": "Struttura della riunione: appunti, punti principali e azioni con referente.",
+      "source_ids": [
+        "notion-meeting-notes",
+        "pipedrive-activities"
+      ],
+      "selection_criteria": {
+        "task_fit": "Alto: incontri cliente e riunioni di commessa.",
+        "simplicity": "Decisioni e prossimo seguito nella stessa scheda.",
+        "readiness": "Verbale dagli appunti inseriti; audio e trascrizione non sono disponibili.",
+        "manual_verifiability": "L’utente conferma decisioni e date; il nome del referente non crea un incarico nel suo account."
+      },
+      "current_filo": "Scheda con meeting_date, partecipanti, appunti, decisioni e azioni testuali, documento scaricabile.",
+      "optimized_local_recipe": [
+        "Checklist: verificare partecipanti e appunti → confermare decisioni → annotare referenti/date concordate → seguire primo punto aperto.",
+        "Far emergere la data della riunione con il suo significato; una nuova azione usa la data concordata e confermata.",
+        "Proporre revisione o nuova attività manuale, senza creare inviti o condividere con partecipanti."
+      ],
+      "provider_dependencies": [
+        "Audio/trascrizione futura: integrazione dedicata e consenso dei partecipanti; condivisione richiede utenti e permessi effettivi."
+      ],
+      "status": "local_available_with_proposed_optimization"
+    },
+    {
+      "service_id": "leave",
+      "reference_product": "Factorial + Personio",
+      "reference_pattern": "Richiesta di assenza distinta dagli accordi e checklist di consegna/copertura.",
+      "source_ids": [
+        "factorial-leave",
+        "personio-onboarding"
+      ],
+      "selection_criteria": {
+        "task_fit": "Medio: piccole squadre di servizi devono garantire copertura.",
+        "simplicity": "Periodo, referente di copertura e consegne prima dell’assenza.",
+        "readiness": "Annotazioni locali e validazione fine≥inizio già possibili; nessun motore HR/payroll.",
+        "manual_verifiability": "Accordi registrati dall’utente; il completamento non è autorizzazione da parte di responsabile o dipendente."
+      },
+      "current_filo": "Persona, starts_on, ends_on, covering_person e handover, con periodo valido; nessun saldo ferie né autorizzazione automatica.",
+      "optimized_local_recipe": [
+        "Checklist: confermare periodo con persona → concordare copertura → verificare consegne → annotare accordi confermati.",
+        "Mostrare starts_on come inizio assenza per preparare la copertura, senza derivare maturazioni o diritto alle ferie.",
+        "Rendere il prossimo passo un accordo umano specifico, non una decisione sul personale."
+      ],
+      "provider_dependencies": [
+        "Gestione ufficiale di ferie e buste paga: sistemi HR/payroll, policy e permessi reali."
+      ],
+      "status": "local_available_with_proposed_optimization"
+    },
+    {
+      "service_id": "training",
+      "reference_product": "Personio",
+      "reference_pattern": "Percorso di onboarding con passaggi verificabili e incontro di feedback.",
+      "source_ids": [
+        "personio-onboarding"
+      ],
+      "selection_criteria": {
+        "task_fit": "Medio-alto: nuovi collaboratori e aggiornamento dei servizi.",
+        "simplicity": "Materiali → passaggi → verifica concordata.",
+        "readiness": "Schede e checklist locali; nessun LMS o certificato collegato.",
+        "manual_verifiability": "Utente registra controlli completati; non prova competenze, presenza o certificazione."
+      },
+      "current_filo": "Scheda persona/gruppo, topic, trainer, materials e session_date.",
+      "optimized_local_recipe": [
+        "Checklist: concordare obiettivo/referente → controllare materiali/accessi → seguire passaggi → registrare confronto.",
+        "Far emergere session_date come incontro concordato, senza inventare obblighi formativi o validità legale.",
+        "Proporre successiva revisione con data scelta esplicitamente dall’utente."
+      ],
+      "provider_dependencies": [],
+      "status": "local_available_with_proposed_optimization"
+    },
+    {
+      "service_id": "expense-claims",
+      "reference_product": "Pleo",
+      "reference_pattern": "Raccolta giustificativo e dettagli della spesa prima della revisione e dell’esportazione.",
+      "source_ids": [
+        "pleo-close"
+      ],
+      "selection_criteria": {
+        "task_fit": "Alto: note spese e trasferte frequenti nei servizi.",
+        "simplicity": "Importo, motivo, giustificativo e prossimo controllo.",
+        "readiness": "Importo inserito ed export locali; nessun pagamento o rilevazione bancaria.",
+        "manual_verifiability": "L’utente controlla il riferimento al giustificativo; non è OCR né documento verificato."
+      },
+      "current_filo": "Scheda person, expense_date, amount, reason ed evidence come riferimento testuale; stato e scadenza manuali.",
+      "optimized_local_recipe": [
+        "Checklist: controllare motivo/importo → verificare giustificativo presso la fonte → confrontare regole aziendali → annotare esito della revisione.",
+        "Mostrare importi in EUR con precisione decimale e distinguere 'da verificare' da rimborso effettuato.",
+        "Non usare expense_date storica come scadenza; la data di revisione/rimborso è due_date inserita."
+      ],
+      "provider_dependencies": [
+        "Pagamento o registrazione contabile reale: approvazione autorizzata, provider pagamento/gestionale e conferma dell’esito."
+      ],
+      "status": "local_available_with_proposed_optimization"
+    },
+    {
+      "service_id": "shipments",
+      "reference_product": "Sendcloud",
+      "reference_pattern": "Tracking con stato proveniente dal corriere e attenzione a ritardi e consegna.",
+      "source_ids": [
+        "sendcloud-tracking"
+      ],
+      "selection_criteria": {
+        "task_fit": "Medio: utile per materiale e consegne di alcune imprese di servizi.",
+        "simplicity": "Destinatario, materiale, tracking e prossima verifica.",
+        "readiness": "Riferimenti e data locali; nessun feed del corriere.",
+        "manual_verifiability": "Esito annotato dopo controllo manuale nel portale del corriere; non aggiornato automaticamente."
+      },
+      "current_filo": "Scheda recipient/items/courier/tracking/delivery_date/amount, con esportazione e priorità manuale.",
+      "optimized_local_recipe": [
+        "Checklist: verificare destinatario/materiale → controllare riferimento di spedizione → consultare tracking del corriere → annotare esito e prossimo passo.",
+        "Usare delivery_date come consegna prevista, non prova di consegna.",
+        "Distinguere 'controllo effettuato' da pacco realmente consegnato."
+      ],
+      "provider_dependencies": [
+        "Tracking automatico/etichette/notifiche: account corriere o Sendcloud, API/webhook e autorizzazioni."
+      ],
+      "status": "local_available_with_proposed_optimization"
+    },
+    {
+      "service_id": "quality",
+      "reference_product": "SafetyCulture + Process Street",
+      "reference_pattern": "Controlli ricorrenti con risultati e attività successive, mantenendo visibile il progresso.",
+      "source_ids": [
+        "safetyculture-schedules",
+        "process-runs"
+      ],
+      "selection_criteria": {
+        "task_fit": "Medio: controlli di attrezzature, procedure e qualità del servizio.",
+        "simplicity": "Controlli → rilievi → intervento concordato → prossima verifica.",
+        "readiness": "Annotazioni locali e checklist manuale; nessun sensore o certificazione.",
+        "manual_verifiability": "Esiti dichiarati dall’utente, non verifiche tecniche certificate o prova di conformità."
+      },
+      "current_filo": "Scheda asset, owner, checks, findings e follow_up; scadenza manuale, documento interno.",
+      "optimized_local_recipe": [
+        "Checklist: concordare controlli → registrarne esiti → verificare rilievi aperti → concordare intervento → scegliere prossima verifica.",
+        "Proporre una nuova attività con data esplicita per controlli ripetuti, senza creare obblighi legali.",
+        "Il primo controllo incompleto deve essere visibile dalla scheda."
+      ],
+      "provider_dependencies": [],
+      "status": "local_available_with_proposed_optimization"
+    },
+    {
+      "service_id": "priority-email",
+      "reference_product": "Superhuman Mail + Microsoft 365 Copilot",
+      "reference_pattern": "Priorità per prossimo passo, promemoria di risposte attese e motivazione visibile.",
+      "source_ids": [
+        "superhuman-assistant",
+        "superhuman-structure",
+        "microsoft-priority"
+      ],
+      "selection_criteria": {
+        "task_fit": "Molto alto: prima esigenza quotidiana della segreteria di studio.",
+        "simplicity": "Poche categorie e prime risposte subito visibili.",
+        "readiness": "Triage, bozze e monitoraggi già disponibili quando la casella è collegata; OAuth Google/Microsoft va configurato dal gestore.",
+        "manual_verifiability": "Mostrare origine email, ultimo controllo e bozza da rivedere; nessun invio dedotto."
+      },
+      "current_filo": "Priorità email, briefing e watch del mittente/risposta attesa, bozze; Gmail/Outlook OAuth e provider IMAP. Casella reale necessaria; collegamenti OAuth non ancora configurati dal gestore.",
+      "optimized_local_recipe": [
+        "Conservare risposta urgente e watch richiesto prima delle attività ordinarie.",
+        "Mostrare prossimo passo e motivo della priorità, con ora dell’ultimo controllo.",
+        "Rimandare invio e azioni esterne alle autorizzazioni e al canale realmente disponibile."
+      ],
+      "provider_dependencies": [
+        "Casella collegata e sincronizzazione affidabile; Google/Microsoft necessitano app OAuth e credenziali Railway configurate.",
+        "Una funzione di sollecito automatico sui thread inviati richiede accesso e rilevamento delle risposte pertinenti."
+      ],
+      "status": "existing_available_when_mailbox_connected"
+    },
+    {
+      "service_id": "agenda",
+      "reference_product": "Google Calendar + Pipedrive",
+      "reference_pattern": "Ordine cronologico degli eventi, dettagli utili e prossimo appuntamento con contesto.",
+      "source_ids": [
+        "google-calendar-overview",
+        "pipedrive-activities",
+        "google-gmail-help"
+      ],
+      "selection_criteria": {
+        "task_fit": "Molto alto: appuntamenti con clienti e lavoro della giornata.",
+        "simplicity": "Ordine del giorno scaricabile e dettaglio davanti all’utente.",
+        "readiness": "Agenda manuale già disponibile; non legge la disponibilità reale dei provider.",
+        "manual_verifiability": "Appuntamenti inseriti dall’utente e note esportate; assenza di conflitti esterni non certificata."
+      },
+      "current_filo": "Appuntamenti manuali e ordine del giorno da scaricare; nessuna sincronizzazione, invito o verifica disponibilità esterna.",
+      "optimized_local_recipe": [
+        "Mantenere appuntamenti e note in ordine della giornata senza clic aggiuntivi.",
+        "Esplicitare che gli appuntamenti sono inseriti manualmente.",
+        "Proporre preparazione e seguito solo dalle informazioni note, senza inventare orari liberi."
+      ],
+      "provider_dependencies": [
+        "Inviti, free/busy o calendari condivisi richiedono il connettore calendario e autorizzazioni dedicate."
+      ],
+      "status": "existing_manual_available"
+    },
+    {
+      "service_id": "sync-calendar",
+      "reference_product": "Google Calendar API",
+      "reference_pattern": "Eventi e disponibilità con autorizzazioni minime, sincronizzazione e provenienza chiara.",
+      "source_ids": [
+        "google-calendar-overview",
+        "google-calendar-auth",
+        "pipedrive-activities"
+      ],
+      "selection_criteria": {
+        "task_fit": "Molto alto: calendario operativo degli studi.",
+        "simplicity": "Un solo calendario quotidiano con fonte e ultimo aggiornamento.",
+        "readiness": "Modulo esterno non disponibile; l’agenda locale resta operativa.",
+        "manual_verifiability": "Non si può verificare manualmente una sincronizzazione inesistente."
+      },
+      "current_filo": "Scheda integrazione non disponibile; agenda locale manuale.",
+      "optimized_local_recipe": [
+        "Mantenere la scheda tra le integrazioni richieste, distinguendo gli appuntamenti locali da quelli futuri sincronizzati.",
+        "Quando collegato, mostrare provider, ultimo sync, permessi e conflitti; richiedere conferma prima di creare/modificare eventi."
+      ],
+      "provider_dependencies": [
+        "App OAuth Google/Microsoft con scope calendario, token per account, consenso e revoca, mapping ID/timezone, sincronizzazione e gestione errori."
+      ],
+      "status": "requires_provider"
+    },
+    {
+      "service_id": "sdi",
+      "reference_product": "Fatture in Cloud",
+      "reference_pattern": "Flusso di emissione/ricezione con stato SDI e conservazione, distinto da una bozza.",
+      "source_ids": [
+        "fic-features"
+      ],
+      "selection_criteria": {
+        "task_fit": "Molto alto: fatturazione italiana di studi e servizi.",
+        "simplicity": "Dati riusati e stato del documento leggibile.",
+        "readiness": "Bozze fattura locali disponibili; XML fiscale, invio e conservazione non implementati.",
+        "manual_verifiability": "La revisione manuale della bozza non prova emissione o ricezione SDI."
+      },
+      "current_filo": "Scheda integrazione non disponibile; preventivo→bozza fattura→incasso locale con revisione e protezione duplicati.",
+      "optimized_local_recipe": [
+        "Tenere chiara la dicitura bozza interna e la necessità del gestionale fiscale.",
+        "Prima dell’eventuale integrazione futura: controllare dati fiscali mancanti, far rivedere la bozza e conservare riferimento e stato del provider."
+      ],
+      "provider_dependencies": [
+        "Provider/intermediario fiscale e credenziali, deleghe quando applicabili, formato XML e regole fiscali, invio/ricezione/notifiche SDI, conservazione e gestione degli scarti."
+      ],
+      "status": "requires_provider"
+    },
+    {
+      "service_id": "bank",
+      "reference_product": "Fatture in Cloud + TS Pay",
+      "reference_pattern": "Abbinare movimenti a documenti con conferma dell’utente e origine bancaria esplicita.",
+      "source_ids": [
+        "fic-features"
+      ],
+      "selection_criteria": {
+        "task_fit": "Alto: scadenze e incassi reali degli studi.",
+        "simplicity": "Proposte di abbinamento trasparenti invece di contabilizzazioni opache.",
+        "readiness": "Incassi/spese manuali disponibili; movimenti e pagamenti bancari assenti.",
+        "manual_verifiability": "Saldo o pagamento annotato dall’utente non è conferma bancaria."
+      },
+      "current_filo": "Scheda integrazione non disponibile; incassi e spese vengono inseriti o convertiti localmente.",
+      "optimized_local_recipe": [
+        "Visualizzare importi e riferimenti annotati come tali; non mostrare saldi bancari inventati.",
+        "Un futuro collegamento deve proporre l’abbinamento e lasciare visibili movimento, documento, fonte e discrepanza."
+      ],
+      "provider_dependencies": [
+        "Provider bancario/open-banking abilitato, consenso e accesso al conto, sincronizzazione affidabile, gestione revoca, log e conferma per pagamenti."
+      ],
+      "status": "requires_provider"
+    },
+    {
+      "service_id": "pec-send",
+      "reference_product": "Aruba PEC",
+      "reference_pattern": "Separare invio, accettazione e consegna con ricevute conservate e stato verificabile.",
+      "source_ids": [
+        "aruba-pec"
+      ],
+      "selection_criteria": {
+        "task_fit": "Alto: comunicazioni formali e rapporti con clienti/PA.",
+        "simplicity": "Pochi stati legati alle ricevute, senza confondere consegna e lettura.",
+        "readiness": "Riferimenti documentali locali; invio e ricevute PEC assenti.",
+        "manual_verifiability": "Annotazione o checkbox non produce valore probatorio; una ricevuta di consegna non prova lettura."
+      },
+      "current_filo": "Scheda integrazione non disponibile; riferimenti PEC possono essere annotati nelle schede documentali.",
+      "optimized_local_recipe": [
+        "Preparare testo e riferimenti localmente e usare il provider PEC per l’invio.",
+        "In futuro mostrare ricezione delle due ricevute e i relativi riferimenti; non segnare consegnato senza ricevuta reale."
+      ],
+      "provider_dependencies": [
+        "Account/provider PEC, credenziali e API o protocollo supportato, acquisizione delle ricevute e associazione al messaggio, gestione degli errori e archivio adeguato."
+      ],
+      "status": "requires_provider"
+    },
+    {
+      "service_id": "erp-sync",
+      "reference_product": "Odoo JSON-2 API",
+      "reference_pattern": "Mapping dei dati e integrazione autenticata, con dati e permessi del gestionale come fonte.",
+      "source_ids": [
+        "odoo-external-api"
+      ],
+      "selection_criteria": {
+        "task_fit": "Alto per imprese con gestionale già in uso; variabile per studio singolo.",
+        "simplicity": "Scambiare solo oggetti necessari e mostrare esiti/errori.",
+        "readiness": "Nessun connettore ERP; i moduli locali non registrano contabilità.",
+        "manual_verifiability": "TXT scaricato non è import contabile né riconciliazione."
+      },
+      "current_filo": "Scheda integrazione non disponibile; registrazioni fiscali e contabili restano nel gestionale.",
+      "optimized_local_recipe": [
+        "Tenere separate le attività locali e le registrazioni del gestionale.",
+        "Una futura sincronizzazione deve conservare mapping/origine/ID, gestire conflitti e duplicati e mostrare esito reale."
+      ],
+      "provider_dependencies": [
+        "Gestionale e API effettivamente disponibili; per Odoo 19 API esterna su Custom, non Standard/One App Free.",
+        "Account/permessi, chiavi sicure e rotazione, mapping campi, connettore, prova in ambiente di test e gestione conflitti."
+      ],
+      "status": "requires_provider"
+    },
+    {
+      "service_id": "social-publish",
+      "reference_product": "Buffer",
+      "reference_pattern": "Coda per canale con data esplicita e pubblicazione legata a profili realmente collegati.",
+      "source_ids": [
+        "buffer-publish"
+      ],
+      "selection_criteria": {
+        "task_fit": "Medio-alto: comunicazione di studi e imprese di servizi.",
+        "simplicity": "Preparare in Filo e pubblicare solo dopo revisione.",
+        "readiness": "Schede contenuto disponibili; nessun post inviato alle piattaforme.",
+        "manual_verifiability": "Una bozza pronta non è un post pubblicato; esito futuro da provider."
+      },
+      "current_filo": "Scheda integrazione non disponibile; il servizio content prepara testi e riferimenti da rivedere.",
+      "optimized_local_recipe": [
+        "Indicare che la pubblicazione va eseguita dal profilo o provider esterno.",
+        "In futuro separare approvata, programmata, pubblicata ed errore con ID e data restituiti dal provider."
+      ],
+      "provider_dependencies": [
+        "Account e profili social, API/OAuth e permessi, connettore per canale, formati/limiti, idempotenza, esiti e revoca."
+      ],
+      "status": "requires_provider"
+    },
+    {
+      "service_id": "phone",
+      "reference_product": "Twilio Programmable Voice",
+      "reference_pattern": "Chiamata in arrivo → richiesta → referente/richiamo, con controllo del flusso e fonte reale.",
+      "source_ids": [
+        "twilio-voice"
+      ],
+      "selection_criteria": {
+        "task_fit": "Alto per studi con contatti telefonici frequenti.",
+        "simplicity": "Prima registrare la richiesta e il richiamo, poi valutare IVR/voce.",
+        "readiness": "Richiami possono essere annotati localmente; nessuna ricezione telefonica attiva.",
+        "manual_verifiability": "Annotazione non è prova di chiamata registrata né contatto avvenuto."
+      },
+      "current_filo": "Scheda integrazione non disponibile; clienti e assistenza possono contenere richiami inseriti dall’utente.",
+      "optimized_local_recipe": [
+        "Organizzare manualmente le richieste nel servizio assistenza, con referente e data concordata.",
+        "Un futuro collegamento deve mostrare stato chiamata e richiamo con origine, senza inventare trascrizioni."
+      ],
+      "provider_dependencies": [
+        "Provider voce/numero, account e tariffe, webhook autenticati, gestione inbound/outbound, sicurezza e regole/consensi per eventuali registrazioni."
+      ],
+      "status": "requires_provider"
+    },
+    {
+      "service_id": "whatsapp",
+      "reference_product": "WhatsApp Business Platform (Meta)",
+      "reference_pattern": "Messaggi e stati via webhook, template e numero aziendale realmente configurati.",
+      "source_ids": [
+        "meta-whatsapp"
+      ],
+      "selection_criteria": {
+        "task_fit": "Alto per imprese che usano già WhatsApp; medio per studi con canali formali.",
+        "simplicity": "Coda di richieste e risposta da rivedere, con origine del messaggio.",
+        "readiness": "Nessun connettore WhatsApp; annotazioni locali delle attività disponibili.",
+        "manual_verifiability": "Annotare una risposta non è invio o consegna; gli stati devono provenire dai webhook."
+      },
+      "current_filo": "Scheda integrazione non disponibile; conversazioni restano nel provider e attività possono essere riportate in Filo.",
+      "optimized_local_recipe": [
+        "Tenere il canale non collegato esplicito e proporre le attività locali conseguenti.",
+        "In futuro conservare messaggio/numero/provider e stato reale; separare bozza, invio e consegna."
+      ],
+      "provider_dependencies": [
+        "App Meta/WhatsApp Business Account e numero, credenziali e webhook, template/permessi approvati dove richiesti, consensi e regole d’invio, limiti/costi provider e revoca."
+      ],
+      "status": "requires_provider"
+    }
+  ],
+  "sources": [
+    {
+      "id": "zendesk-views",
+      "product": "Zendesk",
+      "url": "https://support.zendesk.com/hc/en-us/articles/4408829483930-Accessing-your-views-of-tickets",
+      "title": "Accessing your views of tickets",
+      "excerpt": "Views help you group tickets by status, assignee, group, or other criteria so you can find, open, and work through the right tickets faster.",
+      "type": "official_help",
+      "read_on": "2026-10-05",
+      "quality": "Documentazione operativa del produttore: descrive comportamento, vincoli e prerequisiti; non sostituisce una prova d’uso."
+    },
+    {
+      "id": "buffer-publish",
+      "product": "Buffer",
+      "url": "https://buffer.com/publish",
+      "title": "Publish — Everything you post, planned in one place",
+      "excerpt": "A separate text box per network, so each one reads like it belongs there",
+      "type": "official_product",
+      "read_on": "2026-10-05",
+      "quality": "Pagina del produttore: valida per descrivere il prodotto, interessata commercialmente; non prova produttività o superiorità indipendente."
+    },
+    {
+      "id": "mailchimp-checklist",
+      "product": "Mailchimp",
+      "url": "https://mailchimp.com/developer/marketing/api/campaign-checklist/get-campaign-send-checklist/",
+      "title": "Get campaign send checklist",
+      "excerpt": "Review the send checklist for a campaign, and resolve any issues before sending.",
+      "type": "official_api_help",
+      "read_on": "2026-10-05",
+      "quality": "Documentazione operativa del produttore: descrive comportamento, vincoli e prerequisiti; non sostituisce una prova d’uso."
+    },
+    {
+      "id": "process-runs",
+      "product": "Process Street",
+      "url": "https://www.process.st/help/docs/getting-started-running-workflows/",
+      "title": "Running Workflows",
+      "excerpt": "A workflow is the master blueprint of your process, which includes all the usual steps and details involved in a particular workflow. A workflow run, on the other hand, is a single instance of that process in which you actually implement the work.",
+      "type": "official_help",
+      "read_on": "2026-10-05",
+      "quality": "Documentazione operativa del produttore: descrive comportamento, vincoli e prerequisiti; non sostituisce una prova d’uso."
+    },
+    {
+      "id": "process-schedule",
+      "product": "Process Street",
+      "url": "https://www.process.st/help/docs/scheduled-workflow-runs/",
+      "title": "Scheduled Workflow Runs",
+      "excerpt": "Process Street’s scheduling tool enables you to automate workflow runs for one-off events or recurring processes.",
+      "type": "official_help",
+      "read_on": "2026-10-05",
+      "quality": "Documentazione operativa del produttore: descrive comportamento, vincoli e prerequisiti; non sostituisce una prova d’uso."
+    },
+    {
+      "id": "personio-onboarding",
+      "product": "Personio",
+      "url": "https://support.personio.de/hc/en-us/articles/115002474325-Common-onboarding-templates-and-steps",
+      "title": "Common onboarding templates and steps",
+      "excerpt": "| Feedback meeting (supervisor) | Make appointment for first feedback meeting | Checkbox |",
+      "type": "official_help",
+      "read_on": "2026-10-05",
+      "quality": "Documentazione operativa del produttore: descrive comportamento, vincoli e prerequisiti; non sostituisce una prova d’uso."
+    },
+    {
+      "id": "factorial-leave",
+      "product": "Factorial",
+      "url": "https://help.factorialhr.com/en_US/time-off-settings/how-to-create-and-assign-time-off-policies",
+      "title": "How to create and assign time off policies",
+      "excerpt": "The process for requesting time off.",
+      "type": "official_help",
+      "read_on": "2026-10-05",
+      "quality": "Documentazione operativa del produttore: descrive comportamento, vincoli e prerequisiti; non sostituisce una prova d’uso."
+    },
+    {
+      "id": "pleo-close",
+      "product": "Pleo",
+      "url": "https://help.pleo.io/en/support/solutions/articles/103000403267-month-end-checklist",
+      "title": "Month end checklist",
+      "excerpt": "Check for missing receipts",
+      "type": "official_help",
+      "read_on": "2026-10-05",
+      "quality": "Documentazione operativa del produttore: descrive comportamento, vincoli e prerequisiti; non sostituisce una prova d’uso."
+    },
+    {
+      "id": "sendcloud-tracking",
+      "product": "Sendcloud",
+      "url": "https://support.sendcloud.com/hc/en-us/articles/360024841232-Send-branded-Tracking-emails-to-your-customers",
+      "title": "Send branded Tracking emails to your customers",
+      "excerpt": "Delivered: Sent when the carrier successfully delivered the shipment.",
+      "type": "official_help",
+      "read_on": "2026-10-05",
+      "quality": "Documentazione operativa del produttore: descrive comportamento, vincoli e prerequisiti; non sostituisce una prova d’uso."
+    },
+    {
+      "id": "safetyculture-schedules",
+      "product": "SafetyCulture",
+      "url": "https://help.safetyculture.com/005645",
+      "title": "Edit schedules (new experience)",
+      "excerpt": "You can create a schedule once, and inspections are automatically created at the frequency you set, giving you a single place to monitor progress and ensure critical checks are completed on time.",
+      "type": "official_help",
+      "read_on": "2026-10-05",
+      "quality": "Documentazione operativa del produttore: descrive comportamento, vincoli e prerequisiti; non sostituisce una prova d’uso."
+    },
+    {
+      "id": "notion-meeting-notes",
+      "product": "Notion",
+      "url": "https://www.notion.com/help/ai-meeting-notes",
+      "title": "AI Meeting Notes",
+      "excerpt": "Notion AI transcribes your meeting and identifies key points and action items that you can share with your entire team.",
+      "type": "official_help",
+      "read_on": "2026-10-05",
+      "quality": "Documentazione operativa del produttore: descrive comportamento, vincoli e prerequisiti; non sostituisce una prova d’uso."
+    },
+    {
+      "id": "google-calendar-overview",
+      "product": "Google Calendar",
+      "url": "https://developers.google.com/calendar/api/guides/overview",
+      "title": "Google Calendar API overview",
+      "excerpt": "Event An event on a calendar containing information such as the title, start and end times, and attendees. Events can be either single events or recurring events.",
+      "type": "official_api_help",
+      "read_on": "2026-10-05",
+      "quality": "Documentazione operativa del produttore: descrive comportamento, vincoli e prerequisiti; non sostituisce una prova d’uso."
+    },
+    {
+      "id": "google-calendar-auth",
+      "product": "Google Calendar",
+      "url": "https://developers.google.com/calendar/api/guides/auth",
+      "title": "Configure the OAuth consent screen and choose scopes",
+      "excerpt": "Generally, you should choose the most narrowly focused scope possible and avoid requesting scopes that your app doesn't require.",
+      "type": "official_api_help",
+      "read_on": "2026-10-05",
+      "quality": "Documentazione operativa del produttore: descrive comportamento, vincoli e prerequisiti; non sostituisce una prova d’uso."
+    },
+    {
+      "id": "aruba-pec",
+      "product": "Aruba PEC",
+      "url": "https://www.pec.it/posta-elettronica-certificata.aspx",
+      "title": "Cos’è la Posta Elettronica Certificata",
+      "excerpt": "La ricevuta di avvenuta consegna quindi conferma che il messaggio è stato recapitato al destinatario anche se non dimostra che il messaggio sia stato letto.",
+      "type": "official_product",
+      "read_on": "2026-10-05",
+      "quality": "Pagina del produttore: valida per descrivere il prodotto, interessata commercialmente; non prova produttività o superiorità indipendente."
+    },
+    {
+      "id": "odoo-external-api",
+      "product": "Odoo",
+      "url": "https://www.odoo.com/documentation/19.0/developer/reference/external_api.html",
+      "title": "External JSON-2 API — Odoo 19.0",
+      "excerpt": "Access to data via the external API is only available on Custom Odoo pricing plans. Access to the external API is not available on One App Free or Standard plans.",
+      "type": "official_api_help",
+      "read_on": "2026-10-05",
+      "quality": "Documentazione operativa del produttore: descrive comportamento, vincoli e prerequisiti; non sostituisce una prova d’uso."
+    },
+    {
+      "id": "twilio-voice",
+      "product": "Twilio",
+      "url": "https://www.twilio.com/docs/voice/twiml",
+      "title": "TwiML for Programmable Voice",
+      "excerpt": "When someone makes a call to one of your Twilio numbers, Twilio looks up the URL associated with that phone number and sends it a request.",
+      "type": "official_api_help",
+      "read_on": "2026-10-05",
+      "quality": "Documentazione operativa del produttore: descrive comportamento, vincoli e prerequisiti; non sostituisce una prova d’uso."
+    },
+    {
+      "id": "meta-whatsapp",
+      "product": "WhatsApp Business Platform",
+      "url": "https://developers.facebook.com/docs/whatsapp/cloud-api/overview",
+      "title": "About the WhatsApp Business Platform",
+      "excerpt": "Webhooks deliver JSON payloads to your server for message status updates, incoming messages, asynchronous error handling, and many other notification utilities.",
+      "type": "official_api_help",
+      "read_on": "2026-10-05",
+      "quality": "Documentazione operativa del produttore: descrive comportamento, vincoli e prerequisiti; non sostituisce una prova d’uso."
+    },
+    {
+      "id": "fic-features",
+      "product": "Fatture in Cloud",
+      "url": "https://www.fattureincloud.it/software-fatturazione/caratteristiche/",
+      "title": "Software gestionale cloud e fatturazione: funzionalità",
+      "excerpt": "Collega Fatture in Cloud al tuo conto corrente e importa l’estratto conto. L’AI associa in automatico i movimenti a fatture e altri documenti: a te non rimane che confermare.",
+      "additional_excerpt": "Tu crei al volo la fattura e al resto pensa il software: firma digitale qualificata, invio al SdI e conservazione digitale obbligatoria.",
+      "type": "official_product",
+      "reused_from": "italian-competitors.json",
+      "reread_in_this_workstream": true,
+      "read_on": "2026-10-05",
+      "quality": "Pagina del produttore: valida per descrivere il prodotto, interessata commercialmente; non prova produttività o superiorità indipendente."
+    },
+    {
+      "id": "superhuman-assistant",
+      "product": "Superhuman Mail",
+      "url": "https://help.superhuman.com/hc/en-us/articles/46005854346893-Email-Assistant-by-Superhuman-Mail-Gmail",
+      "title": "Email Assistant by Superhuman Mail (Gmail)",
+      "excerpt": "Auto Reminders bring sent emails back to your inbox when they have not received a response.",
+      "type": "official_help",
+      "reused_from": "productivity-competitors.json",
+      "read_on": "2026-10-05",
+      "quality": "Documentazione operativa del produttore: descrive comportamento, vincoli e prerequisiti; non sostituisce una prova d’uso."
+    },
+    {
+      "id": "superhuman-structure",
+      "product": "Superhuman Mail",
+      "url": "https://help.superhuman.com/hc/en-us/articles/46005793275277-Structure-Your-Inbox",
+      "title": "Structure Your Inbox",
+      "excerpt": "The ideal number of Split Inboxes is usually between 3 and 7.",
+      "type": "official_help",
+      "reused_from": "productivity-competitors.json",
+      "read_on": "2026-10-05",
+      "quality": "Documentazione operativa del produttore: descrive comportamento, vincoli e prerequisiti; non sostituisce una prova d’uso."
+    },
+    {
+      "id": "microsoft-priority",
+      "product": "Microsoft 365 Copilot in Outlook",
+      "url": "https://support.microsoft.com/en-us/topic/prioritize-my-inbox-65e37040-2c90-4ee3-86d9-e95d5ba0e3cb",
+      "title": "Prioritize my inbox",
+      "excerpt": "Copilot does not go back and re-evaluate or change the priorities of mail you've already received.",
+      "type": "official_help",
+      "reused_from": "productivity-competitors.json",
+      "read_on": "2026-10-05",
+      "quality": "Documentazione operativa del produttore: descrive comportamento, vincoli e prerequisiti; non sostituisce una prova d’uso."
+    },
+    {
+      "id": "google-gmail-help",
+      "product": "Google Workspace Gemini in Gmail",
+      "url": "https://support.google.com/mail/answer/14199860?hl=it",
+      "title": "Collaborare con Gemini in Gmail",
+      "excerpt": "Pianifica: proponi orari per le riunioni in base alla tua disponibilità in Google Calendar.",
+      "type": "official_help",
+      "reused_from": "productivity-competitors.json",
+      "read_on": "2026-10-05",
+      "quality": "Documentazione operativa del produttore: descrive comportamento, vincoli e prerequisiti; non sostituisce una prova d’uso."
+    },
+    {
+      "id": "pipedrive-activities",
+      "product": "Pipedrive",
+      "url": "https://support.pipedrive.com/en/article/activities",
+      "title": "Activities",
+      "excerpt": "Active calendar sync is required to send activity invites.",
+      "additional_excerpt": "Next activity date – shows the date of the next activity you scheduled that isn't marked as done yet",
+      "type": "official_help",
+      "reused_from": "suite-competitors.json",
+      "read_on": "2026-10-05",
+      "quality": "Documentazione operativa del produttore: descrive comportamento, vincoli e prerequisiti; non sostituisce una prova d’uso."
+    }
+  ]
+}

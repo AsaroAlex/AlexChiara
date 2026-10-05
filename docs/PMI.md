@@ -15,9 +15,17 @@ La pagina **Servizi** offre 23 moduli aziendali locali, oltre alla segreteria em
 
 I moduli usano schede con campi specifici. Puoi assegnare una scadenza, una priorità e uno stato, aggiornare i dati, completare o riaprire un'attività. Dalla scheda Filo prepara un documento locale da leggere, copiare o scaricare in `.txt`. La modifica dei dati aggiorna il documento.
 
+Ogni modulo suggerisce da tre a cinque **Passaggi da seguire**, adatti al suo compito: per esempio verificare le condizioni del preventivo, raccogliere il giustificativo di una spesa o controllare il destinatario di una spedizione. Le caselle conservano ciò che hai segnato e il prossimo passaggio aperto compare anche nella panoramica. I passaggi sono conferme manuali: segnare un controllo non prova un’approvazione esterna e completare l’attività non spunta automaticamente le caselle.
+
 La ricerca **Cerca attività** trova titoli, referenti, note e dati delle schede in tutti i moduli aziendali; non cerca nella casella email. Si può aprire anche con `Ctrl/Cmd + K`. Le attività della panoramica possono essere completate direttamente e riaperte con il comando per annullare.
 
 La panoramica mostra subito le attività scadute, quelle di oggi e quelle che richiedono attenzione, con il prossimo passo. Per il magazzino una quantità inferiore alla soglia annotata propone un controllo e un riordino: non aggiorna la giacenza e non invia ordini. Le date vengono valutate nel fuso italiano `Europe/Rome`.
+
+Se lasci vuota la scadenza generale, Filo usa la data già inserita nel modulo: validità del preventivo, incasso previsto, pagamento della spesa, consegna dell’acquisto, rinnovo del contratto, pubblicazione, riunione, inizio dell’assenza, formazione o consegna della spedizione. Il dettaglio indica da quale campo arriva. Una scadenza generale scelta da te ha precedenza. La data storica di una nota spese non diventa una scadenza di rimborso.
+
+Il riepilogo economico somma soltanto gli importi delle schede aperte **Incassi** e **Spese**, distinguendo scaduti e oggi. Preventivi e bozze fattura non vengono sommati di nuovo. Sono importi inseriti da te, senza riscontro bancario. Il dettaglio magazzino mostra quanto manca per raggiungere la soglia; la quantità suggerita resta da verificare prima di un acquisto.
+
+Con **Ripeti attività** scegli una data successiva a oggi e rivedi la scheda proposta prima di salvarla. Il titolo, i dati utili e le note sono copiati; i passaggi e i minuti ripartono da zero. Le vecchie date vengono rimosse e la nuova data operativa viene proposta quando il modulo la prevede; le altre date richieste, come la fine di un’assenza, vanno reinserite. Annullare non crea una scheda. Ripetere dalla stessa origine per la stessa data riapre la destinazione già creata e conserva le modifiche. Non è una pianificazione automatica e l’origine resta invariata.
 
 La chat propone il modulo pertinente, ad esempio **Preventivi**, **Incassi** o **Verbali**, senza creare record o attivare permessi soltanto dal testo della richiesta. La segreteria email mantiene il proprio consenso e i limiti del collegamento Gmail/Outlook/IMAP.
 

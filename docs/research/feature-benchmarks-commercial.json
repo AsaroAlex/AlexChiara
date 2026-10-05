@@ -1,0 +1,545 @@
+{
+  "schema_version": 1,
+  "research_date": "2026-10-05",
+  "language": "it",
+  "target_segment": "Studi e imprese di servizi italiane",
+  "scope": "Benchmark per ciascuno dei 13 moduli commerciali e amministrativi assegnati; pattern pubblici riutilizzabili, non codice, marchi o copie di interfaccia.",
+  "selection_definition": "Miglior riferimento qui significa il pattern con migliore aderenza al compito, semplicità per un piccolo studio, applicabilità locale e possibilità di verificare manualmente i dati. Non è una graduatoria globale, quota di mercato o collaudo dei prodotti.",
+  "status_definition": "Snapshot di ricerca prima delle nuove implementazioni: implemented-existing indica il comportamento già presente; proposed-local è il miglioramento implementabile senza provider; needs-integration richiede un servizio esterno. Ogni benchmark distingue esplicitamente filo_existing e optimization. Lo stato finale della consegna va verificato nel codice e nei test.",
+  "methodology": {
+    "tool": "Exa web_search_exa + web_fetch_exa; fonti ufficiali già archiviate",
+    "search_queries": [
+      {
+        "query": "Official Odoo documentation reordering rules minimum stock quantities replenish purchase requests for quotation vendor purchase approval purchase order",
+        "objective": "Prefer official odoo.com help documentation for min-stock alerts, replenishment manual versus automatic, RFQ and approval before purchase; discard third-party implementations.",
+        "numResults": 6
+      },
+      {
+        "query": "Official Zoho Books help accounts receivable aging summary overdue invoices scheduled reminders expense approval receipt record",
+        "objective": "Prefer zoho.com/books/help and official accounting pages documenting unpaid receivables aging buckets, customer reminder drafts and expense verification/approval; no marketing performance numbers.",
+        "numResults": 6
+      },
+      {
+        "query": "Official PandaDoc document approval workflow templates content library contract expiration reminders review send signature",
+        "objective": "Prefer official pandadoc.com and support.pandadoc.com pages about editable reusable document templates, approval sequence before send, contract renewals and expiry reminders; distinguish electronic signature integration from manual review.",
+        "numResults": 6
+      },
+      {
+        "query": "Official Toggl Track help projects clients time reports billable non billable project estimates duration reports manual time entries",
+        "objective": "Prefer official toggl.com and support.toggl.com pages documenting time entries and summaries grouped by project/client; do not use promotional savings or employee productivity rankings.",
+        "numResults": 6
+      }
+    ],
+    "search_calls": 4,
+    "search_results_requested": 24,
+    "sources_reviewed": 24,
+    "sources_reviewed_definition": "Somma dei numResults richiesti nelle nuove ricerche: 4 × 6 = 24. Non è il numero di pagine uniche lette integralmente.",
+    "search_result_urls_observed": 24,
+    "unique_search_result_urls": 24,
+    "fetch_calls": 1,
+    "fetch_urls_requested": 11,
+    "unique_fetch_urls_requested": 11,
+    "fetch_urls_succeeded": 10,
+    "fetch_failures": [
+      {
+        "url": "https://www.zoho.com/us/books/help/expenses/",
+        "error": "CRAWL_NOT_FOUND",
+        "used_as_evidence": false
+      }
+    ],
+    "source_requests_total": 35,
+    "unique_requested_urls": 28,
+    "quoted_source_urls": 13,
+    "unique_quoted_source_urls": 13,
+    "existing_sources_reused": 4,
+    "existing_archive_source_ids": [
+      "odoo-contacts",
+      "odoo-quotes",
+      "fic-features",
+      "pipedrive-activities"
+    ],
+    "counts_note": "I conteggi delle 139 richieste precedenti non vengono sommati o presentati come nuove letture. La fonte Fatture in Cloud è riutilizzata e riletta; le altre tre riutilizzate provengono dall'archivio precedente.",
+    "source_policy": "Fonti help e prodotto ufficiali; affermazioni del produttore non sono misure di efficacia. Nessun account competitor creato, nessun contatto o importazione di dati aziendali.",
+    "scope_limits": [
+      "Nessuna prova comparativa degli account concorrenti.",
+      "Nessun prezzo, addebito o integrazione reale attivata da questa ricerca.",
+      "Tutte le ottimizzazioni locali dipendono dai dati e dalle conferme inseriti dall'utente.",
+      "PandaDoc nuova esperienza dichiarata early access; nessuna promessa di disponibilità universale."
+    ]
+  },
+  "sources": [
+    {
+      "id": "odoo-contacts",
+      "product": "Odoo",
+      "url": "https://www.odoo.com/documentation/19.0/applications/essentials/contacts.html",
+      "title": "Contacts — Odoo 19.0",
+      "quality": "official_help",
+      "excerpt": "Odoo supports both Person and Company contacts.",
+      "reused_from": "docs/research/suite-competitors.json",
+      "limits": "Funzionalità documentate del prodotto; non prova indipendente di migliore qualità o risultati."
+    },
+    {
+      "id": "odoo-quotes",
+      "product": "Odoo",
+      "url": "https://www.odoo.com/documentation/19.0/applications/sales/sales/sales_quotations/create_quotations.html",
+      "title": "Create quotations — Odoo 19.0",
+      "quality": "official_help",
+      "excerpt": "Once a quotation has been confirmed, it officially turns into a sales order, which can then be invoiced and paid for.",
+      "reused_from": "docs/research/suite-competitors.json",
+      "limits": "La conversione Odoo include un ordine; Filo attuale conserva una bozza interna da rivedere."
+    },
+    {
+      "id": "fic-features",
+      "product": "Fatture in Cloud",
+      "url": "https://www.fattureincloud.it/software-fatturazione/caratteristiche/",
+      "title": "Software gestionale cloud e fatturazione: funzionalità",
+      "quality": "official_product",
+      "excerpt": "Una volta approvati, li converti immediatamente in fatture o ordini.",
+      "additional_excerpts": [
+        "Tutte le scadenze imminenti ti vengono notificate nella pagina principale.",
+        "Inserisci tutte le tue spese organizzate per categoria, utilizzando quelle già esistenti o creandone di nuove. Allega un documento ad ogni voce e indicane i valori di deduzione e detrazione se diversi da 100%."
+      ],
+      "reused_from": "docs/research/italian-competitors.json",
+      "refetched": true,
+      "limits": "Pagina del produttore: caratteristiche dichiarate, nessuna prova d'uso. Fatture in Cloud integra SDI; Filo non è un gestionale fiscale."
+    },
+    {
+      "id": "pipedrive-activities",
+      "product": "Pipedrive",
+      "url": "https://support.pipedrive.com/en/article/activities",
+      "title": "Activities",
+      "quality": "official_help",
+      "excerpt": "Next activity date – shows the date of the next activity you scheduled that isn't marked as done yet",
+      "additional_excerpts": [
+        "You can link activities to people, organizations, leads, deals or projects to keep a clear view of what's next.",
+        "The due date field will always show the time and date the activity was originally scheduled for."
+      ],
+      "reused_from": "docs/research/suite-competitors.json",
+      "limits": "Non implica una pipeline CRM completa in Filo; inviti esterni richiedono active calendar sync."
+    },
+    {
+      "id": "odoo-rfq",
+      "product": "Odoo Purchase",
+      "url": "https://www.odoo.com/documentation/19.0/applications/inventory_and_mrp/purchase/manage_deals/rfq.html",
+      "title": "Requests for quotation — Odoo 19.0",
+      "quality": "official_help",
+      "excerpt": "RFQs are documents companies send to vendors requesting product pricing.",
+      "additional_excerpts": [
+        "To Send: orders in the RFQ stage that have not been sent to the vendor.",
+        "Waiting: RFQs that have been sent by email, and are waiting on vendor confirmation.",
+        "Late: RFQs or POs where the Order Deadline has passed.",
+        "Default columns include Quantity, Unit Price, and Delivery Lead Time, but other columns like, Vendor Product Code or Discount (%), can also be enabled."
+      ],
+      "limits": "Filo conserva richieste e date inserite manualmente; non invia ordini né riceve conferme automatiche."
+    },
+    {
+      "id": "odoo-reorder",
+      "product": "Odoo Inventory",
+      "url": "https://www.odoo.com/documentation/19.0/applications/inventory_and_mrp/inventory/warehouses_storage/replenishment/reordering_rules.html",
+      "title": "Reordering rules — Odoo 19.0",
+      "quality": "official_help",
+      "excerpt": "Manual reordering rules, configured by setting the reordering rule’s Trigger field to Manual, list a product on the replenishment dashboard when the forecasted quantity falls below a specified minimum.",
+      "excerpt_capture": "Exa search highlights; fetched first 7500 characters confirm minimum/maximum setup but omit later Manual section.",
+      "limits": "Odoo usa quantità previste, movimenti e ordini; Filo confronta quantità contata e soglia inserite dall'utente, senza previsione o ordine."
+    },
+    {
+      "id": "zoho-home",
+      "product": "Zoho Books",
+      "url": "https://www.zoho.com/us/books/help/home/",
+      "title": "Home | Help | Zoho Books",
+      "quality": "official_help",
+      "excerpt": "In Zoho Books, the Total Receivables panel displays the amount your customers owe you. It is divided into two sections:",
+      "additional_excerpts": [
+        "Current: The amount yet to be received for invoices that haven’t crossed the payment due date.",
+        "Overdue: The amount yet to be received for invoices that have crossed the payment due date.",
+        "In Zoho Books, the Total Payables panel displays the amount you owe your vendors."
+      ],
+      "limits": "Edizione USA: usa solo il pattern visivo e operativo Current/Overdue, non le regole fiscali o bancarie."
+    },
+    {
+      "id": "zoho-ar",
+      "product": "Zoho Books",
+      "url": "https://www.zoho.com/en-sg/books/help/reports/receivables.html",
+      "title": "Receivables Reports | Help | Zoho Books",
+      "quality": "official_help",
+      "excerpt": "This report contains all the money that your customers owe you based on the invoice due date or the invoice date. in different time intervals or on a certain date.",
+      "limits": "Edizione Singapore: il concetto di aging è pertinente, ma intervalli e regole contabili non vengono trasferiti come conformità italiana."
+    },
+    {
+      "id": "pandadoc-template",
+      "product": "PandaDoc",
+      "url": "https://support.pandadoc.com/en/articles/9714616-save-time-with-a-reusable-template-new-experience",
+      "title": "Save time with a reusable template (new experience)",
+      "quality": "official_help",
+      "excerpt": "A template is a reusable master copy of a document.",
+      "additional_excerpts": [
+        "Each template now includes a built-in workflow that defines the steps your team follows when creating documents from it.",
+        "Select Send document step in the workflow builder to customize settings and permissions to apply after sending your document:"
+      ],
+      "documented_settings": [
+        "Expiration",
+        "Renewal",
+        "Redirect"
+      ],
+      "publication_date": "2026-08-21",
+      "limits": "La pagina descrive editor e workflow PandaDoc; Filo genera testo locale da campi e conserva riferimenti, senza firma elettronica o file caricati."
+    },
+    {
+      "id": "pandadoc-approval",
+      "product": "PandaDoc",
+      "url": "https://support.pandadoc.com/en/articles/14809559-approval-workflow-new-experience",
+      "title": "Approval workflow (new experience)",
+      "quality": "official_help",
+      "excerpt": "You insert a Submit for approval step into that sequence before the Send document step.",
+      "publication_date": "2026-08-20",
+      "limits": "La nuova esperienza è early access. L'approvazione PandaDoc ha ruoli/notifiche; spunte Filo attestano solo un controllo dichiarato dall'utente."
+    },
+    {
+      "id": "asana-dependencies",
+      "product": "Asana",
+      "url": "https://help.asana.com/s/article/task-dependencies",
+      "title": "Task dependencies",
+      "quality": "official_help",
+      "excerpt": "Dependencies are the relationships among tasks that determine the order in which activities need to be performed.",
+      "additional_excerpts": [
+        "Blocked by: Shows which tasks are preventing this task from starting or being completed."
+      ],
+      "limits": "Disponibile su piani Asana Starter e superiori. Una checklist ordinata Filo non è un grafo di dipendenze tra schede né notifica il prossimo assegnatario."
+    },
+    {
+      "id": "toggl-summary",
+      "product": "Toggl Track",
+      "url": "https://support.toggl.com/en-us/article/summary-report-1emjk2m/",
+      "title": "Summary Report",
+      "quality": "official_help",
+      "excerpt": "Use the Summary Report to see the total tracked time broken down in different ways.",
+      "additional_excerpts": [
+        "A common question answered by this report is \"How much time did we track for a specific activity?\"."
+      ],
+      "limits": "Toggl calcola da time entries tracciate. Filo usa tempi prima/dopo e ripetizioni dichiarati; nessun timer, valutazione dipendenti o beneficio causale provato."
+    },
+    {
+      "id": "toggl-projects",
+      "product": "Toggl Track",
+      "url": "https://support.toggl.com/en-us/article/creating-projects-jrbd27/",
+      "title": "Creating Projects",
+      "quality": "official_help",
+      "excerpt": "Projects (and clients) are key for organizing time entries in Toggl Track.",
+      "additional_excerpts": [
+        "You can create time entries in manual mode or using the timer mode (a live running timer)."
+      ],
+      "limits": "Filo non importa time entries né tariffe: il confronto locale non produce fatturazione o stipendi."
+    }
+  ],
+  "benchmarks": [
+    {
+      "service_id": "clients",
+      "service_name": "Clienti e opportunità",
+      "reference_product": "Pipedrive",
+      "reference_pattern": "Prossima attività esplicita collegata al cliente, con scadenza originale distinta dal completamento.",
+      "source_ids": [
+        "pipedrive-activities",
+        "odoo-contacts"
+      ],
+      "why_fit": "Uno studio deve sapere chi ricontattare e con quale motivo senza configurare un'intera pipeline commerciale.",
+      "filo_existing": "Schede cliente, richiesta, referente, prossimo passo testuale e scadenza generale; ricerca globale tra moduli.",
+      "optimization": "Checklist breve: verificare referente e richiesta → definire risposta/proposta → concordare prossimo contatto → annotare l'esito. Proporre il primo controllo incompleto e mantenere visibile la data originaria.",
+      "status": "proposed-local",
+      "limits": [
+        "Non dedurre valore o affidabilità del cliente da titolo professionale.",
+        "Nessun messaggio o appuntamento esterno creato dal completamento di una spunta."
+      ],
+      "acceptance_checks": [
+        "Riaprendo la scheda ritrovo i controlli completati.",
+        "Completo il primo controllo: il prossimo passo passa al seguente.",
+        "La scheda di un altro account non è visibile."
+      ]
+    },
+    {
+      "service_id": "quotes",
+      "service_name": "Preventivi",
+      "reference_product": "Fatture in Cloud",
+      "reference_pattern": "Riutilizzare i dati e convertire un preventivo approvato in documento successivo.",
+      "source_ids": [
+        "fic-features",
+        "odoo-quotes",
+        "pandadoc-approval"
+      ],
+      "why_fit": "Preventivi e incarichi sono passaggi frequenti per studi e imprese di servizi; riuso e controlli riducono reinserimenti senza aggiungere complessità ERP.",
+      "filo_existing": "Profilo emittente riutilizzato, imponibile e IVA calcolati con Decimal, documento TXT da rivedere, conversione locale preventivo→bozza fattura protetta dai duplicati.",
+      "optimization": "Controlli persistenti su destinatario, prestazioni/importi/IVA, condizioni e conferma del cliente. Usare valid_until come data operativa se manca una scadenza generale e spiegare la provenienza. Eventuale ripetizione conserva i campi utili ma riparte da controlli e approvazione da fare.",
+      "status": "proposed-local",
+      "limits": [
+        "L'aliquota è scelta dall'utente, non determinata da Filo.",
+        "Una spunta di conferma non costituisce firma elettronica né accettazione verificata dal cliente."
+      ],
+      "acceptance_checks": [
+        "Una proposta con sola valid_until entra nelle priorità alla data corretta.",
+        "Convertire due volte conserva un solo documento derivato.",
+        "Il documento conserva origine e importi; i controlli della nuova scheda non sono già confermati."
+      ]
+    },
+    {
+      "service_id": "invoices",
+      "service_name": "Bozze fattura",
+      "reference_product": "Fatture in Cloud",
+      "reference_pattern": "Dati riusati dal documento commerciale, verifica prima dell'emissione.",
+      "source_ids": [
+        "fic-features",
+        "odoo-quotes",
+        "pandadoc-approval"
+      ],
+      "why_fit": "Serve uno scambio semplice con il referente amministrativo/commercialista, mantenendo chiara la distinzione fra riepilogo operativo e fattura fiscale.",
+      "filo_existing": "Bozza locale con emittente, cliente, descrizione, imponibile, IVA e totale; origine da preventivo e passaggio locale verso incasso.",
+      "optimization": "Controlli persistenti: verificare destinatario/emittente → verificare prestazioni/importi/IVA → verificare pagamento → registrare la revisione prima dell'uso nel gestionale fiscale. Conservare documenti derivati e riferimenti senza reinserire i dati.",
+      "status": "proposed-local",
+      "limits": [
+        "XML, invio SDI, numerazione fiscale e conservazione richiedono needs-integration.",
+        "Non chiamare la bozza 'fattura emessa' in seguito a completamento locale."
+      ],
+      "acceptance_checks": [
+        "La revisione è distinguibile dalla trasmissione fiscale.",
+        "L'export riporta che è una bozza interna.",
+        "Il collegamento di origine resta consultabile dopo il passaggio verso incasso."
+      ]
+    },
+    {
+      "service_id": "receivables",
+      "service_name": "Incassi e solleciti",
+      "reference_product": "Zoho Books",
+      "reference_pattern": "Somme aperte e scadute visibili in homepage, dettaglio per data e cliente.",
+      "source_ids": [
+        "zoho-home",
+        "zoho-ar",
+        "fic-features"
+      ],
+      "why_fit": "I titolari di piccoli studi devono controllare pagamenti attesi e scegliere chi contattare subito, senza ricavare la situazione da ogni scheda.",
+      "filo_existing": "Importo da incassare, expected_date, riferimento e promemoria locale; stato e priorità generale.",
+      "optimization": "Riepilogo degli importi aperti/scaduti dalle sole schede incasso aperte, usando expected_date se non c'è due_date. Controlli: verificare il saldo con il referente → verificare contatto e accordi → rivedere il sollecito → annotare l'esito. Esporre fonte e data, mantenere distinte somme senza data.",
+      "status": "proposed-local",
+      "limits": [
+        "Le somme sono dichiarate, non riconciliate con la banca.",
+        "Non aggiungere preventivi e bozze fattura agli incassi: conterebbero lo stesso credito più volte.",
+        "Invio solleciti e verifica pagamenti richiedono needs-integration."
+      ],
+      "acceptance_checks": [
+        "Schede done/cancelled non aumentano l'importo da incassare.",
+        "Due incassi da 123,45 e 10,55 producono 134,00 senza errore float.",
+        "Con expected_date ieri e due_date assente l'incasso è scaduto; due_date esplicita ha precedenza dichiarata."
+      ]
+    },
+    {
+      "service_id": "expenses",
+      "service_name": "Spese e pagamenti",
+      "reference_product": "Zoho Books",
+      "reference_pattern": "Debiti correnti e scaduti distinti, documenti e verifica prima del pagamento.",
+      "source_ids": [
+        "zoho-home",
+        "fic-features"
+      ],
+      "why_fit": "Spese di fornitori e software ricorrenti sono rilevanti per studi di servizi e vanno rese controllabili prima di autorizzare una disposizione.",
+      "filo_existing": "Beneficiario, importo, riferimento al giustificativo, payment_date e promemoria locale; nessun pagamento.",
+      "optimization": "Importi aperti/scaduti dalle sole schede spesa aperte. Checklist: verificare giustificativo e importo → verificare beneficiario → confermare con referente → annotare esito e riferimento al pagamento eseguito fuori dall'app. Usare payment_date come scadenza operativa se manca due_date.",
+      "status": "proposed-local",
+      "limits": [
+        "Una scheda completata non dimostra addebito bancario.",
+        "Le note spese, gli ordini e le fatture non si sommano di nuovo agli stessi importi.",
+        "OCR, SDI, contabilità e disposizione bonifici richiedono needs-integration."
+      ],
+      "acceptance_checks": [
+        "La somma usa solo expenses aperte.",
+        "La scheda mostra da quale campo deriva la data operativa.",
+        "La conferma manuale di un controllo non esegue chiamate a una banca."
+      ]
+    },
+    {
+      "service_id": "suppliers",
+      "service_name": "Fornitori",
+      "reference_product": "Odoo Purchase",
+      "reference_pattern": "Riferimenti fornitore, condizioni, prezzi e tempi prima della richiesta d'acquisto.",
+      "source_ids": [
+        "odoo-rfq",
+        "odoo-contacts"
+      ],
+      "why_fit": "Una piccola impresa di servizi ha pochi fornitori frequenti: contatti e accordi semplici sono più utili di un sistema complesso di rating.",
+      "filo_existing": "Contatti del fornitore, prodotti/servizi offerti e condizioni annotate.",
+      "optimization": "Checklist riutilizzabile: verificare contatto → verificare servizi e condizioni → confermare tempi e referente → annotare accordo o prossimo contatto. Il primo punto incompleto diventa il prossimo passo della scheda.",
+      "status": "proposed-local",
+      "limits": [
+        "Tempi e condizioni sono inseriti manualmente; nessun listino importato.",
+        "Non dedurre rating economico, rischio o lead time dai soli appunti."
+      ],
+      "acceptance_checks": [
+        "L'accordo da verificare è visibile nel dettaglio senza trovare un altro modulo.",
+        "La conclusione di un punto non manda richieste al fornitore.",
+        "Una ripetizione del controllo conserva il fornitore ma azzera le conferme."
+      ]
+    },
+    {
+      "service_id": "purchases",
+      "service_name": "Acquisti e ordini",
+      "reference_product": "Odoo Purchase",
+      "reference_pattern": "Richiesta prima dell'ordine; To Send/Waiting/Late e consegna attesa espliciti.",
+      "source_ids": [
+        "odoo-rfq",
+        "pandadoc-approval"
+      ],
+      "why_fit": "Per acquisti di materiali e servizi serve conoscere cosa manca prima di impegnare budget e cosa resta in attesa di conferma.",
+      "filo_existing": "Richiesta locale con quantità, importo, approver e delivery_date; stati manuali todo/in_progress/waiting/done.",
+      "optimization": "Controlli quantità/budget/fornitore → conferma del referente → registrazione della condivisione eseguita dall'utente → verifica consegna. Rendere delivery_date efficace nelle priorità in assenza di due_date, senza confonderla con una data ordine.",
+      "status": "proposed-local",
+      "limits": [
+        "Spunta di approvazione è una dichiarazione dell'utente, non un workflow autorizzativo con ruoli.",
+        "Nessun acquisto o invio ordine automatico; eventuale gestionale richiede needs-integration."
+      ],
+      "acceptance_checks": [
+        "Consegna attesa ieri appare scaduta anche senza la scadenza generale.",
+        "I controlli riportano il referente inserito.",
+        "Completare il passaggio non acquista un prodotto."
+      ]
+    },
+    {
+      "service_id": "projects",
+      "service_name": "Commesse e lavori",
+      "reference_product": "Asana",
+      "reference_pattern": "Passaggi ordinati, impedimenti riconoscibili e prossimo lavoro pronto da svolgere.",
+      "source_ids": [
+        "asana-dependencies",
+        "pipedrive-activities"
+      ],
+      "why_fit": "Una commessa di servizi si organizza per consegne e referenti; un percorso breve riduce il carico di impostare un project manager completo.",
+      "filo_existing": "Cliente, risultato da consegnare, referente, budget annotato e milestones testuali.",
+      "optimization": "Checklist persistente per confermare risultato/referente → preparare primo passaggio → controllare impedimenti e consegna → verificare risultato con cliente. Mostrare primo controllo incompleto ed eventuale stato waiting scelto dall'utente.",
+      "status": "proposed-local",
+      "limits": [
+        "La checklist non è un grafo di dipendenze fra commesse o una pianificazione automatica delle persone.",
+        "Nessuna notifica al referente senza un'integrazione esplicita."
+      ],
+      "acceptance_checks": [
+        "Il prossimo passo cambia al completamento e torna indietro se il controllo viene riaperto.",
+        "Le milestones originali restano disponibili.",
+        "Waiting resta distinguibile da lavoro completato."
+      ]
+    },
+    {
+      "service_id": "deadlines",
+      "service_name": "Scadenze amministrative",
+      "reference_product": "Fatture in Cloud",
+      "reference_pattern": "Scadenze personali e derivanti dai documenti in una vista immediata della homepage.",
+      "source_ids": [
+        "fic-features",
+        "pipedrive-activities"
+      ],
+      "why_fit": "Uno studio deve arrivare alla scadenza con documenti e referente pronti, mantenendo la fonte dell'adempimento.",
+      "filo_existing": "Data inserita, obbligo, consulente, documenti richiesti e istruzioni ricevute; priorità per scadenza generale.",
+      "optimization": "Controlli: confermare data e istruzioni con consulente → raccogliere documenti → verificare completezza con referente → annotare consegna. Per un nuovo ciclo proporre una copia locale con nuova data scelta e controlli azzerati, soltanto dopo revisione dell'utente.",
+      "status": "proposed-local",
+      "limits": [
+        "Nessuna scadenza viene ricavata dalle norme o corretta senza consulente.",
+        "La ripetizione non presenta pratiche né dichiarazioni fiscali.",
+        "Un ciclo nuovo non eredita il completamento di documenti precedenti."
+      ],
+      "acceptance_checks": [
+        "Scadute e oggi sono visibili nella panoramica.",
+        "Nuovo ciclo richiede una data esplicita, diversa dall'originale.",
+        "La scheda originale conserva la data e l'esito del ciclo precedente."
+      ]
+    },
+    {
+      "service_id": "documents",
+      "service_name": "Documenti e checklist",
+      "reference_product": "PandaDoc",
+      "reference_pattern": "Un percorso di preparazione e revisione riutilizzabile dal modello.",
+      "source_ids": [
+        "pandadoc-template",
+        "pandadoc-approval"
+      ],
+      "why_fit": "Raccolta documentale, preventivi e incarichi richiedono controlli ripetibili: pochi passaggi concreti aiutano più di un archivio generalista.",
+      "filo_existing": "Elenco richiesto/ricevuto, pratica e riferimento cartella; indice testuale scaricabile.",
+      "optimization": "Checklist: confermare elenco richiesto → confrontare ricevuti/mancanti → verificare cartella e versione → annotare controllo del referente. Rendere persistenti i controlli e partire dal primo incompleto.",
+      "status": "proposed-local",
+      "limits": [
+        "Gli elenchi non sono verificati leggendo file; lo stato è dichiarato dall'utente.",
+        "Una spunta non certifica completezza o firma.",
+        "Upload, versioni binarie e Drive richiedono needs-integration."
+      ],
+      "acceptance_checks": [
+        "Elenco richiesto e ricevuto rimangono entrambi nel documento.",
+        "Un controllo riaperto cambia subito il prossimo passo.",
+        "Non vengono dichiarati file acquisiti quando esistono soltanto riferimenti."
+      ]
+    },
+    {
+      "service_id": "contracts",
+      "service_name": "Contratti e rinnovi",
+      "reference_product": "PandaDoc",
+      "reference_pattern": "Controlli prima della condivisione e date di expiration/renewal associate al documento.",
+      "source_ids": [
+        "pandadoc-template",
+        "pandadoc-approval"
+      ],
+      "why_fit": "Studi e servizi gestiscono incarichi, canoni e fornitori: riferimenti e rinnovi meritano un controllo visibile senza adottare un'intera piattaforma CLM.",
+      "filo_existing": "Controparte, riferimento, renewal_date, valore periodico e termini/preavviso annotati.",
+      "optimization": "Checklist: ritrovare versione firmata → verificare condizioni e preavviso con referente → concordare decisione → annotare esito. Usare renewal_date come data operativa quando manca due_date; proporre nuovo controllo con data esplicita e conferme da rifare.",
+      "status": "proposed-local",
+      "limits": [
+        "Renewal_date non equivale alla data limite di disdetta; indicare l'origine e consentire due_date esplicita per il preavviso.",
+        "Non interpretare clausole né presentare una firma elettronica.",
+        "Notifiche esterne, firma e disdette richiedono needs-integration."
+      ],
+      "acceptance_checks": [
+        "Il rinnovo entra nelle priorità anche senza scadenza generale.",
+        "Una due_date esplicita per preavviso prevale sulla data di rinnovo.",
+        "Ripetere il controllo non rinnova il contratto."
+      ]
+    },
+    {
+      "service_id": "inventory",
+      "service_name": "Magazzino e riordini",
+      "reference_product": "Odoo Inventory",
+      "reference_pattern": "Soglia minima e bisogno di riordino visibile, revisione prima di un ordine.",
+      "source_ids": [
+        "odoo-reorder",
+        "odoo-rfq"
+      ],
+      "why_fit": "Per imprese di servizi bastano spesso consumabili e materiali: contare e vedere cosa manca evita di introdurre un magazzino produttivo completo.",
+      "filo_existing": "Confronto quantità inserita < reorder_level, attenzione in panoramica e invito a verificare il riordino; nessun movimento esterno.",
+      "optimization": "Aggiungere controlli persistenti: confermare quantità fisica → confermare soglia/unità → verificare fornitore e budget → annotare richiesta decisa dall'utente. Conservare quantità e soglia visibili nella motivazione della priorità.",
+      "status": "proposed-local",
+      "limits": [
+        "Confronto su quantità dichiarata, non forecast Odoo.",
+        "Uguaglianza alla soglia non segnala sotto-scorta.",
+        "Non generare movimento di magazzino o acquisto nel completamento di un controllo."
+      ],
+      "acceptance_checks": [
+        "Quantità 4 e soglia 5 segnala attenzione; quantità 5 e soglia 5 no.",
+        "La motivazione riporta quantità e soglia effettive.",
+        "La checklist di riordino non modifica la quantità contata."
+      ]
+    },
+    {
+      "service_id": "time-measurement",
+      "service_name": "Tempo operativo misurato",
+      "reference_product": "Toggl Track",
+      "reference_pattern": "Tempi collegati ad attività/progetti e riepiloghi verificabili dai dati inseriti.",
+      "source_ids": [
+        "toggl-summary",
+        "toggl-projects"
+      ],
+      "why_fit": "Per uno studio il beneficio si valuta confrontando la stessa attività prima e dopo, con volume noto, senza inventare un risparmio dal numero di schede.",
+      "filo_existing": "Durata prima/dopo e ripetizioni inserite dall'utente; differenza calcolata, anche negativa, separata dai minuti risparmiati dichiarati sulle attività completate.",
+      "optimization": "Checklist: definire la stessa attività e unità di confronto → misurare prima → misurare dopo → annotare numero di ripetizioni e confrontare. Rendere esplicito che i risultati sono dichiarati e non confluiscono di nuovo nei minuti già dichiarati sulle altre schede.",
+      "status": "proposed-local",
+      "limits": [
+        "Nessun timer o time entry importata da Toggl.",
+        "Differenza prima/dopo non dimostra causalità di Filo, ROI monetario o capacità di ridurre organico.",
+        "Le misure non producono valutazioni o graduatorie del personale."
+      ],
+      "acceptance_checks": [
+        "Prima 10, dopo 12, tre ripetizioni conserva un risultato di -6 minuti.",
+        "I confronti non sono sommati ai minuti dichiarati per evitare doppio conteggio.",
+        "La metodologia è visibile e il numero di ripetizioni è un intero positivo."
+      ]
+    }
+  ]
+}
