@@ -34,6 +34,49 @@ CATALOG = list_services()
 logger = logging.getLogger(__name__)
 
 
+def _italian_message(error):
+    """Readable Italian text for a validation error; the browser shows it as is."""
+    kind, ctx = str(error.get("type", "")), error.get("ctx") or {}
+    if kind == "value_error":
+        return str(error.get("msg", "")).removeprefix("Value error, ") or "Valore non valido."
+    if kind == "missing":
+        return "Campo obbligatorio."
+    if kind == "string_too_short":
+        return "Compila questo campo." if ctx.get("min_length") == 1 else f"Inserisci almeno {ctx.get('min_length')} caratteri."
+    if kind == "string_too_long":
+        return f"Inserisci al massimo {ctx.get('max_length')} caratteri."
+    if kind == "too_short":
+        return f"Inserisci almeno {ctx.get('min_length')} elementi."
+    if kind == "too_long":
+        return f"Inserisci al massimo {ctx.get('max_length')} elementi."
+    if kind.startswith(("date", "datetime", "time", "timezone")):
+        return "Indica una data valida."
+    if kind in ("greater_than_equal", "greater_than"):
+        return f"Indica un valore di almeno {ctx.get('ge', ctx.get('gt'))}."
+    if kind in ("less_than_equal", "less_than"):
+        return f"Indica un valore fino a {ctx.get('le', ctx.get('lt'))}."
+    if kind.startswith(("int", "float", "decimal")):
+        return "Indica un numero valido."
+    if kind.startswith("bool"):
+        return "Indica sì o no."
+    if kind in ("literal_error", "enum"):
+        return "Scegli uno dei valori previsti."
+    if kind == "string_pattern_mismatch":
+        return "Il formato non è valido."
+    if kind == "extra_forbidden":
+        return "Campo non previsto."
+    if kind in ("json_invalid", "model_type", "dict_type", "list_type"):
+        return "Il contenuto inviato non è valido."
+    if kind.startswith("string"):
+        return "Indica un testo valido."
+    return "Valore non valido."
+
+
+def validation_errors(exc):
+    # Never echo submitted values (passwords, tokens): location, text and type only.
+    return [{"loc": error["loc"], "msg": _italian_message(error), "type": error["type"]} for error in exc.errors()]
+
+
 def recent_oauth_error(db):
     """The last provider return that failed, shown once the browser is back."""
     error = db.get_setting("mail_oauth_error")
@@ -118,8 +161,7 @@ def create_workspace_app(data_dir=None, start_worker=True):
 
     @app.exception_handler(RequestValidationError)
     async def workspace_validation_error(request, exc):
-        errors = [{"loc": error["loc"], "msg": error["msg"], "type": error["type"]} for error in exc.errors()]
-        return JSONResponse({"detail": errors}, status_code=422)
+        return JSONResponse({"detail": validation_errors(exc)}, status_code=422)
 
     @app.get("/api/health")
     def health():
@@ -478,8 +520,7 @@ def create_app(data_dir=None, start_worker=True):
     @app.exception_handler(RequestValidationError)
     async def validation_error(request, exc):
         # Validation payloads must never echo a submitted password or token.
-        errors = [{"loc": error["loc"], "msg": error["msg"], "type": error["type"]} for error in exc.errors()]
-        return JSONResponse({"detail": errors}, status_code=422)
+        return JSONResponse({"detail": validation_errors(exc)}, status_code=422)
 
     @app.middleware("http")
     async def account_boundary(request: Request, call_next):

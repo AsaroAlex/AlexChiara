@@ -308,7 +308,7 @@ def build_briefing(db, now=None, *, service=None):
     failed = run and run["status"] == "failed" and (checked is None or _utc(run["created_at"]) >= checked)
     status = "checking" if active else "error" if failed else "stale" if stale else "ready" if latest else "not_started"
     if status == "not_started":
-        summary = "Il tuo buongiorno è pronto a partire. Configura i contatti e attiva il primo controllo."
+        summary = "Il tuo riepilogo è pronto a partire. Configura i contatti e attiva il primo controllo."
     elif status == "checking":
         summary = "Sto controllando la posta dei tuoi contatti. Il riepilogo si aggiornerà appena il controllo termina."
     elif status == "error":
@@ -326,9 +326,9 @@ def build_briefing(db, now=None, *, service=None):
     if connection.get("status") != "connected":
         suggestion = {"label": "Collega la tua posta", "action": "reconnect", "reason": "Serve una casella collegata per preparare il tuo riepilogo."}
     elif service.get("status") == "paused":
-        suggestion = {"label": "Riprendi il tuo buongiorno", "action": "resume", "reason": "Il servizio è in pausa: riprendilo per tornare a controllare la posta."}
+        suggestion = {"label": "Riprendi i controlli della posta", "action": "resume", "reason": "Il servizio è in pausa: riprendilo per tornare a controllare la posta."}
     elif service.get("status") != "active":
-        suggestion = {"label": "Attiva il tuo buongiorno", "action": "open-wizard", "reason": "Scegli i contatti da seguire e autorizza il controllo."}
+        suggestion = {"label": "Attiva la segreteria email", "action": "open-wizard", "reason": "Scegli i contatti da seguire e autorizza il controllo."}
     elif status in ("stale", "error", "not_started"):
         suggestion = {"label": "Aggiorna il riepilogo", "action": "run", "reason": "Un nuovo controllo verifica i messaggi più recenti."}
     elif active:
@@ -378,13 +378,13 @@ def build_example_briefing(db, now=None):
                              "status": "no_messages", "last_received_at": None})
     return {"preview": True, "generated_at": now.isoformat(), "period": period,
             "last_checked_at": None, "stale": False, "status": "example",
-            "summary": "Un esempio del tuo buongiorno: 3 risposte pronte da verificare, in ordine di priorità.",
+            "summary": "Un esempio del tuo riepilogo: 3 risposte pronte da verificare, in ordine di priorità.",
             "priorities": priorities,
             "contacts": example_contacts,
             "counts": {"pending": len(priorities), "high_priority": sum(item["priority"] == "high" for item in priorities),
                        "contacts_wrote": len(contacts), "contacts_unverified": 0},
             "legacy_pending_count": 0,
-            "suggested_action": {"label": "Prepara il tuo buongiorno", "action": "open-wizard",
+            "suggested_action": {"label": "Prepara il tuo riepilogo", "action": "open-wizard",
                                  "reason": "Collega la posta e scegli i contatti da seguire."},
             "coverage_complete": False, "coverage_note": "Esempio con dati fittizi. Nessun controllo della tua posta.",
             "latest_error": None}

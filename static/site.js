@@ -17,9 +17,18 @@
     element.replaceChildren(document.createTextNode(label), arrow);
   }
 
+  const fieldMessages = {
+    name: 'Inserisci il tuo nome.',
+    email: 'Inserisci un indirizzo email valido.',
+    password: 'La password deve contenere da 12 a 128 caratteri.',
+  };
+
   function detailMessage(detail, fallback) {
     if (typeof detail === 'string' && detail.trim()) return detail;
-    if (Array.isArray(detail)) return 'Controlla i dati inseriti e riprova.';
+    if (Array.isArray(detail)) {
+      const field = detail.map(item => Array.isArray(item?.loc) ? item.loc[item.loc.length - 1] : null).find(name => fieldMessages[name]);
+      return field ? fieldMessages[field] : 'Controlla i dati inseriti e riprova.';
+    }
     return fallback;
   }
 
@@ -82,6 +91,12 @@
       buttonLabel(byId('landing-register'), 'Apri il tuo spazio');
       byId('hero-start').href = '/app';
       buttonLabel(byId('hero-start'), 'Apri la tua giornata');
+      // Every other sign-up or sign-in link leads straight to the private space.
+      document.querySelectorAll('a[href="/register"], a[href="/login"]').forEach((link) => {
+        link.href = '/app';
+        if (link.classList.contains('button')) buttonLabel(link, 'Apri il tuo spazio');
+        else if (link.firstChild?.nodeType === Node.TEXT_NODE) link.firstChild.textContent = 'Apri il tuo spazio ';
+      });
     } catch (_) { /* The public homepage stays usable when account services are unavailable. */ }
   }
 
@@ -123,6 +138,12 @@
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       byId('auth-error').hidden = true;
+      if (register && !name.value.trim()) {
+        // The browser accepts a name made only of spaces; the account would not.
+        showError('auth-error', new Error(fieldMessages.name));
+        name.focus();
+        return;
+      }
       submit.disabled = true;
       byId('auth-progress').textContent = register ? 'Creiamo il tuo account…' : 'Accesso in corso…';
       try {
