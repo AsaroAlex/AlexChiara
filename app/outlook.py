@@ -14,14 +14,14 @@ import os
 import re
 import secrets
 import time
-from urllib.parse import urlencode, urlsplit
+from urllib.parse import quote, urlencode, urlsplit
 
 from cryptography.fernet import InvalidToken
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
 import httpx
 
-from .connectors import ConnectorError, _cipher, _invalidate_in_transaction, _revision_in_transaction
+from .connectors import ConnectorError, _cipher, _invalidate_in_transaction, _revision_in_transaction, oauth_failure
 
 GRAPH_API = "https://graph.microsoft.com/v1.0"
 MAIL_SCOPE = "https://graph.microsoft.com/Mail.Read"
@@ -29,6 +29,8 @@ IDENTITY_SCOPE = "https://graph.microsoft.com/User.Read"
 OUTLOOK_SCOPE = "offline_access " + MAIL_SCOPE + " " + IDENTITY_SCOPE
 _EMAIL = re.compile(r"[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}")
 _MESSAGE_FIELDS = "id,conversationId,from,sender,subject,body,receivedDateTime,sentDateTime,toRecipients,ccRecipients,bccRecipients,isDraft"
+_SENT_METADATA_FIELDS = "id,conversationId,from,sender,sentDateTime,toRecipients,ccRecipients,bccRecipients,isDraft"
+MAX_SENT_BODIES = 25
 
 
 def _client():
@@ -67,7 +69,7 @@ def _valid_redirect(uri):
 def _request(client, method, url, **kwargs):
     try:
         response = client.request(method, url, **kwargs)
-    except (httpx.TimeoutException, httpx.NetworkError) as exc:
+    except httpx.HTTPError as exc:
         raise ConnectorError("Microsoft non risponde entro il tempo previsto. Il controllo può essere riprovato.", "connessione Microsoft", True) from exc
     if response.status_code == 401:
         raise ConnectorError("L'autorizzazione Outlook è scaduta o è stata revocata. Ricollega la casella.", "autorizzazione", False, True)
@@ -166,7 +168,7 @@ def _access_token(db, client, force_refresh=False, deadline=None):
             "client_id": credentials["client_id"], "client_secret": credentials["client_secret"],
             "refresh_token": tokens["refresh_token"], "grant_type": "refresh_token", "scope": OUTLOOK_SCOPE,
         }, **request_options)
-    except (httpx.TimeoutException, httpx.NetworkError) as exc:
+    except httpx.HTTPError as exc:
         raise ConnectorError("Impossibile rinnovare l'accesso: Microsoft non risponde. Riproveremo.", "rinnovo autorizzazione", True) from exc
     if response.status_code in (400, 401):
         raise ConnectorError("Microsoft richiede un nuovo consenso. Ricollega Outlook.", "rinnovo autorizzazione", False, True)
@@ -193,7 +195,7 @@ def _clear_credentials(conn):
 
 
 def _text_body(message):
-    body = message.get("body") or {}
+    body = message.get("body") if isinstance(message.get("body"), dict) else {}
     value = str(body.get("content", ""))[:40000]
     if str(body.get("contentType", "")).lower() == "html":
         value = re.sub(r"<(script|style)\b[^>]*>.*?</\1>", "", value, flags=re.I | re.S)
@@ -250,7 +252,7 @@ def load_outlook_messages(db, contacts):
                    "Prefer": 'outlook.body-content-type="text", IdType="ImmutableId"'}
         refreshed = False
 
-        def listing(url, params):
+        def _request_with_refresh(url, params):
             nonlocal refreshed
             ensure_current()
             try:
@@ -265,6 +267,10 @@ def load_outlook_messages(db, contacts):
                 result = _request(client, "GET", url, headers=headers, params=params,
                                   timeout=max(0.1, min(10.0, deadline - time.monotonic())))
             ensure_current()
+            return result
+
+        def listing(url, params):
+            result = _request_with_refresh(url, params)
             values = result.get("value", [])
             if not isinstance(values, list) or any(not isinstance(m, dict) for m in values):
                 raise ConnectorError("Microsoft ha restituito un elenco email non valido.", "lettura Outlook", True)
@@ -283,9 +289,11 @@ def load_outlook_messages(db, contacts):
                 received = _message_time(message)
                 if received >= cutoff and isinstance(message.get("id"), str) and message["id"]:
                     observed[message["id"]] = (message, received, True)
+        # Recipients are only known after listing, so the sent folder is read
+        # without bodies; only replies to priority contacts are opened below.
         sent = listing(GRAPH_API + "/me/mailFolders/sentitems/messages", {
             "$filter": f"sentDateTime ge {cutoff_text} and isDraft eq false",
-            "$orderby": "sentDateTime desc", "$top": 100, "$select": _MESSAGE_FIELDS,
+            "$orderby": "sentDateTime desc", "$top": 100, "$select": _SENT_METADATA_FIELDS,
         })
         sent_counts = dict.fromkeys(addresses, 0)
         for message in sent[:100]:
@@ -302,6 +310,10 @@ def load_outlook_messages(db, contacts):
             for address in matched:
                 sent_counts[address] += 1
             observed[message["id"]] = (message, received, False)
+        replies = sorted((item for item in observed.values() if not item[2]), key=lambda item: item[1], reverse=True)
+        for message, _, _ in replies[:MAX_SENT_BODIES]:
+            detail = _request_with_refresh(GRAPH_API + "/me/messages/" + quote(message["id"], safe=""), {"$select": "body,subject"})
+            message["body"], message["subject"] = detail.get("body"), detail.get("subject")
         ensure_current()
 
     conversations = {}
@@ -312,9 +324,10 @@ def load_outlook_messages(db, contacts):
     for conversation_id in sorted(conversations):
         messages = sorted(conversations[conversation_id], key=lambda item: (item[0], item[1]))
         received, _, latest, from_client = messages[-1]
-        sender = latest.get("from") or latest.get("sender") or {}
+        sender = latest.get("from") or latest.get("sender")
+        sender = sender if isinstance(sender, dict) else {}
         address = _email_address(sender)
-        name = str((sender.get("emailAddress") or {}).get("name", "")).strip()
+        name = str((sender.get("emailAddress") or {}).get("name", "")).strip() if isinstance(sender.get("emailAddress"), dict) else ""
         context = []
         for _, _, item, _ in messages[-12:]:
             context.append("Da: " + _email_address(item.get("from") or item.get("sender")) + "\n" + _text_body(item)[:4000])
@@ -373,7 +386,9 @@ def create_outlook_router(db):
         challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).decode().rstrip("=")
         params = {"client_id": credentials["client_id"], "redirect_uri": credentials["redirect_uri"],
                   "response_type": "code", "response_mode": "query", "scope": OUTLOOK_SCOPE,
-                  "prompt": "consent", "state": state, "code_challenge": challenge, "code_challenge_method": "S256"}
+                  # Forcing "consent" fails in tenants where only admins may consent,
+                  # even after tenant-wide approval; Microsoft still asks when needed.
+                  "prompt": "select_account", "state": state, "code_challenge": challenge, "code_challenge_method": "S256"}
         return {"authorization_url": _endpoint(credentials, "authorize") + "?" + urlencode(params)}
 
     @router.get("/oauth/callback")
@@ -384,14 +399,14 @@ def create_outlook_router(db):
             row = conn.execute("SELECT value FROM kv WHERE key=?", ("outlook_oauth:" + digest,)).fetchone()
             conn.execute("DELETE FROM kv WHERE key=?", ("outlook_oauth:" + digest,))
         if not row:
-            raise HTTPException(400, "Richiesta di collegamento non valida o già utilizzata.")
+            return oauth_failure(request, db, "outlook", "Richiesta di collegamento non valida o già utilizzata. Avvia di nuovo il collegamento.")
         pending = json.loads(row["value"])
         if not secrets.compare_digest(pending.get("session_id", ""), request.cookies.get("alexchiara_session", "")):
-            raise HTTPException(400, "Completa il collegamento nello stesso browser che lo ha avviato.")
+            return oauth_failure(request, db, "outlook", "Completa il collegamento nello stesso browser che lo ha avviato.")
         if pending.get("expires", 0) < time.time():
-            raise HTTPException(400, "Il collegamento è scaduto. Avvialo nuovamente.")
+            return oauth_failure(request, db, "outlook", "Il collegamento è scaduto. Avvialo nuovamente.")
         if error or not code:
-            raise HTTPException(400, "Collegamento annullato o consenso non concesso. Nessun accesso è stato salvato.")
+            return oauth_failure(request, db, "outlook", "Collegamento annullato o consenso non concesso. Nessun accesso è stato salvato.")
         try:
             credentials = _credentials()
             verifier = _cipher(db).decrypt(pending["verifier"].encode()).decode()
@@ -421,9 +436,9 @@ def create_outlook_router(db):
                 for key, value in updates.items():
                     conn.execute("INSERT INTO kv(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (key, json.dumps(value)))
         except ConnectorError as exc:
-            raise HTTPException(502, exc.message) from exc
-        except (InvalidToken, ValueError, KeyError, TypeError) as exc:
-            raise HTTPException(400, "Le credenziali di collegamento non sono più disponibili. Avvia un nuovo collegamento.") from exc
+            return oauth_failure(request, db, "outlook", exc.message)
+        except (InvalidToken, ValueError, KeyError, TypeError):
+            return oauth_failure(request, db, "outlook", "Le credenziali di collegamento non sono più disponibili. Avvia un nuovo collegamento.")
         return RedirectResponse("/app?provider=outlook&connected=1" if getattr(request.state, "filo_user", None) else "/?provider=outlook&connected=1", status_code=303)
 
     @router.post("/disconnect")

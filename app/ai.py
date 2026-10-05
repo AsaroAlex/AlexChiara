@@ -252,7 +252,9 @@ def _response_schema(source_ids: list[str]) -> dict[str, Any]:
         "type": "object",
         "additionalProperties": False,
         "properties": {
-            "summary": {"type": "string", "minLength": 1, "maxLength": 2000},
+            # Lengths are enforced after the response: strict structured
+            # outputs do not accept string length keywords on every model.
+            "summary": {"type": "string"},
             "items": {
                 "type": "array",
                 "maxItems": len(source_ids),
@@ -261,8 +263,8 @@ def _response_schema(source_ids: list[str]) -> dict[str, Any]:
                     "additionalProperties": False,
                     "properties": {
                         "source_id": {"type": "string", "enum": source_ids},
-                        "reason": {"type": "string", "minLength": 1, "maxLength": 1000},
-                        "draft": {"type": "string", "minLength": 1, "maxLength": 5000},
+                        "reason": {"type": "string"},
+                        "draft": {"type": "string"},
                     },
                     "required": ["source_id", "reason", "draft"],
                 },
@@ -351,9 +353,12 @@ def analyze(messages: list[Any], company: Any, contacts: list[Any], provider: st
             "type": "json_schema",
             "json_schema": {"name": "email_suggestions", "strict": True, "schema": _response_schema(list(candidates))},
         },
-        "temperature": 0,
-        "max_tokens": 6000,
+        # max_completion_tokens is accepted by current chat and reasoning models.
+        "max_completion_tokens": 6000,
     }
+    if not re.match(r"(?:o[0-9]|gpt-5)", request["model"]):
+        # Reasoning models reject a non-default temperature.
+        request["temperature"] = 0
     try:
         response = httpx.post(
             AI_ENDPOINT,

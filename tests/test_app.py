@@ -1114,3 +1114,20 @@ def test_gmail_thread_mapping_produces_a_draft_and_skips_answered_conversations(
     restarted = create_app(data_dir=data_dir, start_worker=False)
     with TestClient(restarted):
         assert restarted.state.db.run(run_id)["items"][0]["source_excerpt"] == original_text[:4000]
+
+
+def test_hosted_ai_failure_falls_back_to_local_rules(environment, cloud_ai_configuration, monkeypatch):
+    app, browser, _ = environment
+    browser.activate()
+
+    def unavailable(*_, **__):
+        return httpx.Response(503, json={"error": {"message": "overloaded"}})
+
+    monkeypatch.setattr(ai.httpx, "post", unavailable)
+    run_id = browser.action("run")["run"]["id"]
+    app.state.scheduler.tick()
+    run = app.state.db.run(run_id)
+    assert run["status"] == "succeeded"
+    assert run["analysis_mode"] == "deterministic"
+    assert run["summary"].startswith("Analisi AI non disponibile")
+    assert run["items"]

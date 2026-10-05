@@ -181,6 +181,27 @@ class _PinnedIMAP4SSL(imaplib.IMAP4_SSL):
         raise TimeoutError("IMAP connection timeout")
 
 
+# RFC 5530 response codes for refusals that resolve by themselves.
+_TEMPORARY_CODES = re.compile(r"\[(?:UNAVAILABLE|LIMIT|INUSE|SERVERBUG)\]", re.I)
+
+
+def _temporary_refusal(exc):
+    return bool(_TEMPORARY_CODES.search(str(exc)))
+
+
+def _login(client, username, password):
+    if username.isascii() and password.isascii():
+        status, _ = client.login(username, password)
+    else:
+        # LOGIN only carries ASCII; SASL PLAIN carries UTF-8 credentials.
+        if "AUTH=PLAIN" not in getattr(client, "capabilities", ()):
+            raise imaplib.IMAP4.error("Server does not accept UTF-8 credentials")
+        token = ("\0" + username + "\0" + password).encode("utf-8")
+        status, _ = client.authenticate("PLAIN", lambda _challenge: token)
+    if status != "OK":
+        raise imaplib.IMAP4.error("Rejected credentials")
+
+
 def _revision_guard(db, revision):
     if db.get_setting("gmail_revision", 0) != revision:
         raise ConnectorError("La casella è stata scollegata o sostituita. Il controllo è stato fermato.", "collegamento", False)
@@ -207,12 +228,12 @@ def _session(credentials, deadline=None):
         client = _PinnedIMAP4SSL(credentials["host"], addresses, timeout=min(SOCKET_TIMEOUT, remaining))
         try:
             _operation_budget(client, deadline)
-            status, _ = client.login(credentials["username"], credentials["password"])
-            if status != "OK":
-                raise imaplib.IMAP4.error("Rejected credentials")
+            _login(client, credentials["username"], credentials["password"])
         except imaplib.IMAP4.abort:
             raise
         except (imaplib.IMAP4.error, UnicodeError) as exc:
+            if _temporary_refusal(exc):
+                raise ConnectorError("Il provider ha rifiutato temporaneamente l'accesso (server occupato o troppe connessioni). Il controllo verrà riprovato.", "autorizzazione IMAP", True) from exc
             raise ConnectorError("Il provider non ha accettato l'accesso. Verifica nome utente e password per app, poi ricollega la casella.", "autorizzazione IMAP", False, True) from exc
         _operation_budget(client, deadline)
         status, _ = client.select("INBOX", readonly=True)
@@ -220,8 +241,13 @@ def _session(credentials, deadline=None):
             raise ConnectorError("Il provider non consente la lettura della posta in arrivo. Verifica che IMAP sia attivo.", "accesso IMAP", False)
         _operation_budget(client, deadline)
         yield client
-    except ssl.SSLError as exc:
+    except ssl.SSLCertVerificationError as exc:
         raise ConnectorError("Il certificato TLS del server IMAP non è valido. Verifica il server; la connessione sicura è obbligatoria.", "sicurezza IMAP", False) from exc
+    except (ssl.SSLEOFError, ssl.SSLZeroReturnError, ssl.SSLSyscallError) as exc:
+        # A connection dropped mid-session is a network failure, not a certificate problem.
+        raise ConnectorError("La connessione con il server IMAP si è interrotta. Il controllo può essere riprovato.", "connessione IMAP", True) from exc
+    except ssl.SSLError as exc:
+        raise ConnectorError("Non è stato possibile stabilire una connessione sicura con il server IMAP. Verifica il server; la connessione cifrata è obbligatoria.", "sicurezza IMAP", False) from exc
     except (OSError, TimeoutError, imaplib.IMAP4.abort) as exc:
         raise ConnectorError("Il server IMAP non risponde entro il tempo previsto. Il controllo può essere riprovato.", "connessione IMAP", True) from exc
     except imaplib.IMAP4.error as exc:
@@ -359,7 +385,9 @@ def _fetch_message(client, folder, uid, addresses, is_sent, cutoff, deadline):
         raise ConnectorError("Il server IMAP non ha completato la lettura. Nessun risultato parziale è stato salvato.", "lettura IMAP", True)
     raw = next((item[1] for item in (parts or []) if isinstance(item, tuple)
                 and len(item) > 1 and isinstance(item[1], bytes)), None)
-    if raw is None or len(raw) > MAX_MESSAGE_BYTES or len(raw) != int(size_match.group(1)):
+    # RFC822.SIZE is only an estimate on some servers (Exchange); a full-limit
+    # literal may have been cut by the partial fetch and is skipped.
+    if raw is None or len(raw) >= MAX_MESSAGE_BYTES:
         return None
     try:
         message = BytesParser(policy=policy.default).parsebytes(raw)
@@ -380,9 +408,10 @@ def _fetch_message(client, folder, uid, addresses, is_sent, cutoff, deadline):
         return {"id": source_id, "thread_id": "imap-thread:" + hashlib.sha256(root_id.encode()).hexdigest(),
                 "sender": sender, "subject": str(message.get("Subject", "(senza oggetto)"))[:1000],
                 "body": _mime_body(message), "received_at": received.isoformat(), "from_client": from_client}
-    except (ValueError, TypeError, MessageError, RecursionError):
-        # A malformed or oversized message never makes the mailbox look empty
-        # with complete coverage: this entire adapter is explicitly incomplete.
+    except Exception:
+        # The standard parser raises assorted errors (IndexError, AttributeError…)
+        # on malformed headers. One such message is skipped instead of blocking
+        # every check; the adapter never claims complete coverage.
         return None
 
 

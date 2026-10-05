@@ -99,6 +99,12 @@ def test_default_redirect_uses_public_origin(monkeypatch, configured):
     assert outlook._credentials()["redirect_uri"] == "https://filo-production.example.test/api/outlook/oauth/callback"
 
 
+def assert_oauth_failure(response):
+    """A failed Microsoft return lands back in the app with a stored message."""
+    assert response.status_code == 303
+    assert response.headers["location"].endswith("?mail_error=outlook#connections")
+
+
 @pytest.mark.parametrize("redirect", ["http://public.example.test/callback", "https://user:secret@example.test/callback", "https://example.test/callback#fragment", "javascript:alert(1)"])
 def test_invalid_redirect_is_rejected(environment, configured, monkeypatch, redirect):
     _, client = environment
@@ -146,7 +152,7 @@ def test_oauth_pkce_once_encrypted_and_replaces_all_mailbox_credentials(environm
     assert db.get_setting("gmail_revision") == 1 and db.get_setting("outlook_revision") == 1
     assert db.get_setting("service")["status"] == "inactive"
     assert db.get_setting("service")["mandate"] is None
-    assert client.get("/api/outlook/oauth/callback", params={"state": state, "code": "fake-code"}).status_code == 400
+    assert_oauth_failure(client.get("/api/outlook/oauth/callback", params={"state": state, "code": "fake-code"}, follow_redirects=False))
     assert requests == [("POST", "/common/oauth2/v2.0/token"), ("GET", "/v1.0/me")]
 
 
@@ -167,7 +173,7 @@ def test_invalid_or_cancelled_state_consumed_without_network(environment, config
         client.cookies.set("alexchiara_session", "different-session")
     else:
         params["error"] = "access_denied"
-    assert client.get("/api/outlook/oauth/callback", params=params).status_code == 400
+    assert_oauth_failure(client.get("/api/outlook/oauth/callback", params=params, follow_redirects=False))
     assert db.get_setting("outlook_tokens") is None
     if kind != "unknown":
         assert db.get_setting(key) is None
@@ -184,8 +190,8 @@ def test_scope_rejects_broad_or_missing_permissions(environment, configured, mon
 
     mock_http(monkeypatch, handler)
     state = begin(client)
-    response = client.get("/api/outlook/oauth/callback", params={"state": state, "code": "fake-code"})
-    assert response.status_code == 502
+    response = client.get("/api/outlook/oauth/callback", params={"state": state, "code": "fake-code"}, follow_redirects=False)
+    assert_oauth_failure(response)
     assert db.get_setting("outlook_tokens") is None
     assert calls == ["/common/oauth2/v2.0/token"]
 
@@ -202,8 +208,8 @@ def test_callback_switch_in_flight_cannot_restore_credentials(environment, confi
         return httpx.Response(200, json={"mail": "old@example.test"})
 
     mock_http(monkeypatch, handler)
-    response = client.get("/api/outlook/oauth/callback", params={"state": state, "code": "fake-code"})
-    assert response.status_code == 502
+    response = client.get("/api/outlook/oauth/callback", params={"state": state, "code": "fake-code"}, follow_redirects=False)
+    assert_oauth_failure(response)
     assert db.get_setting("outlook_tokens") is None
     assert db.get_connection()["provider"] == "gmail"
     assert db.get_setting("gmail_revision") == 7
@@ -265,9 +271,14 @@ def test_reads_bounded_inbound_and_sent_replies_deterministically(environment, m
             assert request.url.params["$top"] == "25"
             assert "from/emailAddress/address eq 'alfa@example.test'" in request.url.params["$filter"]
             return httpx.Response(200, json={"value": [open_mail, earlier], "@odata.nextLink": "https://evil.example.test/never-follow"})
+        if request.url.path == "/v1.0/me/messages/sent":
+            # Only a reply to a priority contact is opened, and only its body.
+            assert request.url.params["$select"] == "body,subject"
+            return httpx.Response(200, json={"body": reply["body"], "subject": reply["subject"]})
         assert request.url.path == "/v1.0/me/mailFolders/sentitems/messages"
         assert request.url.params["$top"] == "100"
-        return httpx.Response(200, json={"value": [reply]})
+        assert "body" not in request.url.params["$select"].split(",")
+        return httpx.Response(200, json={"value": [{key: value for key, value in reply.items() if key not in ("body", "subject")}]})
 
     mock_http(monkeypatch, handler)
     result = outlook.load_outlook_messages(db, [{"email": "alfa@example.test"}])
@@ -275,7 +286,8 @@ def test_reads_bounded_inbound_and_sent_replies_deterministically(environment, m
     assert result[0]["from_client"] is False
     assert result[1]["from_client"] is True
     assert "Serve il preventivo" in result[0]["context"] and "Ecco il preventivo" in result[0]["context"]
-    assert len(requests) == 2
+    assert requests[-1] == ("GET", "/v1.0/me/messages/sent")
+    assert len(requests) == 3
 
 
 def test_filters_old_drafts_unrelated_sent_and_strips_html(environment, monkeypatch):
@@ -371,3 +383,34 @@ def test_bad_remote_json_and_deadline_fail_recoverably(environment, monkeypatch)
     mock_http(monkeypatch, lambda _: pytest.fail("Deadline must stop before mailbox request"))
     with pytest.raises(ConnectorError, match="tempo massimo"):
         outlook.load_outlook_messages(db, [{"email": "alfa@example.test"}])
+
+
+def test_authorization_lets_microsoft_decide_when_consent_is_needed(environment, configured):
+    _, client = environment
+    url = urlparse(client.post("/api/outlook/oauth/start").json()["authorization_url"])
+    assert parse_qs(url.query)["prompt"] == ["select_account"]
+
+
+@pytest.mark.parametrize("error", [httpx.RemoteProtocolError("server disconnected"), httpx.ProxyError("proxy"), httpx.ReadError("reset")])
+def test_any_transport_failure_is_retryable(environment, monkeypatch, error):
+    db, _ = environment
+    connected(db)
+
+    def handler(request):
+        raise error
+    mock_http(monkeypatch, handler)
+    with pytest.raises(ConnectorError) as raised:
+        outlook.load_outlook_messages(db, [{"email": "alfa@example.test"}])
+    assert raised.value.retryable is True
+
+
+def test_transport_failure_during_callback_returns_to_the_app(environment, configured, monkeypatch):
+    db, client = environment
+
+    def handler(request):
+        raise httpx.RemoteProtocolError("server disconnected")
+    mock_http(monkeypatch, handler)
+    state = begin(client)
+    assert_oauth_failure(client.get("/api/outlook/oauth/callback", params={"state": state, "code": "fake-code"}, follow_redirects=False))
+    assert db.get_setting("mail_oauth_error")["provider"] == "outlook"
+    assert db.get_setting("outlook_tokens") is None

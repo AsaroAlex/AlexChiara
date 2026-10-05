@@ -1,9 +1,11 @@
 """Public Spazelia site and authenticated, isolated workspaces."""
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, closing
 import json
+import logging
 import os
 from pathlib import Path
 import re
+import sqlite3
 import threading
 import time
 from urllib.parse import urlsplit
@@ -29,6 +31,7 @@ from .models import Action, Activation, ChatInput, CompanyInput, DemoFailure, Pr
 from .service import Scheduler
 
 CATALOG = list_services()
+logger = logging.getLogger(__name__)
 
 
 def recent_oauth_error(db):
@@ -120,7 +123,7 @@ def create_workspace_app(data_dir=None, start_worker=True):
 
     @app.get("/api/health")
     def health():
-        return {"status": "ok", "scheduler": "running" if scheduler._thread and scheduler._thread.is_alive() else "disabled", "persistence": "sqlite", "can_send": False}
+        return {"status": "ok", "scheduler": "running" if scheduler.alive() else "disabled", "persistence": "sqlite", "can_send": False}
 
     @app.get("/api/bootstrap")
     def bootstrap(request: Request):
@@ -283,27 +286,30 @@ def create_workspace_app(data_dir=None, start_worker=True):
 
     @app.post("/api/service/action")
     def service_action(payload: Action):
-        service = db.get_setting("service")
         action = payload.action
         if action == "run":
             return {"run": scheduler.enqueue()}
-        if action == "pause":
-            if service["status"] != "active":
-                raise HTTPException(409, "Il servizio deve essere attivo per metterlo in pausa.")
-            service["status"] = "paused"
-        elif action == "resume":
-            if service["status"] != "paused":
-                raise HTTPException(409, "Il servizio deve essere in pausa per riprenderlo.")
-            connection = db.get_connection()
-            if connection["status"] != "connected" or connection["provider"] != service["provider"] or (real_data_only() and connection.get("provider") not in REAL_MAIL_PROVIDERS):
-                raise HTTPException(409, "Ricollega la casella autorizzata prima di riprendere il servizio.")
-            service.update(status="active", activated_at=iso_now())
-        elif action == "deactivate":
-            service.update(status="inactive", mandate=None, activated_at=None)
-            with db.connection() as conn:
+        # One write transaction: concurrent clicks or an activation cannot
+        # interleave with this read-modify-write of the service.
+        with db.connection() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            service = json.loads(conn.execute("SELECT value FROM kv WHERE key='service'").fetchone()["value"])
+            if action == "pause":
+                if service["status"] != "active":
+                    raise HTTPException(409, "Il servizio deve essere attivo per metterlo in pausa.")
+                service["status"] = "paused"
+            elif action == "resume":
+                if service["status"] != "paused":
+                    raise HTTPException(409, "Il servizio deve essere in pausa per riprenderlo.")
+                connection = db.get_connection()
+                if connection["status"] != "connected" or connection["provider"] != service["provider"] or (real_data_only() and connection.get("provider") not in REAL_MAIL_PROVIDERS):
+                    raise HTTPException(409, "Ricollega la casella autorizzata prima di riprendere il servizio.")
+                service.update(status="active", activated_at=iso_now())
+            elif action == "deactivate":
+                service.update(status="inactive", mandate=None, activated_at=None)
                 conn.execute("UPDATE runs SET status='failed',error='Servizio disattivato dall’utente.',error_step='mandato',retryable=0,next_attempt_at=NULL,finished_at=? WHERE status IN ('queued','retry_wait')", (iso_now(),))
-        db.set_setting("service", service)
-        db.log_action("service_" + action, "priority-email")
+            conn.execute("UPDATE kv SET value=? WHERE key='service'", (json.dumps(service, ensure_ascii=False),))
+            scheduler._log_in_transaction(conn, "service_" + action, "priority-email", {})
         return {"service": visible_service(db)}
 
     @app.post("/api/demo/failure")
@@ -370,6 +376,18 @@ def create_workspace_app(data_dir=None, start_worker=True):
     return app
 
 
+def _has_scheduled_work(path):
+    """Whether a stored workspace has an active service or unfinished checks."""
+    try:
+        with closing(sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=5)) as conn:
+            row = conn.execute("SELECT value FROM kv WHERE key='service'").fetchone()
+            pending = conn.execute("SELECT 1 FROM runs WHERE status IN ('queued','running','retry_wait') LIMIT 1").fetchone()
+        return bool(pending) or (row is not None and json.loads(row[0]).get("status") == "active")
+    except (sqlite3.Error, ValueError, TypeError, AttributeError):
+        # When in doubt, load it: a missed daily check is worse than a thread.
+        return True
+
+
 def create_app(data_dir=None, start_worker=True):
     """Serve a public site and resolve private data from the signed-in account."""
     from .accounts import AccountStore, OWNER_ID, create_account_router
@@ -408,9 +426,17 @@ def create_app(data_dir=None, start_worker=True):
     @asynccontextmanager
     async def lifespan(app):
         nonlocal running
+        # Only workspaces with scheduled work need a worker at startup; the
+        # others open on their owner's first request, keeping boot time and
+        # threads proportional to active services rather than to sign-ups.
         for user in accounts.list_users():
-            if (runtime / "workspaces" / user["id"] / "alexchiara.sqlite3").exists():
-                workspace(user["id"])
+            path = runtime / "workspaces" / user["id"] / "alexchiara.sqlite3"
+            if path.exists() and _has_scheduled_work(path):
+                try:
+                    workspace(user["id"])
+                except Exception:
+                    # One damaged workspace must not keep every other account offline.
+                    logger.exception("Workspace %s could not be opened at startup", user["id"])
         running = True
         if start_worker:
             for private_app in list(workspaces.values()):
@@ -419,8 +445,12 @@ def create_app(data_dir=None, start_worker=True):
             yield
         finally:
             running = False
-            for private_app in list(workspaces.values()):
-                private_app.state.scheduler.stop()
+            # Signal every worker first so shutdown waits once, not once per account.
+            schedulers = [private_app.state.scheduler for private_app in list(workspaces.values())]
+            for scheduler in schedulers:
+                scheduler.stop(wait=False)
+            for scheduler in schedulers:
+                scheduler.stop()
 
     app = FastAPI(title="Spazelia", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.accounts = accounts
@@ -552,7 +582,9 @@ def create_app(data_dir=None, start_worker=True):
 
     @app.api_route("/api/health", methods=page_methods)
     def health():
-        return {"status": "ok", "scheduler": "running" if running and start_worker else "disabled", "persistence": "sqlite", "can_send": False}
+        alive = all(private.state.scheduler.alive() for private in list(workspaces.values()))
+        state = "disabled" if not (running and start_worker) else "running" if alive else "degraded"
+        return {"status": "ok", "scheduler": state, "persistence": "sqlite", "can_send": False}
 
     class WorkspaceDispatcher:
         async def __call__(self, scope, receive, send):
@@ -566,7 +598,13 @@ def create_app(data_dir=None, start_worker=True):
             if not user:
                 await JSONResponse({"detail": "Accedi a Spazelia per continuare."}, status_code=401)(scope, receive, send)
                 return
-            await workspace(user["id"])(scope, receive, send)
+            try:
+                private_app = workspace(user["id"])
+            except Exception:
+                logger.exception("Workspace %s could not be opened", user["id"])
+                await JSONResponse({"detail": "Il tuo spazio non è disponibile in questo momento. Riprova tra poco o contatta l'assistenza."}, status_code=503)(scope, receive, send)
+                return
+            await private_app(scope, receive, send)
 
     app.mount("/", WorkspaceDispatcher())
     return app
