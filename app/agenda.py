@@ -128,7 +128,7 @@ def agenda_summary(db, now=None, day=None):
 def _export_text(summary):
     day = calendar_date.fromisoformat(summary["date"])
     lines = [
-        "Filo — Ordine del giorno", day.strftime("%d/%m/%Y"),
+        "Spazelia — Ordine del giorno", day.strftime("%d/%m/%Y"),
         "Fuso orario: Europe/Rome", SOURCE,
         "Calendario esterno non collegato.", "",
     ]

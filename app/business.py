@@ -402,7 +402,7 @@ def _attention_reason(item):
 def _document(item, service, company=None):
     labels = {"todo": "Da fare", "in_progress": "In corso", "waiting": "In attesa", "done": "Completata", "cancelled": "Annullata"}
     lines = [
-        f'Filo — {service.get("output_title", service["name"])}',
+        f'Spazelia — {service.get("output_title", service["name"])}',
         "Bozza locale preparata dai dati inseriti; da verificare prima dell’uso.", "",
         item["title"],
     ]
@@ -472,7 +472,7 @@ def _document(item, service, company=None):
         lines.extend(["", "Prossimo passo:", item["next_action"]])
     if service.get("output_footer"):
         lines.extend(["", service["output_footer"]])
-    lines.extend(["", "Nessun invio, pagamento o adempimento eseguito da Filo."])
+    lines.extend(["", "Nessun invio, pagamento o adempimento eseguito da Spazelia."])
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -917,6 +917,6 @@ def create_business_router(db):
             if not row:
                 raise HTTPException(status_code=404, detail="Attività non trovata.")
             item = _item(row, company=company, links=_record_links(conn, [record_id])[record_id])
-        return Response(content=item["document"].encode("utf-8"), media_type="text/plain; charset=utf-8", headers={"Content-Disposition": f'attachment; filename="filo-{item["service_id"]}-{record_id}.txt"', "X-Content-Type-Options": "nosniff"})
+        return Response(content=item["document"].encode("utf-8"), media_type="text/plain; charset=utf-8", headers={"Content-Disposition": f'attachment; filename="spazelia-{item["service_id"]}-{record_id}.txt"', "X-Content-Type-Options": "nosniff"})
 
     return router

@@ -34,7 +34,7 @@
     try {
       response = await fetch(path, { method, credentials: 'same-origin', headers, ...(method !== 'GET' ? { body: JSON.stringify(options.body || {}) } : {}) });
     } catch (_) {
-      throw new Error('Non riusciamo a raggiungere Filo. Controlla la connessione e riprova.');
+      throw new Error('Non riusciamo a raggiungere Spazelia. Controlla la connessione e riprova.');
     }
     let data = {};
     try { data = await response.json(); } catch (_) { /* Some server errors have no JSON body. */ }
@@ -93,9 +93,9 @@
     const email = byId('auth-email');
     const name = byId('auth-name');
     if (register) {
-      document.title = 'Crea il tuo account · Filo';
+      document.title = 'Crea il tuo account · Spazelia';
       byId('auth-title').textContent = 'Cominciamo da te.';
-      byId('auth-description').textContent = 'Crea il tuo account Filo.';
+      byId('auth-description').textContent = 'Crea il tuo account Spazelia.';
       byId('auth-name-field').hidden = false;
       name.required = true;
       byId('auth-email-label').textContent = 'Email';
@@ -170,7 +170,7 @@
     const status = data.subscription_status || subscription.status || 'free';
     const active = ['active', 'trialing'].includes(status);
     const hasSubscription = !['free', 'none'].includes(status);
-    byId('plan-name').textContent = plan.name || 'Filo';
+    byId('plan-name').textContent = plan.name || 'Spazelia';
     byId('plan-price').textContent = plan.price_label || (data.configured ? 'Il prezzo sarà indicato nel checkout.' : 'Prezzo in definizione');
     byId('subscription-status').textContent = subscriptionLabels[status] || 'Stato da verificare';
     byId('subscription-status').classList.toggle('active', active);
@@ -255,10 +255,10 @@
       const data = await session();
       if (!data.authenticated) { goToLogin(); return; }
       const user = data.user || {};
-      byId('profile-name').textContent = user.name || 'Account Filo';
+      byId('profile-name').textContent = user.name || 'Account Spazelia';
       byId('profile-email').textContent = user.email || '—';
-      byId('profile-role').textContent = user.role === 'owner' ? 'Titolare dello spazio' : 'Account Filo';
-      byId('profile-avatar').textContent = (user.name || user.email || 'F').trim().charAt(0).toUpperCase();
+      byId('profile-role').textContent = user.role === 'owner' ? 'Titolare dello spazio' : 'Account Spazelia';
+      byId('profile-avatar').textContent = (user.name || user.email || 'S').trim().charAt(0).toUpperCase();
       byId('account-loading').hidden = true;
       byId('account-content').hidden = false;
       byId('account-logout').disabled = false;

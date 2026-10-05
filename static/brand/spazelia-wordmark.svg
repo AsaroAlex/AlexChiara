@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 350 104" role="img" aria-labelledby="spazelia-wordmark-title spazelia-wordmark-desc">
+<title id="spazelia-wordmark-title">Spazelia</title>
+<desc id="spazelia-wordmark-desc">Il marchio Spazelia con due angoli aperti e il nome in carattere di sistema.</desc>
+<g transform="translate(8 20)"><path d="M42 13H26C18.82 13 13 18.82 13 26V42" fill="none" stroke="#202124" stroke-width="6" stroke-linecap="round"/><path d="M22 51H38C45.18 51 51 45.18 51 38V22" fill="none" stroke="#E56F32" stroke-width="6" stroke-linecap="round"/></g>
+<text x="88" y="73" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif" font-size="62" font-weight="600" letter-spacing="-2.2" fill="#202124">Spazelia</text>
+</svg>

@@ -1,4 +1,4 @@
-# Architettura e mandato del servizio
+# Architettura e mandato del servizio Spazelia
 
 Il prodotto offre funzioni progettate dal gestore. La chat riconosce intenti supportati e indirizza all'attivazione: non costruisce workflow e non può attivare servizi, inviare messaggi o modificare autorizzazioni in risposta a una frase.
 
@@ -18,6 +18,10 @@ flowchart LR
     AUTH --> BILLING[Stripe Checkout e portale]
     WEBHOOK[Webhook Stripe firmato] --> LEDGER[(SQLite abbonamenti)]
 ```
+
+## Identità pubblica e compatibilità
+
+Il prodotto si presenta come Spazelia. Il rebranding conserva le variabili `FILO_*`, le sessioni e i cookie esistenti, i nomi dei database, gli identificatori delle rotte e il dominio Railway configurato. Non comporta una migrazione dei dati o una nuova autorizzazione delle caselle; eventuali modifiche al dominio richiedono una configurazione distinta di host, OAuth e ritorni Stripe. Gli snapshot di ricerca conservano i nomi e le citazioni originali; il report visualizza Spazelia nei soli testi editoriali riferiti al nostro prodotto.
 
 ## Esecuzione
 

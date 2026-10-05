@@ -1,4 +1,4 @@
-"""Public Filo site and authenticated, isolated workspaces."""
+"""Public Spazelia site and authenticated, isolated workspaces."""
 from contextlib import asynccontextmanager
 import json
 import os
@@ -45,7 +45,7 @@ def create_workspace_app(data_dir=None, start_worker=True):
         finally:
             scheduler.stop()
 
-    app = FastAPI(title="Filo — servizi per la tua attività", lifespan=lifespan)
+    app = FastAPI(title="Spazelia — servizi per la tua attività", lifespan=lifespan)
     app.state.db = db
     app.state.scheduler = scheduler
     app.state.runtime = runtime
@@ -346,7 +346,7 @@ def create_workspace_app(data_dir=None, start_worker=True):
         index_path = static / "index.html"
         if index_path.exists():
             return FileResponse(index_path)
-        return JSONResponse({"name": "Filo", "message": "Interfaccia in preparazione. Le API sono disponibili.", "bootstrap": "/api/bootstrap"})
+        return JSONResponse({"name": "Spazelia", "message": "Interfaccia in preparazione. Le API sono disponibili.", "bootstrap": "/api/bootstrap"})
 
     return app
 
@@ -403,7 +403,7 @@ def create_app(data_dir=None, start_worker=True):
             for private_app in list(workspaces.values()):
                 private_app.state.scheduler.stop()
 
-    app = FastAPI(title="Filo", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(title="Spazelia", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.accounts = accounts
     app.state.billing = billing
     app.state.workspaces = workspaces
@@ -450,7 +450,7 @@ def create_app(data_dir=None, start_worker=True):
                 response = RedirectResponse("/login?next=" + ("/account" if path.startswith("/account") else "/app"), status_code=303)
                 response.headers["Cache-Control"] = "no-store"
                 return response
-            return JSONResponse({"detail": "Accedi a Filo per continuare.", "login_url": "/login"}, status_code=401, headers={"Cache-Control": "no-store"})
+            return JSONResponse({"detail": "Accedi a Spazelia per continuare.", "login_url": "/login"}, status_code=401, headers={"Cache-Control": "no-store"})
         if request.method not in ("GET", "HEAD", "OPTIONS"):
             if not webhook and path.startswith("/api/") and not accounts.csrf_valid(request.cookies.get("filo_session"), request.headers.get("x-csrf-token")):
                 return JSONResponse({"detail": "Sessione non valida. Ricarica la pagina prima di continuare."}, status_code=403, headers={"Cache-Control": "no-store"})
@@ -496,7 +496,7 @@ def create_app(data_dir=None, start_worker=True):
     @app.get("/api/research/market-review")
     def market_review(request: Request):
         if (getattr(request.state, "filo_user", None) or {}).get("id") != OWNER_ID:
-            raise HTTPException(status_code=403, detail="La ricerca di prodotto è riservata al gestore di Filo.")
+            raise HTTPException(status_code=403, detail="La ricerca di prodotto è riservata al gestore di Spazelia.")
         report = Path(__file__).resolve().parent.parent / "docs" / "research" / "market-review-2026-10-05.html"
         if not report.is_file():
             raise HTTPException(status_code=404, detail="La ricerca non è ancora disponibile.")
@@ -510,7 +510,7 @@ def create_app(data_dir=None, start_worker=True):
         async def __call__(self, scope, receive, send):
             user = scope.get("state", {}).get("filo_user")
             if not user:
-                await JSONResponse({"detail": "Accedi a Filo per continuare."}, status_code=401)(scope, receive, send)
+                await JSONResponse({"detail": "Accedi a Spazelia per continuare."}, status_code=401)(scope, receive, send)
                 return
             await workspace(user["id"])(scope, receive, send)
 

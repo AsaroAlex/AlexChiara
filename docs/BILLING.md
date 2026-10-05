@@ -1,4 +1,4 @@
-# Abbonamenti Stripe
+# Abbonamenti Spazelia con Stripe
 
 La registrazione crea un account gratuito e non richiede una carta. Il prezzo
 dell'abbonamento deve essere deciso dal titolare: questa implementazione non
@@ -9,6 +9,8 @@ Checkout; Stripe mostra il prezzo e raccoglie l'accettazione del pagamento.
 Finché manca la configurazione, l'area personale mostra che i pagamenti non
 sono ancora attivi. La segreteria esistente resta utilizzabile; non sono state
 introdotte restrizioni legate al piano.
+
+Il piano usa Spazelia come nome pubblico. Le variabili `FILO_*`, il dominio Railway e l’endpoint webhook rimangono compatibili con la configurazione esistente. Il cambio di nome non crea prodotti Stripe, non cambia prezzi e non attiva addebiti.
 
 ## Configurazione sul server
 
@@ -22,7 +24,7 @@ introdotte restrizioni legate al piano.
    - `FILO_PUBLIC_URL`: origine pubblica, per esempio
      `https://filo-production-65a1.up.railway.app`, senza percorso. Se omessa,
      viene usata l'origine della richiesta, già controllata dal middleware.
-   - `FILO_PLAN_LABEL` facoltativa: nome del piano; il valore predefinito è Filo.
+   - `FILO_PLAN_LABEL` facoltativa: nome del piano; il valore predefinito è Spazelia.
    - `FILO_PLAN_PRICE_LABEL` facoltativa: testo del listino approvato, coerente
      con il prezzo Stripe. Se omessa, nessun prezzo è presentato sul sito.
 3. Registrare in Stripe l'endpoint pubblico

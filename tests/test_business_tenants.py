@@ -119,7 +119,7 @@ def test_private_quotes_list_summary_catalog_and_exports_do_not_cross_accounts(s
             exported = client.get("/api/business/records/" + mine["id"] + "/export")
             assert exported.status_code == 200
             assert mine["title"] in exported.text and other["title"] not in exported.text
-            assert "Nessun invio, pagamento o adempimento eseguito da Filo." in exported.text
+            assert "Nessun invio, pagamento o adempimento eseguito da Spazelia." in exported.text
             assert "non viene trasmessa allo SDI" in exported.text
             for path in ("/api/business/records/" + other["id"], "/api/business/records/" + other["id"] + "/export"):
                 assert client.get(path).status_code == 404

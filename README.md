@@ -1,4 +1,4 @@
-# Filo · servizi già pronti per il lavoro di ogni giorno
+# Spazelia · la tua giornata, con più spazio
 
 Applicazione in italiano per PMI e piccoli studi. **Segreteria email** controlla i contatti prioritari e prepara bozze da rivedere. Il catalogo include **23 moduli aziendali locali** per clienti, preventivi, bozze fattura, incassi, spese, acquisti, commesse, documenti, scadenze, magazzino, assistenza e organizzazione del lavoro. La panoramica presenta le cose da fare, un riepilogo neutro a destra e l’agenda manuale. Le integrazioni esterne non ancora disponibili sono indicate nel catalogo.
 
@@ -26,7 +26,7 @@ Per studi e imprese di servizi, il profilo aziendale riusa i dati nei documenti.
 
 Ogni modulo propone passaggi operativi specifici: **94 passaggi nei 23 moduli**, con progresso segnato dall’utente e prossimo passo visibile nella panoramica. Dieci moduli riusano la data operativa già compilata quando manca una scadenza esplicita. Incassi e spese mostrano gli importi aperti, scaduti e previsti per oggi; il magazzino calcola la quantità necessaria per raggiungere la soglia scelta. **Ripeti attività** prepara una nuova scheda per una data futura, da rivedere prima di salvarla, con passaggi e minuti azzerati.
 
-Apri **Servizi**, cerca un modulo o scegli un’area e aggiungi una scheda con i dati della tua impresa. Filo prepara il documento locale, calcola i totali di preventivi/bozze fattura, ordina scadenze e priorità e segnala scorte sotto la soglia inserita. Puoi aggiornare, completare, riaprire o esportare ogni attività. La chat suggerisce il servizio da aprire, senza modificare dati o permessi da sola. I nuovi spazi partono vuoti.
+Apri **Servizi**, cerca un modulo o scegli un’area e aggiungi una scheda con i dati della tua impresa. Spazelia prepara il documento locale, calcola i totali di preventivi/bozze fattura, ordina scadenze e priorità e segnala scorte sotto la soglia inserita. Puoi aggiornare, completare, riaprire o esportare ogni attività. La chat suggerisce il servizio da aprire, senza modificare dati o permessi da sola. I nuovi spazi partono vuoti.
 
 [La guida dei servizi PMI](docs/PMI.md) descrive funzioni e limiti: bozze fiscali interne, riferimenti documentali e dati aggiunti dall’utente; SDI, banche, PEC, calendario esterno e telefonia richiedono integrazioni dedicate. I minuti risparmiati sono dichiarazioni dell’utente, senza una stima automatica del costo del personale.
 
@@ -80,6 +80,10 @@ Database, preferenze, mandati, cronologia e tentativi sopravvivono al riavvio se
 
 Prima dell'uso continuativo reale servono backup e ripristino verificato dell'intera cartella dati e delle chiavi locali. Il deploy Railway aggiunge HTTPS e supervisione del processo; l'applicazione separa i dati per account, senza condivisione o ruoli di squadra. La cifratura dei token non cifra l'intero database delle email.
 
+## Identità e compatibilità
+
+Spazelia è il nome pubblico del prodotto. Le variabili `FILO_*`, il nome tecnico del servizio Railway `filo`, il nome utente predefinito `filo`, i cookie, gli archivi SQLite e i percorsi API conservano i loro identificatori per mantenere configurazione, dati e sessioni esistenti. Il dominio pubblico e le callback OAuth restano quelli effettivamente configurati su Railway; il rebranding non registra un nuovo dominio.
+
 ## Pubblicazione Railway
 
 `railway.toml` configura Railpack, le dipendenze bloccate, l'avvio su `0.0.0.0:$PORT`, un solo processo e il controllo `/api/health`. Seleziona Python 3.12 tramite `RAILPACK_PYTHON_VERSION=3.12` e collega un volume persistente a `/data` con `ALEXCHIARA_DATA_DIR=/data`. Mantieni una sola replica e disabilita la sospensione automatica: il processo gestisce i controlli programmati.
@@ -94,7 +98,7 @@ Vedi [collegamento Gmail](docs/GMAIL.md) per i passaggi ufficiali e le variabili
 
 La progettazione del prodotto, il confronto dei moduli, le fonti e la proposta commerciale sono in [PRODOTTO.md](docs/PRODOTTO.md). Architettura, controlli e limiti sono descritti in [ARCHITETTURA.md](docs/ARCHITETTURA.md). Le prove eseguite sono raccolte in [VERIFICA.md](docs/VERIFICA.md).
 
-La [ricerca di nome e branding](docs/research/naming-branding-2026-10-05.html) propone **Spazelia**, con Giorvia e Prontela come direzioni alternative, sei loghi/simboli SVG e controlli documentati su domini, usi commerciali e canali. È una proposta creativa: i segnali pubblici di disponibilità restano da confermare presso il registrar e nei registri dei marchi.
+Il prodotto adotta **Spazelia**, con la promessa «La tua giornata, con più spazio», un simbolo aperto e una palette bianco, carbone e arancio caldo. La [ricerca di nome e branding](docs/research/naming-branding-2026-10-05.html) conserva il confronto con Giorvia e Prontela, sei loghi/simboli SVG e i controlli documentati. Il cambio di identità non conferma la disponibilità dei domini, dei marchi o dei nomi social: queste verifiche restano separate prima di registrarli.
 
 ## Ambito
 

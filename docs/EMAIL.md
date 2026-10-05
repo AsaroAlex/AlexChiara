@@ -1,16 +1,18 @@
-# Collegare la propria posta a Filo
+# Collegare la propria posta a Spazelia
 
-Apri **Collegamenti** nell'area riservata. Ogni account Filo può avere una sola casella: Gmail, Outlook/Microsoft 365, iCloud, Yahoo, Aruba, Libero oppure un altro server IMAP. Cambiare casella ferma i controlli precedenti; attiva nuovamente il servizio per autorizzare la nuova connessione.
+Apri **Collegamenti** nell'area riservata. Ogni account Spazelia può avere una sola casella: Gmail, Outlook/Microsoft 365, iCloud, Yahoo, Aruba, Libero oppure un altro server IMAP. Cambiare casella ferma i controlli precedenti; attiva nuovamente il servizio per autorizzare la nuova connessione.
 
-Le credenziali sono cifrate sul server, nello spazio privato dell'utente. I connettori non inviano email e non modificano i messaggi. Le bozze rimangono in Filo. Il controllo legge un campione limitato degli ultimi sette giorni, filtrato sui contatti prioritari: non dimostra che una persona non abbia scritto o risposto.
+Le credenziali sono cifrate sul server, nello spazio privato dell'utente. I connettori non inviano email e non modificano i messaggi. Le bozze rimangono in Spazelia. Il controllo legge un campione limitato degli ultimi sette giorni, filtrato sui contatti prioritari: non dimostra che una persona non abbia scritto o risposto.
+
+Spazelia è il nome pubblico del prodotto; il servizio Railway `filo`, le variabili `FILO_*` e le callback qui riportate conservano gli identificatori esistenti. I nomi visualizzati nelle app OAuth Google e Microsoft possono usare Spazelia senza cambiare le callback.
 
 ## Gmail: configurazione iniziale del gestore
 
 Il pulsante Gmail apre il consenso Google nella stessa scheda. Prima occorre configurare una volta il client OAuth del prodotto; ogni cliente utilizzerà poi il pulsante del sito.
 
-1. Apri [Google Cloud Console](https://console.cloud.google.com/) e crea o scegli il progetto Filo.
+1. Apri [Google Cloud Console](https://console.cloud.google.com/) e crea o scegli il progetto Spazelia.
 2. Abilita **Gmail API** in **API e servizi → Libreria**.
-3. In **Google Auth Platform**, completa nome e contatti. Scegli **External** per Gmail personale; in modalità test aggiungi gli indirizzi delle caselle che proveranno Filo. **Internal** limita l'accesso alla propria organizzazione Google Workspace.
+3. In **Google Auth Platform**, completa nome e contatti. Scegli **External** per Gmail personale; in modalità test aggiungi gli indirizzi delle caselle che proveranno Spazelia. **Internal** limita l'accesso alla propria organizzazione Google Workspace.
 4. Aggiungi il solo ambito `https://www.googleapis.com/auth/gmail.readonly`.
 5. Crea un client **Web application** e registra esattamente questa callback:
 
@@ -33,7 +35,7 @@ Il pulsante Gmail apre il consenso Google nella stessa scheda. Prima occorre con
    https://filo-production-65a1.up.railway.app/api/outlook/oauth/callback
    ```
 
-4. Usa permessi **delegati** Microsoft Graph `Mail.Read` e `User.Read`, insieme a `offline_access` per il rinnovo. Non aggiungere permessi di invio o scrittura al consenso Filo.
+4. Usa permessi **delegati** Microsoft Graph `Mail.Read` e `User.Read`, insieme a `offline_access` per il rinnovo. Non aggiungere permessi di invio o scrittura al consenso Spazelia.
 5. In **Certificates & secrets**, crea un client secret e copia il suo **Value**, non il suo ID. Conserva la scadenza per rinnovarlo in tempo.
 6. Nelle variabili Railway configura e applica il deploy:
 
@@ -62,7 +64,7 @@ Seleziona il provider, inserisci indirizzo email e password per app quando richi
 
 Gmail e Outlook utilizzano i propri pulsanti OAuth. Il preset Aruba riguarda la posta ordinaria; per una PEC usa il modulo personalizzato con il server corretto indicato dal fornitore. Eventuali costi dell'opzione IMAP dipendono dal proprio contratto.
 
-Filo apre le cartelle in sola lettura e usa `BODY.PEEK`, senza segnare le email come lette. Controlla la posta inviata quando disponibile per riconoscere risposte già osservate; la copertura rimane incompleta. Scarica messaggi MIME limitati a 512 KiB, esclude gli allegati dall'analisi e salta messaggi troppo grandi. Server privati, locali o privi di TLS non vengono accettati.
+Spazelia apre le cartelle in sola lettura e usa `BODY.PEEK`, senza segnare le email come lette. Controlla la posta inviata quando disponibile per riconoscere risposte già osservate; la copertura rimane incompleta. Scarica messaggi MIME limitati a 512 KiB, esclude gli allegati dall'analisi e salta messaggi troppo grandi. Server privati, locali o privi di TLS non vengono accettati.
 
 Riferimenti: [iCloud IMAP](https://support.apple.com/102525), [password Apple per app](https://support.apple.com/102654), [Yahoo IMAP](https://help.yahoo.com/kb/SLN4075.html), [assistenza Aruba](https://guide.hosting.aruba.it/), [assistenza Libero](https://aiuto.libero.it/).
 
@@ -70,6 +72,6 @@ Riferimenti: [iCloud IMAP](https://support.apple.com/102525), [password Apple pe
 
 Compila il profilo della tua attività, scegli da uno a quattro contatti prioritari e l'orario del controllo. L'attivazione autorizza lettura e preparazione di bozze. Con un avviso odierno in attesa, il servizio attivo verifica nuovi arrivi ogni cinque minuti anche senza browser aperto; pausa e scollegamento fermano i controlli.
 
-**Scollega** elimina localmente le credenziali di tutti i provider e ferma il servizio. Per revocare anche presso il fornitore, rimuovi Filo dalle app collegate oppure revoca la password per app nelle impostazioni della casella.
+**Scollega** elimina localmente le credenziali di tutti i provider e ferma il servizio. Per revocare anche presso il fornitore, rimuovi Spazelia dalle app collegate oppure revoca la password per app nelle impostazioni della casella.
 
 Le prove di sviluppo usano risposte simulate e archivi temporanei. Il collegamento a caselle reali richiede credenziali e consenso del titolare; non è stato collaudato durante queste verifiche. I pagamenti Stripe restano nel proprio percorso separato, con prezzo da definire.

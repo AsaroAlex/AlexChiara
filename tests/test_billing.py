@@ -91,7 +91,7 @@ def test_unconfigured_billing_is_truthful_and_registration_never_implies_payment
     result = state(client)
     assert result["configured"] is False
     assert result["subscription"] == {"status": "free", "cancel_at_period_end": False, "current_period_end": None}
-    assert result["plan"]["name"] == "Filo"
+    assert result["plan"]["name"] == "Spazelia"
     assert result["plan"]["price_label"] is None
     assert result["portal_available"] is False
     for path in ("checkout", "portal"):

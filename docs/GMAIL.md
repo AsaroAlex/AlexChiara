@@ -1,6 +1,8 @@
 # Collegare Gmail con permessi di sola lettura
 
-Il deploy [Filo su Railway](https://filo-production-65a1.up.railway.app) usa soltanto dati reali (`FILO_REAL_DATA_ONLY=1`). Il collegamento Gmail richiede un client OAuth Google; non basta l'accesso a Railway. Queste operazioni sono a carico del gestore del prodotto. L'integrazione è verificata con risposte simulate, senza collegamento a un account reale durante lo sviluppo.
+Il deploy [Spazelia su Railway](https://filo-production-65a1.up.railway.app) usa soltanto dati reali (`FILO_REAL_DATA_ONLY=1`). Il collegamento Gmail richiede un client OAuth Google; non basta l'accesso a Railway. Queste operazioni sono a carico del gestore del prodotto. L'integrazione è verificata con risposte simulate, senza collegamento a un account reale durante lo sviluppo.
+
+Spazelia è il nome pubblico; il servizio Railway mantiene il nome tecnico `filo`, le variabili `FILO_*` e le callback qui riportate. Nel consenso Google usa Spazelia come nome visualizzato dell’app.
 
 ## Configurazione del gestore
 
@@ -13,8 +15,8 @@ Il deploy [Filo su Railway](https://filo-production-65a1.up.railway.app) usa sol
    https://filo-production-65a1.up.railway.app/api/gmail/oauth/callback
    ```
 
-5. Nel servizio Filo dell'ambiente **production** su Railway, apri **Variables** e inserisci `FILO_GOOGLE_CLIENT_ID` e `FILO_GOOGLE_CLIENT_SECRET` con i valori del client appena creato. `FILO_GOOGLE_REDIRECT_URI` è già impostata all'indirizzo del punto 4: mantieni lo stesso valore. Lascia `FILO_REAL_DATA_ONLY=1`. Salva le variabili e applica il nuovo deploy. Non inserire il segreto nella chat, nel codice o in Git.
-6. Apri Filo, seleziona **Collega Gmail** e accedi con l'account aggiunto tra gli utenti di test. Concedi la lettura e attendi il ritorno all'app. Compila il profilo della tua azienda, scegli i contatti prioritari e autorizza lettura e preparazione di bozze per attivare i controlli automatici.
+5. Nel servizio `filo` dell'ambiente **production** su Railway, apri **Variables** e inserisci `FILO_GOOGLE_CLIENT_ID` e `FILO_GOOGLE_CLIENT_SECRET` con i valori del client appena creato. `FILO_GOOGLE_REDIRECT_URI` è già impostata all'indirizzo del punto 4: mantieni lo stesso valore. Lascia `FILO_REAL_DATA_ONLY=1`. Salva le variabili e applica il nuovo deploy. Non inserire il segreto nella chat, nel codice o in Git.
+6. Apri Spazelia, seleziona **Collega Gmail** e accedi con l'account aggiunto tra gli utenti di test. Concedi la lettura e attendi il ritorno all'app. Compila il profilo della tua azienda, scegli i contatti prioritari e autorizza lettura e preparazione di bozze per attivare i controlli automatici.
 
 Se Google mostra `redirect_uri_mismatch`, confronta l'URI registrato con quello del punto 4. Se l'accesso è negato in modalità test, verifica che la casella sia tra gli utenti di test del progetto. Un'app **External** in stato **Testing** può ottenere refresh token con scadenza di sette giorni: per un uso continuativo serve completare il passaggio alla produzione previsto da Google o ricollegare la casella quando richiesto.
 

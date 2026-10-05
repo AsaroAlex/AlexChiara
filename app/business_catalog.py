@@ -435,7 +435,7 @@ SERVICE_CATALOG = (
     _integration(
         "sdi", "Fatturazione elettronica e SDI",
         "Emissione, ricezione e conservazione richiedono un provider fiscale autorizzato e un’integrazione dedicata.",
-        "Continua a usare il tuo gestionale fiscale; puoi annotare in Filo riferimenti e scadenze degli incassi.",
+        "Continua a usare il tuo gestionale fiscale; puoi annotare in Spazelia riferimenti e scadenze degli incassi.",
     ),
     _integration(
         "bank", "Banche e riconciliazione",
@@ -450,7 +450,7 @@ SERVICE_CATALOG = (
     _integration(
         "erp-sync", "Gestionali e contabilità",
         "Scambio con il gestionale, registrazioni contabili e dati fiscali richiedono connettori dedicati.",
-        "Mantieni le registrazioni nel gestionale. Filo organizza le attività annotate senza sostituire la contabilità.",
+        "Mantieni le registrazioni nel gestionale. Spazelia organizza le attività annotate senza sostituire la contabilità.",
     ),
     _integration(
         "social-publish", "Pubblicazione sui social",
@@ -460,7 +460,7 @@ SERVICE_CATALOG = (
     _integration(
         "phone", "Telefonia e segreteria vocale",
         "Ricezione di chiamate e gestione telefonica richiedono un provider voce e un connettore dedicato.",
-        "Annota richieste e richiami nelle schede clienti o assistenza; Filo non riceve chiamate.",
+        "Annota richieste e richiami nelle schede clienti o assistenza; Spazelia non riceve chiamate.",
     ),
     _integration(
         "whatsapp", "WhatsApp Business",

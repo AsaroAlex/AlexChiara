@@ -69,7 +69,7 @@ async function api(path, options = {}) {
     clearImapSecret();
     sessionStorage.removeItem('filo-pending-wizard');
     location.replace('/login?next=/app');
-    throw new Error('Accedi a Filo per continuare.');
+    throw new Error('Accedi a Spazelia per continuare.');
   }
   if (!response.ok) throw new Error(errorText(result.detail || result.error || result.message || `Operazione non riuscita (${response.status}).`));
   return result;
@@ -121,14 +121,14 @@ function setPage(page) {
   $$('.page-view').forEach(view => { view.hidden = view.id !== `page-${state.page}`; });
   $$('.nav-item').forEach(item => { const active = item.dataset.page === state.page; item.classList.toggle('active', active); if (active) item.setAttribute('aria-current', 'page'); else item.removeAttribute('aria-current'); });
   $('#page-crumb').textContent = titles[state.page];
-  document.title = `${titles[state.page]} · Filo`;
+  document.title = `${titles[state.page]} · Spazelia`;
 }
 function render(forceCompany = false) {
   const { company = {}, service = {}, connection = {}, approvals = [] } = state.data;
   $('#sidebar-company').textContent = company.name || 'Il tuo studio';
   $('#company-avatar').textContent = (company.name || 'Il tuo studio').split(/\s+/).filter(Boolean).slice(0, 2).map(x => x[0]).join('').toUpperCase();
   const hour = Number(new Intl.DateTimeFormat('it-IT', { timeZone: 'Europe/Rome', hour: 'numeric', hourCycle: 'h23' }).format(new Date()));
-  $('#greeting-label').textContent = `${hour < 13 ? 'Buongiorno' : hour < 19 ? 'Buon pomeriggio' : 'Buonasera'}${company.name ? `, ${company.name}` : ', c’è Filo'}`;
+  $('#greeting-label').textContent = `${hour < 13 ? 'Buongiorno' : hour < 19 ? 'Buon pomeriggio' : 'Buonasera'}${company.name ? `, ${company.name}` : ', c’è Spazelia'}`;
   setPill('#overview-service-status', service.status);
   $('#catalog-mail-status').textContent = connection.status === 'connected' ? 'Casella collegata' : connection.status === 'expired' ? 'Da ricollegare' : 'Collega la casella';
   const expired = connection.status === 'expired';
@@ -141,7 +141,7 @@ function render(forceCompany = false) {
   $('#company-profile-summary').textContent = filled ? `${filled} informazioni facoltative salvate. Le utilizziamo dove servono, senza copiarle in ogni scheda.` : 'Aggiungi ragione sociale e contatti quando ti servono. Puoi lavorare anche con il solo nome.';
   const isActive = service.status === 'active';
   const isPaused = service.status === 'paused';
-  $('#overview-service-description').textContent = isActive ? 'La tua segreteria è al lavoro: seleziona le email prioritarie e prepara bozze locali che potrai rivedere.' : isPaused ? 'Hai messo il servizio in pausa. Le esecuzioni programmate si fermano; attività e bozze restano a disposizione.' : 'Scegli chi seguire. Filo ordina le richieste e prepara le bozze.';
+  $('#overview-service-description').textContent = isActive ? 'La tua segreteria è al lavoro: seleziona le email prioritarie e prepara bozze locali che potrai rivedere.' : isPaused ? 'Hai messo il servizio in pausa. Le esecuzioni programmate si fermano; attività e bozze restano a disposizione.' : 'Scegli chi seguire. Spazelia ordina le richieste e prepara le bozze.';
   const facts = [];
   if (isActive || isPaused) {
     for (const [symbol, text] of [['clock', `${clockTime()} · Europe/Rome`], ['mail', `${service.priority_contacts?.length || 0} contatti prioritari`], ['link', `Casella ${mailProviderLabel()}`]]) { const fact = el('span', 'service-fact', text); fact.prepend(icon(symbol)); facts.push(fact); }
@@ -363,7 +363,7 @@ function openBusinessForm(record = null, conversion = null, repetition = null) {
   state.businessEditing = conversion || repetition ? null : record; businessFormService = service.id;
   if (!conversion && !repetition) state.businessService = service.id;
   $('#business-form-module').textContent = service.name; $('#business-form-title').textContent = repetition ? 'Rivedi la prossima attività' : conversion ? (service.id === 'invoices' ? 'Rivedi la bozza fattura' : 'Rivedi l’incasso') : record ? 'Modifica attività' : 'Aggiungi attività';
-  $('#business-form-intro').textContent = repetition ? 'Abbiamo ripreso le informazioni utili e azzerato i passaggi. Controlla e modifica i dati prima di creare la prossima attività.' : conversion ? 'Abbiamo ripreso i dati dal documento precedente. Controlla importi, riferimenti e scadenza prima di salvare.' : 'Inserisci le informazioni che hai. Filo prepara un riepilogo e ordina le tue scadenze.';
+  $('#business-form-intro').textContent = repetition ? 'Abbiamo ripreso le informazioni utili e azzerato i passaggi. Controlla e modifica i dati prima di creare la prossima attività.' : conversion ? 'Abbiamo ripreso i dati dal documento precedente. Controlla importi, riferimenti e scadenza prima di salvare.' : 'Inserisci le informazioni che hai. Spazelia prepara un riepilogo e ordina le tue scadenze.';
   $('#business-conversion-note').hidden = !conversion && !repetition;
   $('#business-conversion-note').textContent = repetition ? `Da “${repetition.source.title}” · Prossima scadenza: ${prettyDate(`${repetition.next_date}T12:00:00+02:00`, false)}. L’attività originale resta invariata. Le altre date vanno verificate o reinserite.` : conversion ? `Da “${conversion.source.title}”. ${service.id === 'invoices' ? 'Questa è una bozza interna: non è una fattura elettronica e non viene inviata allo SDI.' : 'Il salvataggio prepara un promemoria: non registra un pagamento né invia un sollecito.'}` : '';
   $('#business-savings-fields').hidden = Boolean(conversion || repetition);
@@ -405,7 +405,7 @@ function renderBusinessDetail(record) {
   if (record.playbook?.steps?.length) {
     const section = el('section', 'business-playbook'); section.setAttribute('aria-labelledby', 'business-playbook-title');
     const heading = el('div', 'business-playbook-heading'); const title = el('h3', '', 'Passaggi da seguire'); title.id = 'business-playbook-title';
-    const progress = el('span', 'business-progress-caption', `${record.playbook.completed}/${record.playbook.total} segnati da te`); progress.id = 'business-playbook-progress'; progress.setAttribute('role', 'status'); heading.append(title, progress); section.append(heading, el('p', 'helper-text', 'Segna tu ciò che hai fatto. Filo conserva il progresso; i passaggi non vengono verificati automaticamente.'));
+    const progress = el('span', 'business-progress-caption', `${record.playbook.completed}/${record.playbook.total} segnati da te`); progress.id = 'business-playbook-progress'; progress.setAttribute('role', 'status'); heading.append(title, progress); section.append(heading, el('p', 'helper-text', 'Segna tu ciò che hai fatto. Spazelia conserva il progresso; i passaggi non vengono verificati automaticamente.'));
     for (const step of record.playbook.steps) {
       const label = el('label', 'business-playbook-step'); const checkbox = el('input'); checkbox.type = 'checkbox'; checkbox.id = `business-step-${step.id}`; checkbox.dataset.businessStep = step.id; checkbox.dataset.recordId = record.id; checkbox.checked = Boolean(step.checked); label.htmlFor = checkbox.id; label.append(checkbox, el('span', '', step.label)); section.append(label);
     }
@@ -567,7 +567,7 @@ function renderMorning() {
   if (signature === state.briefingSignature) return;
   state.briefingSignature = signature;
   if (!priorities.length) {
-    const empty = el('div', 'briefing-empty'); empty.append(icon(real?.status === 'not_started' ? 'mail' : real?.status === 'checking' ? 'clock' : 'check'), el('h3', '', real?.legacy_pending_count ? 'Le bozze precedenti restano nello storico.' : real?.status === 'not_started' ? 'Le tue priorità arriveranno qui.' : real?.status === 'checking' ? 'Filo sta preparando il riepilogo.' : 'Nessuna risposta da rivedere qui.'), el('p', '', real?.legacy_pending_count ? 'Un nuovo controllo verificherà quali richieste aspettano ancora una risposta. Puoi consultare le bozze precedenti nelle attività.' : real?.status === 'not_started' ? 'Richieste, contatti e bozze da rivedere, dopo il primo controllo.' : 'Il riepilogo riguarda i messaggi controllati: aggiornalo per verificare nuove richieste.'));
+    const empty = el('div', 'briefing-empty'); empty.append(icon(real?.status === 'not_started' ? 'mail' : real?.status === 'checking' ? 'clock' : 'check'), el('h3', '', real?.legacy_pending_count ? 'Le bozze precedenti restano nello storico.' : real?.status === 'not_started' ? 'Le tue priorità arriveranno qui.' : real?.status === 'checking' ? 'Spazelia sta preparando il riepilogo.' : 'Nessuna risposta da rivedere qui.'), el('p', '', real?.legacy_pending_count ? 'Un nuovo controllo verificherà quali richieste aspettano ancora una risposta. Puoi consultare le bozze precedenti nelle attività.' : real?.status === 'not_started' ? 'Richieste, contatti e bozze da rivedere, dopo il primo controllo.' : 'Il riepilogo riguarda i messaggi controllati: aggiornalo per verificare nuove richieste.'));
     if (real?.legacy_pending_count) { const link = el('a', 'text-link', 'Consulta le attività'); link.href = '#activity'; empty.append(link); }
     replace('#priority-list', empty);
   } else {
@@ -585,7 +585,7 @@ function renderMorning() {
       draft.append(el('pre', 'draft-text', item.draft));
       if (item.draft_id) {
         const actions = el('div', 'card-actions'); actions.append(actionButton('Copia la bozza', 'copy-priority', 'secondary', undefined, { id: item.draft_id }), actionButton('Segna come rivista', 'approve-draft', 'primary', 'check', { id: item.draft_id })); draft.append(actions);
-        draft.append(el('p', 'small-text', 'La revisione resta in Filo. L’email non viene inviata.'));
+        draft.append(el('p', 'small-text', 'La revisione resta in Spazelia. L’email non viene inviata.'));
       }
       body.append(draft); row.append(rank, body); return row;
     }));
@@ -708,7 +708,7 @@ function openImapConnection(id) {
   openDialog('#imap-dialog'); $('#imap-email').focus();
 }
 function confirmMailChange(provider = null) {
-  state.mailChange = { provider }; $('#mail-confirm-title').textContent = provider ? 'Cambiare casella?' : 'Scollegare la casella?'; $('#mail-confirm-description').textContent = provider ? `Stai passando da ${mailProviderLabel()} a ${mailProvider(provider).label}. Dopo il collegamento, i controlli della vecchia casella si fermano. Dovrai rivedere i contatti e autorizzare di nuovo la segreteria. Lo storico resta consultabile.` : 'I controlli automatici si fermano e le credenziali vengono rimosse da Filo. Lo storico resta consultabile. Potrai collegare di nuovo la casella e autorizzare il servizio.'; $('#mail-confirm-button').textContent = provider ? 'Continua' : 'Scollega la casella'; openDialog('#mail-confirm-dialog');
+  state.mailChange = { provider }; $('#mail-confirm-title').textContent = provider ? 'Cambiare casella?' : 'Scollegare la casella?'; $('#mail-confirm-description').textContent = provider ? `Stai passando da ${mailProviderLabel()} a ${mailProvider(provider).label}. Dopo il collegamento, i controlli della vecchia casella si fermano. Dovrai rivedere i contatti e autorizzare di nuovo la segreteria. Lo storico resta consultabile.` : 'I controlli automatici si fermano e le credenziali vengono rimosse da Spazelia. Lo storico resta consultabile. Potrai collegare di nuovo la casella e autorizzare il servizio.'; $('#mail-confirm-button').textContent = provider ? 'Continua' : 'Scollega la casella'; openDialog('#mail-confirm-dialog');
 }
 async function connectMailProvider(id) {
   const provider = mailProvider(id);
@@ -787,7 +787,7 @@ function renderWizard() {
   const wizard = state.wizard;
   if (!wizard) return;
   notice('#wizard-error', '');
-  replace('#wizard-progress', ...['Service', 'Casella', 'Preferenze', 'Anteprima', 'Consenso'].map((label, index) => { const step = index + 1; const item = el('li', step === wizard.step ? 'current' : step < wizard.step ? 'complete' : ''); item.append(el('span', '', step < wizard.step ? '✓' : step), document.createTextNode(label === 'Service' ? 'Servizio' : label)); if (step === wizard.step) item.setAttribute('aria-current', 'step'); return item; }));
+  replace('#wizard-progress', ...['Service', 'Casella', 'Preferenze', 'Anteprima', 'Consenso'].map((label, index) => { const step = index + 1; const item = el('li', step === wizard.step ? 'current' : step < wizard.step ? 'complete' : ''); item.append(el('span', 'wizard-step-number', step < wizard.step ? '✓' : step), el('span', 'wizard-step-label', label === 'Service' ? 'Servizio' : label)); if (step === wizard.step) item.setAttribute('aria-current', 'step'); return item; }));
   const body = $('#wizard-body'); body.replaceChildren();
   const footer = $('#wizard-footer'); footer.replaceChildren();
   const back = actionButton(wizard.step === 1 || wizard.edit && wizard.step === 3 ? 'Annulla' : 'Indietro', wizard.step === 1 || wizard.edit && wizard.step === 3 ? 'close-wizard' : 'wizard-back', 'ghost'); footer.append(back);
@@ -795,12 +795,12 @@ function renderWizard() {
   if (wizard.step === 1) {
     title('Una segreteria, alle tue condizioni.', 'Un compito preciso: leggere le email dei contatti prioritari e preparare bozze locali. Tu mantieni l’ultima parola.');
     const choice = el('div', 'step-choice'); const mark = el('span', 'icon-box teal'); mark.append(icon('mail')); const copy = el('div'); copy.append(el('h3', '', 'Segreteria email'), el('p', '', 'Priorità, risposte abbozzate e un giro ogni giorno.')); choice.append(mark, copy, icon('check')); body.append(choice);
-    body.append(el('p', 'step-disclosure', 'Le bozze restano in Filo. Questo servizio non invia messaggi e non crea bozze nella casella del provider.'));
+    body.append(el('p', 'step-disclosure', 'Le bozze restano in Spazelia. Questo servizio non invia messaggi e non crea bozze nella casella del provider.'));
     if (state.data.ai?.enabled && state.data.ai?.configured) body.append(el('p', 'step-disclosure', 'Questo ambiente usa un servizio AI esterno solo sulle email dimostrative, durante le esecuzioni attivate. L’anteprima e le email reali usano regole locali.'));
     footer.append(actionButton('Iniziamo', 'wizard-next', 'primary', 'arrow'));
   } else if (wizard.step === 2) {
     title('Collega la tua posta.', 'Scegli il provider. Una casella, i contatti che contano per te.');
-    body.append(providerChooser(), el('p', 'step-disclosure', 'Filo legge la posta e prepara bozze locali. I controlli automatici partono dopo il tuo consenso.'));
+    body.append(providerChooser(), el('p', 'step-disclosure', 'Spazelia legge la posta e prepara bozze locali. I controlli automatici partono dopo il tuo consenso.'));
     if (wizard.mailSetup) body.append(mailSetupGuide(wizard.mailSetup));
     if (wizard.reconnect) { const next = actionButton('Torna alla panoramica', 'wizard-finish-reconnect', 'primary', 'arrow'); next.disabled = state.data.connection.status !== 'connected'; footer.append(next); }
     else { const next = actionButton('Continua', 'wizard-next', 'primary', 'arrow'); next.disabled = state.data.connection.status !== 'connected'; footer.append(next); }
@@ -814,7 +814,7 @@ function renderWizard() {
     const schedule = el('div', 'schedule-fields'); const time = field('Orario quotidiano', 'time', 'wizard-time', `${String(wizard.preferences.hour).padStart(2, '0')}:${String(wizard.preferences.minute).padStart(2, '0')}`, { required: true }); const zone = field('Fuso orario', 'text', 'wizard-timezone', 'Europe/Rome', { readOnly: true }); schedule.append(time, zone); body.append(schedule, el('p', 'helper-text', 'Ogni giorno, anche nel fine settimana. L’orario segue automaticamente l’ora legale italiana. Puoi mettere il servizio in pausa in qualsiasi momento.'));
     footer.append(actionButton('Guarda l’anteprima', 'wizard-preview', 'primary', 'arrow'));
   } else if (wizard.step === 4) {
-    title('Ecco cosa preparerebbe Filo.', isRealMailbox() ? 'Un’anteprima sulle email reali dei contatti scelti. Le bozze restano nella piattaforma: nessuna email viene inviata.' : 'Un’anteprima con email di esempio. È una simulazione deterministica senza AI reale; l’attivazione parte solo con il tuo consenso.');
+    title('Ecco cosa preparerebbe Spazelia.', isRealMailbox() ? 'Un’anteprima sulle email reali dei contatti scelti. Le bozze restano nella piattaforma: nessuna email viene inviata.' : 'Un’anteprima con email di esempio. È una simulazione deterministica senza AI reale; l’attivazione parte solo con il tuo consenso.');
     body.append(el('div', 'preview-intro', typeof wizard.preview?.summary === 'string' ? wizard.preview.summary : `${wizard.preview?.items?.length || 0} email selezionate per i contatti scelti.`));
     const items = wizard.preview?.items || [];
     if (items.length) items.forEach(item => body.append(renderDraft(item, false)));
@@ -824,11 +824,11 @@ function renderWizard() {
   } else if (wizard.step === 5) {
     title('Il via libera è tuo.', 'Il servizio partirà soltanto dopo questi consensi espliciti. Potrai metterlo in pausa o disattivarlo quando vuoi.');
     body.append(mandateSummary());
-    const read = el('label', 'checkbox-row'); const readInput = el('input'); readInput.type = 'checkbox'; readInput.id = 'authorize-read'; readInput.checked = wizard.authorizedRead; read.append(readInput, el('span', '', isRealMailbox() ? 'Autorizzo Filo a leggere le email dei contatti prioritari nella casella collegata. Il servizio limita le ricerche ai contatti scelti.' : 'Autorizzo Filo a leggere le email dei contatti prioritari nella casella demo.'));
-    const draft = el('label', 'checkbox-row'); const draftInput = el('input'); draftInput.type = 'checkbox'; draftInput.id = 'authorize-draft'; draftInput.checked = wizard.authorizedDraft; draft.append(draftInput, el('span', '', 'Autorizzo la preparazione di bozze locali in Filo, che dovrò rivedere prima di usare.'));
+    const read = el('label', 'checkbox-row'); const readInput = el('input'); readInput.type = 'checkbox'; readInput.id = 'authorize-read'; readInput.checked = wizard.authorizedRead; read.append(readInput, el('span', '', isRealMailbox() ? 'Autorizzo Spazelia a leggere le email dei contatti prioritari nella casella collegata. Il servizio limita le ricerche ai contatti scelti.' : 'Autorizzo Spazelia a leggere le email dei contatti prioritari nella casella demo.'));
+    const draft = el('label', 'checkbox-row'); const draftInput = el('input'); draftInput.type = 'checkbox'; draftInput.id = 'authorize-draft'; draftInput.checked = wizard.authorizedDraft; draft.append(draftInput, el('span', '', 'Autorizzo la preparazione di bozze locali in Spazelia, che dovrò rivedere prima di usare.'));
     body.append(read, draft);
     if (state.data.connection.provider === 'demo' && state.data.ai?.enabled && state.data.ai?.configured) body.append(el('p', 'step-disclosure', 'Nelle esecuzioni demo autorizzate, il servizio AI esterno configurato può elaborare le email fittizie. Nessun contenuto delle caselle reali viene condiviso.'));
-    const noSend = el('div', 'no-send'); noSend.append(icon('shield'), document.createTextNode('Nessuna autorizzazione all’invio. Filo non invia email.')); body.append(noSend);
+    const noSend = el('div', 'no-send'); noSend.append(icon('shield'), document.createTextNode('Nessuna autorizzazione all’invio. Spazelia non invia email.')); body.append(noSend);
     const activate = actionButton('Autorizza e attiva il servizio', 'wizard-activate', 'primary', 'check'); activate.id = 'activate-button'; activate.disabled = !wizard.authorizedRead || !wizard.authorizedDraft; footer.append(activate);
   } else if (wizard.step === 6) {
     $('#wizard-progress').hidden = true;
@@ -878,7 +878,7 @@ function renderDraft(item, withApproval = false) {
   }
   article.append(el('div', 'draft-box-label', 'BOZZA LOCALE · DA CONTROLLARE'), el('div', 'draft-box', typeof item.draft === 'string' ? item.draft : item.draft?.body || 'Bozza non disponibile.'));
   if (withApproval) {
-    const bar = el('div', 'approval-bar'); const copy = el('p', '', 'La revisione viene registrata solo in Filo. Nessun invio alla casella.'); bar.append(copy);
+    const bar = el('div', 'approval-bar'); const copy = el('p', '', 'La revisione viene registrata solo in Spazelia. Nessun invio alla casella.'); bar.append(copy);
     const approved = item.status === 'approved' || state.data.approvals?.some(approval => approval.id === item.id && approval.status === 'approved');
     if (approved) bar.append(statusPill('approved'));
     else if (item.id) bar.append(actionButton('Registra la revisione', 'approve-draft', 'secondary', 'check', { id: item.id }));
@@ -973,7 +973,7 @@ async function handleAction(button) {
       }
       else if (action === 'open-run') await openRun(button.dataset.id);
       else if (action === 'retry-run') { await api(`/api/runs/${encodeURIComponent(button.dataset.id)}/retry`, { method: 'POST', body: {} }); await refresh(); await openRun(button.dataset.id); toast('Nuovo tentativo avviato.'); }
-      else if (action === 'approve-draft') { await api(`/api/drafts/${encodeURIComponent(button.dataset.id)}/approve`, { method: 'POST', body: {} }); await refresh(); if ($('#detail-dialog').open && state.currentRun) await openRun(state.currentRun.id); toast('Revisione registrata in Filo. Nessun messaggio inviato.'); }
+      else if (action === 'approve-draft') { await api(`/api/drafts/${encodeURIComponent(button.dataset.id)}/approve`, { method: 'POST', body: {} }); await refresh(); if ($('#detail-dialog').open && state.currentRun) await openRun(state.currentRun.id); toast('Revisione registrata in Spazelia. Nessun messaggio inviato.'); }
       else if (action === 'delete-agenda-event') { await api(`/api/agenda/${encodeURIComponent(button.dataset.id)}`, { method: 'DELETE' }); await refresh(); toast('Appuntamento rimosso dall’agenda.'); }
       else if (action.startsWith('simulate-')) { const kind = action.replace('simulate-', ''); await api('/api/demo/failure', { method: 'POST', body: { kind } }); await refresh(); toast({ temporary: 'Imprevisto temporaneo preparato per la prossima esecuzione demo.', expired: 'Simulazione pronta: la connessione demo scadrà alla prossima esecuzione.', clear: 'Connessione demo ripristinata.' }[kind]); }
     } catch (error) { if (inWizard) notice('#wizard-error', error.message); else toast(error.message, true); }

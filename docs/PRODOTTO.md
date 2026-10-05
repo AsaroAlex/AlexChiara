@@ -1,4 +1,4 @@
-> Documento storico del primo MVP. Per le funzionalità attuali e il catalogo PMI vedi [README](../README.md) e [Servizi PMI](PMI.md). I prezzi e i budget qui sotto sono ipotesi iniziali, non il prezzo configurato nell’app.
+> Documento storico del primo MVP, ora presentato con il marchio Spazelia. Il rebranding non aggiorna la data delle fonti o rende attuali le ipotesi iniziali. Per le funzionalità attuali e il catalogo PMI vedi [README](../README.md) e [Servizi PMI](PMI.md). I prezzi e i budget qui sotto sono ipotesi iniziali, non il prezzo configurato nell’app.
 
 # Servizi AI per piccoli studi: scelta dell'MVP e piano di validazione
 

@@ -77,7 +77,7 @@ def test_each_available_module_has_functional_persistent_record_and_download(bus
     item = add(client, service["id"], details=required_fields(service), title="Scheda compilata")
     assert item["service_name"] == service["name"]
     assert item["source"] == "manual"
-    assert item["document"].startswith("Filo — " + service["output_title"])
+    assert item["document"].startswith("Spazelia — " + service["output_title"])
     assert "Scheda compilata" in item["document"]
     assert item["next_action"] == get_playbook(service["id"])["steps"][0]["label"]
     assert client.get("/api/business/records/" + item["id"]).json()["item"] == item

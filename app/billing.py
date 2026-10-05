@@ -259,7 +259,7 @@ def create_billing_router(store):
             "portal_available": _configured(config) and bool(store.customer_for_user(user["id"])),
             "subscription_status": subscription["status"], "subscription": subscription,
             "plan": {
-                "name": config["FILO_PLAN_LABEL"] or "Filo",
+                "name": config["FILO_PLAN_LABEL"] or "Spazelia",
                 "price_label": config["FILO_PLAN_PRICE_LABEL"] or None,
                 "features": ["Priorità email, avvisi e agenda", "Clienti, preventivi e incassi", "Fornitori, acquisti e commesse", "Scadenze e documenti da rivedere"],
             },
