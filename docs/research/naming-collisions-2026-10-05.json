@@ -1,0 +1,682 @@
+{
+  "title": "Filo: screening preliminare dei nomi, collisioni pubbliche e controlli marchi/social",
+  "observed_date": "2026-10-05",
+  "timezone": "Europe/Rome",
+  "scope": "Nove nomi: otto candidati e Filo come controllo. Fonti pubbliche web, profili social leggibili, documentazione ufficiale registri marchi. Nessuna registrazione/acquisto o modifica dell'app.",
+  "status": "preliminary_screening_not_clearance",
+  "methodology": {
+    "sources_reviewed": 48,
+    "sources_reviewed_definition": "Somma di numResults richiesti nelle otto ricerche Exa: 48. Non sono 48 pagine lette né 48 fonti uniche verificate.",
+    "search_queries": 8,
+    "unique_search_result_urls": 44,
+    "quoted_source_urls": 21,
+    "query_coverage": "Primo passaggio: quattro coppie di candidati e controllo Filo/social. Secondo: strumenti ufficiali marchi. Terzo: due ricerche dedicate alle quattro finaliste Giorvia, Spazelia, Prontela, Svoltiva.",
+    "matching": "Exa è semantico: i risultati vicini per grafia sono separati dalle corrispondenze esatte. Le ricerche con più nomi non sono un censimento completo di ogni singolo nome.",
+    "absence_rule": "Assenza di risultati pertinenti, errore HTTP, pagina inesistente o DNS non risolto non prova disponibilità commerciale, di marchio, di dominio o di handle.",
+    "observed_date_rule": "La data è quella della consultazione; risultati indicizzati/archiviati possono essere meno recenti e sono etichettati come tali.",
+    "legal_scope": "Nessuna ricerca di anteriorità live completata e nessuna conclusione sulla registrabilità o sulla violazione di diritti. Denominazione sociale, marchio, dominio e username sono controlli distinti."
+  },
+  "candidates": [
+    {
+      "name": "Giorvia",
+      "web_status": "no_relevant_commercial_exact_match",
+      "summary": "Nessun risultato commerciale esatto pertinente emerso nel web consultato; non equivale a nome, marchio o handle disponibile.",
+      "search_query_keys": [
+        "giorvia_ordivela",
+        "filo_social",
+        "final_giorvia_spazelia"
+      ],
+      "commercial_collisions": [],
+      "other_public_usage": [
+        {
+          "kind": "ai_character",
+          "label": "Acanthe & Giorvia è un personaggio generato dagli utenti di Talkie, non un marchio commerciale omonimo identificato.",
+          "source_ids": [
+            "talkie-giorvia"
+          ]
+        },
+        {
+          "kind": "archived_social_username",
+          "label": "Un archivio terzo mostra il vecchio username X/Twitter @Giorvia; esistenza attuale e disponibilità non verificate.",
+          "source_ids": [
+            "giorvia-x-archive"
+          ]
+        }
+      ],
+      "similar_names": [
+        {
+          "name": "Girovia",
+          "sector": "e-commerce beauty",
+          "assessment": "Grafia vicina con inversione di lettere; da includere nelle verifiche di somiglianza. Non è una corrispondenza esatta.",
+          "source_ids": [
+            "girovia-official"
+          ]
+        }
+      ],
+      "social": {
+        "instagram": {
+          "handle": "@giorvia",
+          "status": "unverified",
+          "observation": "Fetch della pagina pubblica non riuscito: CRAWL_UNKNOWN_ERROR. Nessuna disponibilità accertata."
+        },
+        "linkedin": {
+          "slug": "giorvia",
+          "status": "unverified",
+          "observation": "Fetch restituisce ENTITY_NOT_FOUND; non conferma che il nome sia assegnabile."
+        },
+        "x": {
+          "handle": "@Giorvia",
+          "status": "potential_existing_handle_unverified_live",
+          "observation": "Archivio pubblico terzo indica uso precedente. Profilo live SOURCE_NOT_AVAILABLE.",
+          "source_ids": [
+            "giorvia-x-archive"
+          ]
+        }
+      },
+      "recommendation": "Finalista, con verifica preventiva delle similarità e possibilità di handle qualificato uniforme (da controllare)."
+    },
+    {
+      "name": "Ordivela",
+      "web_status": "exact_company_name_found_other_sector",
+      "summary": "Società ceca Ordivela s.r.o. identificata in repertori pubblici aggregati; attività odontoiatriche e ulteriori servizi. Nessun diritto di marchio accertato.",
+      "search_query_keys": [
+        "giorvia_ordivela"
+      ],
+      "commercial_collisions": [
+        {
+          "name": "Ordivela s.r.o.",
+          "sector": "odontoiatria/servizi",
+          "geography": "Repubblica Ceca",
+          "source_ids": [
+            "ordivela-aggregator"
+          ],
+          "confidence": "medium_public_aggregator"
+        }
+      ],
+      "other_public_usage": [],
+      "similar_names": [],
+      "social": {
+        "status": "unverified"
+      },
+      "recommendation": "Scartare dalla rosa pratica per omonimia e associazione sanitaria poco coerente con il brief, senza concludere un conflitto giuridico."
+    },
+    {
+      "name": "Spazelia",
+      "web_status": "no_relevant_commercial_exact_match",
+      "summary": "Nessun risultato commerciale esatto pertinente emerso nel web consultato; non equivale a nome, marchio o handle disponibile.",
+      "search_query_keys": [
+        "spazelia_svolia",
+        "filo_social",
+        "final_giorvia_spazelia"
+      ],
+      "commercial_collisions": [],
+      "other_public_usage": [],
+      "similar_names": [],
+      "social": {
+        "instagram": {
+          "handle": "@spazelia",
+          "status": "unverified",
+          "observation": "Nessun account pertinente emerso nella ricerca; nessuna verifica di assegnabilità completata."
+        },
+        "linkedin": {
+          "slug": "spazelia",
+          "status": "unverified",
+          "observation": "Nessun account pertinente emerso nella ricerca; nessuna verifica di assegnabilità completata."
+        }
+      },
+      "recommendation": "Candidato senza omonimia commerciale individuata, da valutare con domini, pronunciabilità e verifica marchi."
+    },
+    {
+      "name": "Svolia",
+      "web_status": "no_relevant_commercial_exact_match",
+      "summary": "Nessun risultato commerciale esatto pertinente emerso nel web consultato; non equivale a nome, marchio o handle disponibile.",
+      "search_query_keys": [
+        "spazelia_svolia",
+        "filo_social"
+      ],
+      "commercial_collisions": [],
+      "other_public_usage": [],
+      "similar_names": [
+        {
+          "name": "Sovelia",
+          "sector": "software engineering/PLM",
+          "assessment": "Nome vicino emerso nella ricerca semantica; non corrispondenza esatta. La similarità va valutata se il nome viene mantenuto.",
+          "source_ids": [
+            "sovelia-official"
+          ]
+        }
+      ],
+      "social": {
+        "status": "unverified"
+      },
+      "recommendation": "Nessun omonimo esatto commerciale individuato. Il nome vicino Sovelia opera nel software: controllo di similarità necessario se rimane in rosa."
+    },
+    {
+      "name": "Prontela",
+      "web_status": "no_relevant_commercial_exact_match",
+      "summary": "Nessun risultato commerciale esatto pertinente emerso nel web consultato; non equivale a nome, marchio o handle disponibile.",
+      "search_query_keys": [
+        "prontela_largiva",
+        "filo_social",
+        "final_prontela_svoltiva"
+      ],
+      "commercial_collisions": [],
+      "other_public_usage": [],
+      "similar_names": [
+        {
+          "name": "Prontelas",
+          "sector": "tessili/coperture",
+          "geography": "Brasile",
+          "assessment": "Nome commerciale con una lettera finale in più, diverso settore. Non è un omonimo esatto; verificare comunque somiglianze.",
+          "source_ids": [
+            "prontelas-official"
+          ]
+        },
+        {
+          "name": "Prontotela",
+          "sector": "prodotti per lavorazione pietra",
+          "geography": "Italia",
+          "assessment": "Marchio dichiarato sul sito ufficiale di Digital Shop SRL, con grafia diversa. Non è un omonimo esatto; verificare comunque somiglianze.",
+          "source_ids": [
+            "prontotela-official"
+          ]
+        }
+      ],
+      "social": {
+        "instagram": {
+          "handle": "@prontela",
+          "status": "unverified",
+          "observation": "Fetch della pagina pubblica non riuscito: CRAWL_LIVECRAWL_TIMEOUT. Nessuna disponibilità accertata."
+        },
+        "linkedin": {
+          "slug": "prontela",
+          "status": "unverified",
+          "observation": "Fetch restituisce ENTITY_NOT_FOUND; non conferma che il nome sia assegnabile."
+        }
+      },
+      "recommendation": "Finalista, ma il marchio deve essere cercato anche per similitudini Prontelas/Prontotela prima dell'adozione."
+    },
+    {
+      "name": "Largiva",
+      "web_status": "exact_product_name_found_other_sector",
+      "summary": "Largiva Sachet 5gm è un prodotto commercializzato da una farmacia online indiana, con produttore indicato Windlas Biotech Ltd. Non è stato accertato un diritto di marchio.",
+      "search_query_keys": [
+        "prontela_largiva"
+      ],
+      "commercial_collisions": [
+        {
+          "name": "Largiva Sachet 5gm",
+          "sector": "prodotto farmaceutico/integratore, classificazione clinica non verificata",
+          "geography": "India",
+          "source_ids": [
+            "largiva-retailer"
+          ],
+          "confidence": "medium_retail_product_listing"
+        }
+      ],
+      "other_public_usage": [],
+      "similar_names": [],
+      "social": {
+        "status": "unverified"
+      },
+      "recommendation": "Scartare dalla rosa pratica per nome prodotto esistente e associazione sanitaria contraria al brief."
+    },
+    {
+      "name": "Tenvia",
+      "web_status": "exact_commercial_brand_found_adjacent_software",
+      "summary": "Tenvia è già una piattaforma software/app per vendita, delivery e gestione ordini destinata alle imprese.",
+      "search_query_keys": [
+        "tenvia_svoltiva",
+        "filo_social"
+      ],
+      "commercial_collisions": [
+        {
+          "name": "Tenvia",
+          "sector": "software/app per imprese, gestione ordini e pagamenti",
+          "geography": "Ecuador",
+          "source_ids": [
+            "tenvia-official"
+          ],
+          "confidence": "high_first_party"
+        }
+      ],
+      "other_public_usage": [],
+      "similar_names": [],
+      "social": {
+        "status": "unverified"
+      },
+      "recommendation": "Scartare: uso commerciale esatto in software rivolto alle imprese, vicino al posizionamento di Filo."
+    },
+    {
+      "name": "Svoltiva",
+      "web_status": "no_relevant_commercial_exact_match",
+      "summary": "Nessun risultato commerciale esatto pertinente emerso nel web consultato; non equivale a nome, marchio o handle disponibile.",
+      "search_query_keys": [
+        "tenvia_svoltiva",
+        "filo_social",
+        "final_prontela_svoltiva"
+      ],
+      "commercial_collisions": [],
+      "other_public_usage": [],
+      "similar_names": [],
+      "social": {
+        "instagram": {
+          "handle": "@svoltiva",
+          "status": "unverified",
+          "observation": "Nessun account pertinente emerso nella ricerca; nessuna verifica di assegnabilità completata."
+        },
+        "linkedin": {
+          "slug": "svoltiva",
+          "status": "unverified",
+          "observation": "Nessun account pertinente emerso nella ricerca; nessuna verifica di assegnabilità completata."
+        }
+      },
+      "recommendation": "Candidato senza omonimia commerciale individuata, da valutare con domini, pronunciabilità e verifica marchi."
+    },
+    {
+      "name": "Filo",
+      "role": "current_name_control",
+      "web_status": "exact_commercial_brand_found_same_category",
+      "summary": "FiloMail usa il nome Filo per un'app email AI e to-do che estrae attività dalle email, riassume conversazioni e aiuta a rispondere. Esiste inoltre un prodotto Filo di knowledge management AI.",
+      "search_query_keys": [
+        "filo_social"
+      ],
+      "commercial_collisions": [
+        {
+          "name": "Filo / FiloMail",
+          "sector": "email AI e to-do",
+          "geography": "internazionale",
+          "source_ids": [
+            "filomail-official",
+            "filomail-linkedin"
+          ],
+          "confidence": "high_first_party_and_company_profile"
+        },
+        {
+          "name": "Filo by Harmonize",
+          "sector": "knowledge management AI in Slack",
+          "geography": "internazionale",
+          "source_ids": [
+            "filo-harmonize-product"
+          ],
+          "confidence": "medium_company_product_profile"
+        }
+      ],
+      "other_public_usage": [],
+      "similar_names": [],
+      "social": {
+        "instagram": {
+          "handle": "@filo_mail",
+          "status": "existing_brand_handle_reported",
+          "source_ids": [
+            "filomail-linkedin"
+          ]
+        },
+        "linkedin": {
+          "slug": "filo-ai",
+          "status": "existing_public_company_profile",
+          "source_ids": [
+            "filomail-linkedin"
+          ]
+        }
+      },
+      "recommendation": "Cambiare il nome: collisione pubblica concreta nel compito principale email/AI/produttività. Non è una determinazione di violazione o validità di marchi."
+    }
+  ],
+  "trademark_checks": {
+    "overall_status": "not_searched_in_live_register",
+    "candidate_status": "Tutti i candidati richiedono ricerca live di anteriorità, identità e similarità nelle aree pertinenti.",
+    "register_attempts": [
+      {
+        "register": "TMview",
+        "url": "https://www.tmdn.org/tmview/#/tmview",
+        "status": "no_live_name_search_completed",
+        "observation": "Fetch restituisce pagina di manutenzione EUIPN; tentativo di lettura diretta dall'ambiente bloccato con Tunnel 403."
+      },
+      {
+        "register": "EUIPO eSearch plus",
+        "url": "https://euipo.europa.eu/eSearch/",
+        "status": "no_live_name_search_completed",
+        "observation": "Fetch leggibile solo come shell dell'applicazione, senza risultati per nome; lettura diretta dall'ambiente bloccata con Tunnel 403."
+      },
+      {
+        "register": "WIPO Global Brand Database",
+        "url": "https://branddb.wipo.int/",
+        "status": "no_live_name_search_completed",
+        "observation": "Pagina richiede verifica umana; non è stata aggirata. Nessun risultato di registro consultato."
+      },
+      {
+        "register": "UIBM",
+        "url": "https://uibm.mise.gov.it/index.php/it/banche-dati",
+        "status": "no_live_name_search_completed",
+        "observation": "Letta documentazione ufficiale e collegamenti a TMview; accesso diretto dall'ambiente bloccato con Tunnel 403."
+      }
+    ],
+    "relevant_nice_classes": [
+      {
+        "class": 42,
+        "priority": "core",
+        "rationale": "SaaS: accesso web al software di Filo.",
+        "source_ids": [
+          "nice-class-42"
+        ]
+      },
+      {
+        "class": 9,
+        "priority": "if_downloadable_app_or_software_is_offered",
+        "rationale": "Software scaricabile/registrato se la distribuzione effettiva comprende app o download, non automaticamente per il solo SaaS.",
+        "source_ids": [
+          "nice-class-9"
+        ]
+      },
+      {
+        "class": 35,
+        "priority": "evaluate_actual_service_claims_separately",
+        "rationale": "Da valutare se si vendono veri servizi di amministrazione/gestione d'ufficio, oltre alla fornitura tecnologica. La sola funzione software non determina la classe.",
+        "source_ids": [
+          "nice-class-42"
+        ]
+      }
+    ],
+    "next_checks": [
+      "Ricercare il nome esatto, varianti fonetiche/ortografiche e radici distintive in TMview, EUIPO, UIBM e WIPO.",
+      "Verificare territori Italia/UE e registrazioni internazionali pertinenti, stato, titolare ed elenco effettivo dei prodotti/servizi; non solo il numero della classe.",
+      "Per Giorvia includere Girovia nelle similarità; per Prontela includere Prontelas e Prontotela; per Svolia includere Sovelia.",
+      "Ripetere la ricerca subito prima del deposito/adozione, conservando risultati e date. Omonimia in altro settore non equivale automaticamente a incompatibilità."
+    ],
+    "source_ids": [
+      "euipo-availability",
+      "euipo-search",
+      "euipo-esearch-help",
+      "tmview-help",
+      "uibm-tmview",
+      "uibm-databases",
+      "wipo-global-brand",
+      "nice-class-9",
+      "nice-class-42"
+    ]
+  },
+  "social_checks": {
+    "overall_status": "no_free_handles_confirmed",
+    "accounts_created": false,
+    "handles_reserved": false,
+    "note": "Per i finalisti sono state esaminate ricerche web e, dove indicato, URL pubblici diretti. Non è stato completato alcun controllo di assegnabilità nel flusso ufficiale della piattaforma.",
+    "recommended_next_step": "Verificare contemporaneamente nome profilo e username su Instagram, LinkedIn, X e altre piattaforme che si intende usare. Se l'username esatto non è disponibile, confrontare una variante coerente su tutti i canali, per esempio [nome]app o get[nome], da controllare prima di proporla come disponibile."
+  },
+  "queries": [
+    {
+      "key": "giorvia_ordivela",
+      "query": "Official business websites, software products, company profiles or app listings using the brand names Giorvia or Ordivela, with their exact brand spelling, Italy and international markets",
+      "num_results_requested": 6,
+      "result_urls": [
+        "https://www.finmag.cz/obchodni-rejstrik/29919916-ordivela-s-r-o",
+        "https://girovia.com/",
+        "https://rejstriky.finance.cz/firma-ordivela-s-r-o-29919916",
+        "https://orvelia.com/",
+        "https://www.gioriaserramenti.it/en/",
+        "https://rejstriky.finance.cz/firma-ordivela-s-r-o-29919916/obory-cinnosti"
+      ]
+    },
+    {
+      "key": "spazelia_svolia",
+      "query": "Official business websites, software products, company profiles or app listings using the brand names Spazelia or Svolia, with their exact brand spelling, Italy and international markets",
+      "num_results_requested": 6,
+      "result_urls": [
+        "https://sovelia.com/",
+        "https://sovelia.com/about/contact-us/",
+        "https://sianabyspalopia.com/it/",
+        "https://www.seleniaitalia.it/",
+        "https://www.seleniaitalia.it/en/our-world/",
+        "https://linkedin.com/company/spalopia"
+      ]
+    },
+    {
+      "key": "prontela_largiva",
+      "query": "Official business websites, software products, company profiles or app listings using the brand names Prontela or Largiva, with their exact brand spelling, Italy and international markets",
+      "num_results_requested": 6,
+      "result_urls": [
+        "https://prontotela.com/en/content/4-about-us",
+        "https://www.prontelas.com.br/",
+        "https://prontotela.com/en/",
+        "https://prontotela.com/it/286-MARCHI",
+        "https://www.platinumrx.in/otc/largiva-sachet-5gm/1839714",
+        "https://www.prontelas.com.br/produtos-servicos/"
+      ]
+    },
+    {
+      "key": "tenvia_svoltiva",
+      "query": "Official business websites, software products, company profiles or app listings using the brand names Tenvia or Svoltiva, with their exact brand spelling, Italy and international markets",
+      "num_results_requested": 6,
+      "result_urls": [
+        "https://tenvia.ec/",
+        "https://linkedin.com/company/tenvia-express-sac",
+        "https://find-and-update.company-information.service.gov.uk/company/16616355",
+        "https://www.solvenia.it/",
+        "https://www.solvenia.it/chi-siamo",
+        "https://entreprises.lefigaro.fr/tenvia-12/entreprise-988059630"
+      ]
+    },
+    {
+      "key": "filo_social",
+      "query": "Official Filo software AI productivity brand and LinkedIn or Instagram company profiles named Giorvia, Ordivela, Spazelia, Svolia, Prontela, Largiva, Tenvia or Svoltiva",
+      "num_results_requested": 6,
+      "result_urls": [
+        "https://linkedin.com/company/filo-ai",
+        "https://www.linkedin.com/posts/filo-ai_weve-added-more-advanced-ai-models-to-filo-activity-7475824558340640770-tj3J",
+        "https://www.linkedin.com/products/harmonizehq-filo/",
+        "https://linkedin.com/company/filoedtech",
+        "https://www.producthunt.com/products/filo-mail",
+        "https://tenvia.ec/"
+      ]
+    },
+    {
+      "key": "register",
+      "query": "Official EUIPO trademark availability search tools TMview eSearch plus and Italian UIBM database how to search trademark names and similar names before applying",
+      "num_results_requested": 6,
+      "result_urls": [
+        "https://www.euipo.europa.eu/en/trade-marks/before-applying/availability",
+        "https://www.euipo.europa.eu/en/help-centre/tm/faq-search-availability",
+        "https://www.euipo.europa.eu/en/help-centre/searches/faq-esearch-plus",
+        "https://uibm.mise.gov.it/index.php/it/banche-dati/tmview",
+        "https://www.tmdn.org/static/tmdsview/tmview/helpFiles/en/help.html",
+        "https://www.euipo.europa.eu/en/search"
+      ]
+    },
+    {
+      "key": "final_giorvia_spazelia",
+      "query": "Existing businesses, brands, software apps, Instagram accounts or LinkedIn company pages whose exact name or username is Giorvia or Spazelia. Identify exact spelling Giorvia and Spazelia rather than similarly spelled names.",
+      "num_results_requested": 6,
+      "result_urls": [
+        "https://instalker.org/Giorvia",
+        "https://www.talkie-ai.com/chat/acanthe-%26-giorvia-419124255383819",
+        "https://it.linkedin.com/company/gioia-spa",
+        "https://linkedin.com/company/galleria-spazia",
+        "https://www.linkedin.com/in/giorvi",
+        "https://www.tuckerup.com/blog/someone-is-using-my-brand-name-on-instagram-what-to-do/"
+      ]
+    },
+    {
+      "key": "final_prontela_svoltiva",
+      "query": "Existing businesses, brands, software apps, Instagram accounts or LinkedIn company pages whose exact name or username is Prontela or Svoltiva. Identify exact spelling Prontela and Svoltiva rather than similarly spelled names.",
+      "num_results_requested": 6,
+      "result_urls": [
+        "https://www.prontelas.com.br/",
+        "https://linkedin.com/company/renata-juliani-frascareli",
+        "https://www.prontelas.com.br/produtos-servicos/",
+        "https://exa.ai/library/place/vr7x7p2s73k",
+        "https://prontotela.com/en/",
+        "https://www.solutudo.com.br/empresas/sp/sumare/fabricacao-de-artefatos-texteis/prontelas-industria-e-comercio-de-alcas-e-telas-ltda-3579859"
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "id": "filomail-official",
+      "url": "https://filomail.com/",
+      "publisher": "FiloMail",
+      "kind": "first_party_product",
+      "evidence": "Filo finds every task from your email, apps, and life; AI email and to-do app.",
+      "observed_date": "2026-10-05"
+    },
+    {
+      "id": "filomail-linkedin",
+      "url": "https://linkedin.com/company/filo-ai",
+      "publisher": "LinkedIn public company page",
+      "kind": "company_profile",
+      "evidence": "FiloMail AI email/to-do; homepage filomail.com; social Instagram filo_mail.",
+      "observed_date": "2026-10-05"
+    },
+    {
+      "id": "filo-harmonize-product",
+      "url": "https://www.linkedin.com/products/harmonizehq-filo/",
+      "publisher": "LinkedIn public product page",
+      "kind": "company_product_profile",
+      "evidence": "Filo knowledge management AI, Jira/Confluence/Notion inside Slack.",
+      "observed_date": "2026-10-05"
+    },
+    {
+      "id": "tenvia-official",
+      "url": "https://tenvia.ec/",
+      "publisher": "Tenvia",
+      "kind": "first_party_product",
+      "evidence": "Plataforma marca blanca para app de ventas, delivery y gestión de pedidos.",
+      "observed_date": "2026-10-05"
+    },
+    {
+      "id": "largiva-retailer",
+      "url": "https://www.platinumrx.in/otc/largiva-sachet-5gm/1839714",
+      "publisher": "PlatinumRx",
+      "kind": "retailer_product_listing",
+      "evidence": "Largiva Sachet 5gm; Windlas Biotech Ltd. Product listing, not trademark registry evidence.",
+      "observed_date": "2026-10-05"
+    },
+    {
+      "id": "ordivela-aggregator",
+      "url": "https://www.finmag.cz/obchodni-rejstrik/29919916-ordivela-s-r-o",
+      "publisher": "Finmag.cz",
+      "kind": "public_company_register_aggregator",
+      "evidence": "Ordivela s.r.o.; Czech company ID 29919916; dental/other services. Not independently checked in official registry.",
+      "observed_date": "2026-10-05"
+    },
+    {
+      "id": "girovia-official",
+      "url": "https://girovia.com/",
+      "publisher": "Girovia",
+      "kind": "first_party_ecommerce",
+      "evidence": "Girovia beauty e-commerce, different spelling from Giorvia.",
+      "observed_date": "2026-10-05"
+    },
+    {
+      "id": "sovelia-official",
+      "url": "https://sovelia.com/",
+      "publisher": "Sovelia",
+      "kind": "first_party_product",
+      "evidence": "Sovelia digital engineering and product lifecycle management software, different spelling from Svolia.",
+      "observed_date": "2026-10-05"
+    },
+    {
+      "id": "prontelas-official",
+      "url": "https://www.prontelas.com.br/",
+      "publisher": "Prontelas",
+      "kind": "first_party_business",
+      "evidence": "Prontelas shading/covering products; Brazil; spelling ends in s.",
+      "observed_date": "2026-10-05"
+    },
+    {
+      "id": "prontotela-official",
+      "url": "https://prontotela.com/en/content/4-about-us",
+      "publisher": "Prontotela / Digital Shop SRL",
+      "kind": "first_party_business",
+      "evidence": "Prontotela is described as a trademark of DIGITAL SHOP SRL; natural/artificial stone processing products.",
+      "observed_date": "2026-10-05"
+    },
+    {
+      "id": "talkie-giorvia",
+      "url": "https://www.talkie-ai.com/chat/acanthe-%26-giorvia-419124255383819",
+      "publisher": "Talkie AI",
+      "kind": "user_generated_ai_character",
+      "evidence": "Acanthe & Giorvia AI-generated character page, not identified as an independent commercial brand.",
+      "observed_date": "2026-10-05"
+    },
+    {
+      "id": "giorvia-x-archive",
+      "url": "https://instalker.org/Giorvia",
+      "publisher": "Instalker",
+      "kind": "third_party_social_archive",
+      "evidence": "Archived X/Twitter profile with exact username @Giorvia. Current existence/availability not verified.",
+      "observed_date": "2026-10-05"
+    },
+    {
+      "id": "euipo-availability",
+      "url": "https://www.euipo.europa.eu/en/trade-marks/before-applying/availability",
+      "publisher": "EUIPO",
+      "kind": "official_guidance",
+      "evidence": "Search same/similar signs; other rights may challenge a trademark; finding an earlier mark is not an automatic bar.",
+      "observed_date": "2026-10-05"
+    },
+    {
+      "id": "euipo-search",
+      "url": "https://www.euipo.europa.eu/en/search",
+      "publisher": "EUIPO",
+      "kind": "official_search_entrypoints",
+      "evidence": "Official links to eSearch plus, TMview and TMclass.",
+      "observed_date": "2026-10-05"
+    },
+    {
+      "id": "euipo-esearch-help",
+      "url": "https://www.euipo.europa.eu/en/help-centre/searches/faq-esearch-plus",
+      "publisher": "EUIPO",
+      "kind": "official_guidance",
+      "evidence": "Basic and advanced search; filters include Nice class and registration status.",
+      "observed_date": "2026-10-05"
+    },
+    {
+      "id": "tmview-help",
+      "url": "https://www.tmdn.org/static/tmdsview/tmview/helpFiles/en/help.html",
+      "publisher": "EUIPO / TMview",
+      "kind": "official_guidance",
+      "evidence": "Quick name searches, fuzzy search for spelling similarity, territory/office/Nice class filters; limitations when office fields differ.",
+      "observed_date": "2026-10-05"
+    },
+    {
+      "id": "uibm-tmview",
+      "url": "https://uibm.mise.gov.it/index.php/it/banche-dati/tmview",
+      "publisher": "UIBM",
+      "kind": "official_guidance",
+      "evidence": "TMview free multilingual searches; source office responsible for updating its data.",
+      "observed_date": "2026-10-05"
+    },
+    {
+      "id": "uibm-databases",
+      "url": "https://uibm.mise.gov.it/index.php/it/banche-dati",
+      "publisher": "UIBM",
+      "kind": "official_search_entrypoints",
+      "evidence": "UIBM databases for trademarks and other industrial-property rights.",
+      "observed_date": "2026-10-05"
+    },
+    {
+      "id": "wipo-global-brand",
+      "url": "https://www.wipo.int/en/web/global-brand-database",
+      "publisher": "WIPO",
+      "kind": "official_guidance",
+      "evidence": "Global Brand Database includes participating collections; WIPO recommends also consulting national/regional registers.",
+      "observed_date": "2026-10-05"
+    },
+    {
+      "id": "nice-class-9",
+      "url": "https://www.wipo.int/classifications/nice/nclpub/en/fr/?basic_numbers=show&class_number=9&explanatory_notes=show&lang=en&menulang=en&mode=flat&notion=&pagination=no&version=20260101",
+      "publisher": "WIPO",
+      "kind": "official_classification",
+      "evidence": "Class 9 includes recorded and downloadable computer software.",
+      "observed_date": "2026-10-05"
+    },
+    {
+      "id": "nice-class-42",
+      "url": "https://www.wipo.int/classifications/nice/nclpub/en/fr/?basic_numbers=show&class_number=42&explanatory_notes=show&lang=en&menulang=en&mode=flat&notion=&pagination=no&version=20260101",
+      "publisher": "WIPO",
+      "kind": "official_classification",
+      "evidence": "Class 42 expressly includes SaaS and PaaS; excludes computerized file management class 35.",
+      "observed_date": "2026-10-05"
+    }
+  ]
+}

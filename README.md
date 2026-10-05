@@ -94,6 +94,8 @@ Vedi [collegamento Gmail](docs/GMAIL.md) per i passaggi ufficiali e le variabili
 
 La progettazione del prodotto, il confronto dei moduli, le fonti e la proposta commerciale sono in [PRODOTTO.md](docs/PRODOTTO.md). Architettura, controlli e limiti sono descritti in [ARCHITETTURA.md](docs/ARCHITETTURA.md). Le prove eseguite sono raccolte in [VERIFICA.md](docs/VERIFICA.md).
 
+La [ricerca di nome e branding](docs/research/naming-branding-2026-10-05.html) propone **Spazelia**, con Giorvia e Prontela come direzioni alternative, sei loghi/simboli SVG e controlli documentati su domini, usi commerciali e canali. È una proposta creativa: i segnali pubblici di disponibilità restano da confermare presso il registrar e nei registri dei marchi.
+
 ## Ambito
 
 Questo è un MVP verificabile, disponibile anche su Railway con homepage pubblica e account separati. Include il percorso Stripe da configurare, ma non un prezzo attivo o un paywall. Non include invio email, sincronizzazione delle bozze Gmail o dei calendari esterni, telefonia, campagne, condivisione dello spazio fra colleghi o recupero password tramite email. Non impegna budget pubblicitario.

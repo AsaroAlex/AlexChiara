@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "research_date": "2026-10-05",
+  "workstream": "Metodo di verifica dei domini e condizioni economiche osservate",
+  "methodology": {
+    "search_provider": "Exa",
+    "search_calls": 2,
+    "search_results_requested": 12,
+    "sources_reviewed_definition": "Somma dei numResults richiesti: 2 × 6. Non indica dodici pagine interamente lette.",
+    "fetch_calls": 1,
+    "fetch_urls_requested": 3,
+    "fetch_urls_succeeded": 3,
+    "queries": [
+      {
+        "query": "Official ICANN RDAP domain availability registration data no object 404 Registro it Whois domain available registrar .com .it renewal price Aruba OVH",
+        "numResults": 6
+      },
+      {
+        "query": "Official Registro .it Whois domain availability website search domain registration reserved names Aruba .it .com domain registration renewal price Italy",
+        "numResults": 6
+      }
+    ]
+  },
+  "verification_rules": [
+    "L’assenza di un sito, di risultati di ricerca o di record DNS non dimostra che il dominio sia registrabile.",
+    "Un errore del crawler non equivale a una risposta di assenza dal registro.",
+    "Un 404 RDAP presso un registrar può significare che non è il registrar del dominio; va consultato il registro autorevole.",
+    "Un sito terzo che riporta AVAILABLE è un indizio da attribuire alla fonte, se non si può verificare la freschezza della risposta del registro.",
+    "Un dominio libero non certifica l’assenza di diritti su un marchio; riserva e costo premium vanno verificati nel risultato finale del registrar."
+  ],
+  "domain_plan": {
+    "primary_extension": ".it per il primo mercato italiano",
+    "secondary_extension": ".com, se la disponibilità e il costo sono confermati",
+    "application_host": "app.<nome>.it, sottodominio del dominio acquistato; non richiede una seconda registrazione",
+    "contact_examples": ["ciao@<nome>.it", "assistenza@<nome>.it"],
+    "ownership": "Intestazione al titolare dell’attività, accesso al registrar e rinnovo controllati dal titolare.",
+    "current_state": "Nessun dominio acquistato o prenotato dalla ricerca."
+  },
+  "price_observation": {
+    "provider": "Aruba",
+    "source_ids": ["naming-aruba-domain-pricing"],
+    "observed_offer": "La pagina pubblicizza registrazione di domini selezionati da 0,99 € + IVA per il primo anno e rinnovi da 11,99 € + IVA.",
+    "conditions": "Importi minimi pubblicizzati, non un preventivo per Giorvia, Spazelia o Prontela. Estensione, pacchetto, requisiti della promozione e prezzo di rinnovo specifico vanno confermati nel checkout.",
+    "not_included": "Nessun canone software Filo, hosting Railway, posta o deposito di marchio è ricavato da questo prezzo.",
+    "purchase_status": "Nessun ordine o pagamento effettuato."
+  },
+  "sources": [
+    {
+      "id": "naming-nic-registration",
+      "url": "https://www.nic.it/it/trova-il-tuo-it/come-registrare",
+      "title": "Come registrare — Registro .it",
+      "type": "official_registry",
+      "excerpt": "Verifica sul Registro dei nomi a dominio .it che sia disponibile il nome che hai scelto.",
+      "supports": "Controllo nel registro, registrazione tramite registrar, nomi riservati."
+    },
+    {
+      "id": "naming-icann-rdap",
+      "url": "https://www.icann.org/rdap",
+      "title": "Registration Data Access Protocol — ICANN",
+      "type": "official_registry_policy",
+      "excerpt": "The Registration Data Access Protocol (RDAP) enables users to access current registration data.",
+      "supports": "Il controllo della registrazione si fonda sui dati RDAP, non sulla presenza di un sito."
+    },
+    {
+      "id": "naming-aruba-domain-pricing",
+      "url": "https://hosting.aruba.it/domini.aspx",
+      "title": "Domini — Hosting Aruba",
+      "type": "official_registrar_pricing",
+      "excerpt": "al rinnovo da 11,99 € + IVA",
+      "supports": "Prezzo minimo di rinnovo pubblicizzato, da distinguere dalla promozione iniziale e dal costo del dominio scelto."
+    }
+  ]
+}

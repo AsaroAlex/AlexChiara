@@ -1,0 +1,713 @@
+{
+  "title": "Filo naming: domain registration availability evidence",
+  "researchDate": "2026-10-05",
+  "recordedAt": "2026-10-05T10:53:18Z",
+  "intendedMarket": "Studi e imprese di servizi, PMI italiane",
+  "scope": "Eight initial candidates across .it and .com; optional .eu for three finalists.",
+  "summary": {
+    "domainsChecked": 19,
+    "registered": 3,
+    "confirmedAvailable": 0,
+    "unverified": 16,
+    "finalists": [
+      "giorvia",
+      "spazelia",
+      "svoltiva"
+    ]
+  },
+  "decisionRule": "Confirm available only with authoritative registry not-found response containing actual HTTP 404/errorCode404, or an explicit candidate-specific registrar available result. Search absence, DNS absence, generic web errors and no WHOIS data are insufficient.",
+  "network": {
+    "shellPolicy": "restricted",
+    "registryHostsAllowlisted": false,
+    "shellRegistryRequestsAttempted": false,
+    "proxyBypassed": false,
+    "connectorFetchUsed": true
+  },
+  "checks": [
+    {
+      "candidate": "giorvia",
+      "domain": "giorvia.com",
+      "tld": "com",
+      "status": "unverified",
+      "checkedAt": "2026-10-05T10:51:03Z",
+      "source": {
+        "type": "third_party_whois",
+        "url": "https://who.is/whois/giorvia.com",
+        "provider": "Who.is",
+        "registryAuthoritative": false,
+        "whoisServerReported": null
+      },
+      "observation": "No WHOIS data was found; the page itself lists registry/server failure as possible causes.",
+      "sourceSnapshotAt": null,
+      "registrationMetadata": null,
+      "registrarCheckoutConfirmed": false,
+      "limitations": [
+        "No data does not establish an authoritative registry HTTP 404 or registrar availability.",
+        "No candidate-specific registry or checkout result was observed."
+      ],
+      "additionalSources": [
+        {
+          "url": "https://who.is/rdap/giorvia.com",
+          "provider": "Who.is",
+          "observation": "No RDAP data was found; may be available for registration.",
+          "registryAuthoritative": false
+        }
+      ]
+    },
+    {
+      "candidate": "giorvia",
+      "domain": "giorvia.it",
+      "tld": "it",
+      "status": "unverified",
+      "checkedAt": "2026-10-05T10:51:03Z",
+      "source": {
+        "type": "third_party_whois",
+        "url": "https://who.is/whois/giorvia.it",
+        "provider": "Who.is",
+        "registryAuthoritative": false,
+        "whoisServerReported": null
+      },
+      "observation": "The domain-specific Domain Status field displays AVAILABLE.",
+      "evidenceQuote": "Domain Status: AVAILABLE",
+      "counterObservation": "The same page contains a generic text claiming the domain is registered but not pointed at a website.",
+      "interpretation": "Promising availability signal from a third party; the contradictory text may be a generic template. Not an official live availability confirmation.",
+      "sourceSnapshotAt": null,
+      "registrarCheckoutConfirmed": false,
+      "limitations": [
+        "No raw WHOIS response text, registry server identity, or WHOIS fetch date was extractable for this candidate.",
+        "Known registered .it controls return ok, but their reported snapshots are cached.",
+        "The third-party AVAILABLE display requires confirmation at Registro .it or registrar checkout."
+      ]
+    },
+    {
+      "candidate": "ordivela",
+      "domain": "ordivela.com",
+      "tld": "com",
+      "status": "registered",
+      "checkedAt": "2026-10-05T10:51:03Z",
+      "source": {
+        "type": "third_party_whois",
+        "url": "https://who.is/whois/ordivela.com",
+        "provider": "Who.is",
+        "registryAuthoritative": false,
+        "whoisServerReported": "whois.cloudflare.com"
+      },
+      "observation": "Domain-specific registered record and creation/expiry dates present.",
+      "sourceSnapshotAt": "2026-09-14",
+      "registrationMetadata": {
+        "registrar": "Cloudflare, Inc.",
+        "createdAt": "2026-08-15",
+        "expiresAt": "2027-08-15"
+      },
+      "registrarCheckoutConfirmed": false,
+      "limitations": [
+        "Third-party registration lookup; freshness depends on its stated snapshot."
+      ]
+    },
+    {
+      "candidate": "ordivela",
+      "domain": "ordivela.it",
+      "tld": "it",
+      "status": "unverified",
+      "checkedAt": "2026-10-05T10:51:03Z",
+      "source": {
+        "type": "third_party_whois",
+        "url": "https://who.is/whois/ordivela.it",
+        "provider": "Who.is",
+        "registryAuthoritative": false,
+        "whoisServerReported": null
+      },
+      "observation": "The domain-specific Domain Status field displays AVAILABLE.",
+      "evidenceQuote": "Domain Status: AVAILABLE",
+      "counterObservation": "The same page contains a generic text claiming the domain is registered but not pointed at a website.",
+      "interpretation": "Promising availability signal from a third party; the contradictory text may be a generic template. Not an official live availability confirmation.",
+      "sourceSnapshotAt": null,
+      "registrarCheckoutConfirmed": false,
+      "limitations": [
+        "No raw WHOIS response text, registry server identity, or WHOIS fetch date was extractable for this candidate.",
+        "Known registered .it controls return ok, but their reported snapshots are cached.",
+        "The third-party AVAILABLE display requires confirmation at Registro .it or registrar checkout."
+      ]
+    },
+    {
+      "candidate": "spazelia",
+      "domain": "spazelia.com",
+      "tld": "com",
+      "status": "unverified",
+      "checkedAt": "2026-10-05T10:51:03Z",
+      "source": {
+        "type": "third_party_whois",
+        "url": "https://who.is/whois/spazelia.com",
+        "provider": "Who.is",
+        "registryAuthoritative": false,
+        "whoisServerReported": null
+      },
+      "observation": "No WHOIS data was found; the page itself lists registry/server failure as possible causes.",
+      "sourceSnapshotAt": null,
+      "registrationMetadata": null,
+      "registrarCheckoutConfirmed": false,
+      "limitations": [
+        "No data does not establish an authoritative registry HTTP 404 or registrar availability.",
+        "No candidate-specific registry or checkout result was observed."
+      ],
+      "additionalSources": [
+        {
+          "url": "https://who.is/rdap/spazelia.com",
+          "provider": "Who.is",
+          "observation": "No RDAP data was found; may be available for registration.",
+          "registryAuthoritative": false
+        }
+      ]
+    },
+    {
+      "candidate": "spazelia",
+      "domain": "spazelia.it",
+      "tld": "it",
+      "status": "unverified",
+      "checkedAt": "2026-10-05T10:51:03Z",
+      "source": {
+        "type": "third_party_whois",
+        "url": "https://who.is/whois/spazelia.it",
+        "provider": "Who.is",
+        "registryAuthoritative": false,
+        "whoisServerReported": null
+      },
+      "observation": "The domain-specific Domain Status field displays AVAILABLE.",
+      "evidenceQuote": "Domain Status: AVAILABLE",
+      "counterObservation": "The same page contains a generic text claiming the domain is registered but not pointed at a website.",
+      "interpretation": "Promising availability signal from a third party; the contradictory text may be a generic template. Not an official live availability confirmation.",
+      "sourceSnapshotAt": null,
+      "registrarCheckoutConfirmed": false,
+      "limitations": [
+        "No raw WHOIS response text, registry server identity, or WHOIS fetch date was extractable for this candidate.",
+        "Known registered .it controls return ok, but their reported snapshots are cached.",
+        "The third-party AVAILABLE display requires confirmation at Registro .it or registrar checkout."
+      ]
+    },
+    {
+      "candidate": "svolia",
+      "domain": "svolia.com",
+      "tld": "com",
+      "status": "unverified",
+      "checkedAt": "2026-10-05T10:51:03Z",
+      "source": {
+        "type": "third_party_whois",
+        "url": "https://who.is/whois/svolia.com",
+        "provider": "Who.is",
+        "registryAuthoritative": false,
+        "whoisServerReported": null
+      },
+      "observation": "No WHOIS data was found; the page itself lists registry/server failure as possible causes.",
+      "sourceSnapshotAt": null,
+      "registrationMetadata": null,
+      "registrarCheckoutConfirmed": false,
+      "limitations": [
+        "No data does not establish an authoritative registry HTTP 404 or registrar availability.",
+        "No candidate-specific registry or checkout result was observed."
+      ]
+    },
+    {
+      "candidate": "svolia",
+      "domain": "svolia.it",
+      "tld": "it",
+      "status": "unverified",
+      "checkedAt": "2026-10-05T10:51:03Z",
+      "source": {
+        "type": "third_party_whois",
+        "url": "https://who.is/whois/svolia.it",
+        "provider": "Who.is",
+        "registryAuthoritative": false,
+        "whoisServerReported": null
+      },
+      "observation": "The domain-specific Domain Status field displays AVAILABLE.",
+      "evidenceQuote": "Domain Status: AVAILABLE",
+      "counterObservation": "The same page contains a generic text claiming the domain is registered but not pointed at a website.",
+      "interpretation": "Promising availability signal from a third party; the contradictory text may be a generic template. Not an official live availability confirmation.",
+      "sourceSnapshotAt": null,
+      "registrarCheckoutConfirmed": false,
+      "limitations": [
+        "No raw WHOIS response text, registry server identity, or WHOIS fetch date was extractable for this candidate.",
+        "Known registered .it controls return ok, but their reported snapshots are cached.",
+        "The third-party AVAILABLE display requires confirmation at Registro .it or registrar checkout."
+      ]
+    },
+    {
+      "candidate": "prontela",
+      "domain": "prontela.com",
+      "tld": "com",
+      "status": "registered",
+      "checkedAt": "2026-10-05T10:51:03Z",
+      "source": {
+        "type": "third_party_whois",
+        "url": "https://who.is/whois/prontela.com",
+        "provider": "Who.is",
+        "registryAuthoritative": false,
+        "whoisServerReported": "whois.namecheap.com"
+      },
+      "observation": "Domain-specific registered record and creation/expiry dates present.",
+      "sourceSnapshotAt": "2026-10-05",
+      "registrationMetadata": {
+        "registrar": "NameCheap, Inc.",
+        "createdAt": "2026-07-28",
+        "expiresAt": "2027-07-28"
+      },
+      "registrarCheckoutConfirmed": false,
+      "limitations": [
+        "Third-party registration lookup; freshness depends on its stated snapshot."
+      ],
+      "additionalSources": [
+        {
+          "url": "https://who.is/rdap/prontela.com",
+          "provider": "Who.is",
+          "observation": "Registered record; Resource URL points to Verisign registry.",
+          "resourceUrl": "https://rdap.verisign.com/com/v1/domain/prontela.com",
+          "sourceSnapshotAt": "2026-10-05",
+          "registryAuthoritative": false
+        }
+      ]
+    },
+    {
+      "candidate": "prontela",
+      "domain": "prontela.it",
+      "tld": "it",
+      "status": "unverified",
+      "checkedAt": "2026-10-05T10:51:03Z",
+      "source": {
+        "type": "third_party_whois",
+        "url": "https://who.is/whois/prontela.it",
+        "provider": "Who.is",
+        "registryAuthoritative": false,
+        "whoisServerReported": null
+      },
+      "observation": "The domain-specific Domain Status field displays AVAILABLE.",
+      "evidenceQuote": "Domain Status: AVAILABLE",
+      "counterObservation": "The same page contains a generic text claiming the domain is registered but not pointed at a website.",
+      "interpretation": "Promising availability signal from a third party; the contradictory text may be a generic template. Not an official live availability confirmation.",
+      "sourceSnapshotAt": null,
+      "registrarCheckoutConfirmed": false,
+      "limitations": [
+        "No raw WHOIS response text, registry server identity, or WHOIS fetch date was extractable for this candidate.",
+        "Known registered .it controls return ok, but their reported snapshots are cached.",
+        "The third-party AVAILABLE display requires confirmation at Registro .it or registrar checkout."
+      ]
+    },
+    {
+      "candidate": "largiva",
+      "domain": "largiva.com",
+      "tld": "com",
+      "status": "unverified",
+      "checkedAt": "2026-10-05T10:51:03Z",
+      "source": {
+        "type": "third_party_whois",
+        "url": "https://who.is/whois/largiva.com",
+        "provider": "Who.is",
+        "registryAuthoritative": false,
+        "whoisServerReported": null
+      },
+      "observation": "No WHOIS data was found; the page itself lists registry/server failure as possible causes.",
+      "sourceSnapshotAt": null,
+      "registrationMetadata": null,
+      "registrarCheckoutConfirmed": false,
+      "limitations": [
+        "No data does not establish an authoritative registry HTTP 404 or registrar availability.",
+        "No candidate-specific registry or checkout result was observed."
+      ]
+    },
+    {
+      "candidate": "largiva",
+      "domain": "largiva.it",
+      "tld": "it",
+      "status": "unverified",
+      "checkedAt": "2026-10-05T10:51:03Z",
+      "source": {
+        "type": "third_party_whois",
+        "url": "https://who.is/whois/largiva.it",
+        "provider": "Who.is",
+        "registryAuthoritative": false,
+        "whoisServerReported": null
+      },
+      "observation": "The domain-specific Domain Status field displays AVAILABLE.",
+      "evidenceQuote": "Domain Status: AVAILABLE",
+      "counterObservation": "The same page contains a generic text claiming the domain is registered but not pointed at a website.",
+      "interpretation": "Promising availability signal from a third party; the contradictory text may be a generic template. Not an official live availability confirmation.",
+      "sourceSnapshotAt": null,
+      "registrarCheckoutConfirmed": false,
+      "limitations": [
+        "No raw WHOIS response text, registry server identity, or WHOIS fetch date was extractable for this candidate.",
+        "Known registered .it controls return ok, but their reported snapshots are cached.",
+        "The third-party AVAILABLE display requires confirmation at Registro .it or registrar checkout."
+      ]
+    },
+    {
+      "candidate": "tenvia",
+      "domain": "tenvia.com",
+      "tld": "com",
+      "status": "registered",
+      "checkedAt": "2026-10-05T10:51:03Z",
+      "source": {
+        "type": "third_party_whois",
+        "url": "https://who.is/whois/tenvia.com",
+        "provider": "Who.is",
+        "registryAuthoritative": false,
+        "whoisServerReported": "whois.namebright.com"
+      },
+      "observation": "Domain-specific registered record and creation/expiry dates present.",
+      "sourceSnapshotAt": "2026-09-19",
+      "registrationMetadata": {
+        "registrar": "TurnCommerce, Inc. DBA NameBright.com",
+        "createdAt": "2017-01-10",
+        "expiresAt": "2027-01-10"
+      },
+      "registrarCheckoutConfirmed": false,
+      "limitations": [
+        "Third-party registration lookup; freshness depends on its stated snapshot."
+      ]
+    },
+    {
+      "candidate": "tenvia",
+      "domain": "tenvia.it",
+      "tld": "it",
+      "status": "unverified",
+      "checkedAt": "2026-10-05T10:51:03Z",
+      "source": {
+        "type": "third_party_whois",
+        "url": "https://who.is/whois/tenvia.it",
+        "provider": "Who.is",
+        "registryAuthoritative": false,
+        "whoisServerReported": null
+      },
+      "observation": "The domain-specific Domain Status field displays AVAILABLE.",
+      "evidenceQuote": "Domain Status: AVAILABLE",
+      "counterObservation": "The same page contains a generic text claiming the domain is registered but not pointed at a website.",
+      "interpretation": "Promising availability signal from a third party; the contradictory text may be a generic template. Not an official live availability confirmation.",
+      "sourceSnapshotAt": null,
+      "registrarCheckoutConfirmed": false,
+      "limitations": [
+        "No raw WHOIS response text, registry server identity, or WHOIS fetch date was extractable for this candidate.",
+        "Known registered .it controls return ok, but their reported snapshots are cached.",
+        "The third-party AVAILABLE display requires confirmation at Registro .it or registrar checkout."
+      ]
+    },
+    {
+      "candidate": "svoltiva",
+      "domain": "svoltiva.com",
+      "tld": "com",
+      "status": "unverified",
+      "checkedAt": "2026-10-05T10:51:03Z",
+      "source": {
+        "type": "third_party_whois",
+        "url": "https://who.is/whois/svoltiva.com",
+        "provider": "Who.is",
+        "registryAuthoritative": false,
+        "whoisServerReported": null
+      },
+      "observation": "No WHOIS data was found; the page itself lists registry/server failure as possible causes.",
+      "sourceSnapshotAt": null,
+      "registrationMetadata": null,
+      "registrarCheckoutConfirmed": false,
+      "limitations": [
+        "No data does not establish an authoritative registry HTTP 404 or registrar availability.",
+        "No candidate-specific registry or checkout result was observed."
+      ],
+      "additionalSources": [
+        {
+          "url": "https://who.is/rdap/svoltiva.com",
+          "provider": "Who.is",
+          "observation": "No RDAP data was found; may be available for registration.",
+          "registryAuthoritative": false
+        }
+      ]
+    },
+    {
+      "candidate": "svoltiva",
+      "domain": "svoltiva.it",
+      "tld": "it",
+      "status": "unverified",
+      "checkedAt": "2026-10-05T10:51:03Z",
+      "source": {
+        "type": "third_party_whois",
+        "url": "https://who.is/whois/svoltiva.it",
+        "provider": "Who.is",
+        "registryAuthoritative": false,
+        "whoisServerReported": null
+      },
+      "observation": "The domain-specific Domain Status field displays AVAILABLE.",
+      "evidenceQuote": "Domain Status: AVAILABLE",
+      "counterObservation": "The same page contains a generic text claiming the domain is registered but not pointed at a website.",
+      "interpretation": "Promising availability signal from a third party; the contradictory text may be a generic template. Not an official live availability confirmation.",
+      "sourceSnapshotAt": null,
+      "registrarCheckoutConfirmed": false,
+      "limitations": [
+        "No raw WHOIS response text, registry server identity, or WHOIS fetch date was extractable for this candidate.",
+        "Known registered .it controls return ok, but their reported snapshots are cached.",
+        "The third-party AVAILABLE display requires confirmation at Registro .it or registrar checkout."
+      ]
+    },
+    {
+      "candidate": "giorvia",
+      "domain": "giorvia.eu",
+      "tld": "eu",
+      "status": "unverified",
+      "checkedAt": "2026-10-05T10:51:03Z",
+      "source": {
+        "type": "third_party_whois",
+        "url": "https://who.is/whois/giorvia.eu",
+        "provider": "Who.is",
+        "registryAuthoritative": false,
+        "whoisServerReported": null
+      },
+      "observation": "The domain-specific Domain Status field displays AVAILABLE, alongside generic registered-domain copy.",
+      "sourceSnapshotAt": null,
+      "registrarCheckoutConfirmed": false,
+      "limitations": [
+        "Official EURid Whois fetch returns no readable result.",
+        "No raw registry response or candidate-specific snapshot date was visible.",
+        "Third-party status requires official or registrar verification."
+      ]
+    },
+    {
+      "candidate": "spazelia",
+      "domain": "spazelia.eu",
+      "tld": "eu",
+      "status": "unverified",
+      "checkedAt": "2026-10-05T10:51:03Z",
+      "source": {
+        "type": "third_party_whois",
+        "url": "https://who.is/whois/spazelia.eu",
+        "provider": "Who.is",
+        "registryAuthoritative": false,
+        "whoisServerReported": null
+      },
+      "observation": "The domain-specific Domain Status field displays AVAILABLE, alongside generic registered-domain copy.",
+      "sourceSnapshotAt": null,
+      "registrarCheckoutConfirmed": false,
+      "limitations": [
+        "Official EURid Whois fetch returns no readable result.",
+        "No raw registry response or candidate-specific snapshot date was visible.",
+        "Third-party status requires official or registrar verification."
+      ]
+    },
+    {
+      "candidate": "svoltiva",
+      "domain": "svoltiva.eu",
+      "tld": "eu",
+      "status": "unverified",
+      "checkedAt": "2026-10-05T10:51:03Z",
+      "source": {
+        "type": "third_party_whois",
+        "url": "https://who.is/whois/svoltiva.eu",
+        "provider": "Who.is",
+        "registryAuthoritative": false,
+        "whoisServerReported": null
+      },
+      "observation": "The domain-specific Domain Status field displays AVAILABLE, alongside generic registered-domain copy.",
+      "sourceSnapshotAt": null,
+      "registrarCheckoutConfirmed": false,
+      "limitations": [
+        "Official EURid Whois fetch returns no readable result.",
+        "No raw registry response or candidate-specific snapshot date was visible.",
+        "Third-party status requires official or registrar verification."
+      ]
+    }
+  ],
+  "controls": [
+    {
+      "domain": "google.com",
+      "url": "https://www.whois.com/whois/google.com",
+      "observed": "Registered record; creation 1997-09-15.",
+      "sourceSnapshot": "Updated 1 hour ago",
+      "result": "Registered positive control readable."
+    },
+    {
+      "domain": "google.it",
+      "url": "https://who.is/whois/google.it",
+      "observed": "Domain Status ok; WHOIS Server whois.nic.it.",
+      "sourceSnapshotAt": "2026-08-12",
+      "result": "Registered positive control; proves status display varies but also reveals caching."
+    },
+    {
+      "domain": "nic.it",
+      "url": "https://who.is/whois/nic.it",
+      "observed": "Domain Status ok; WHOIS Server whois.nic.it.",
+      "sourceSnapshotAt": "2026-08-12",
+      "result": "Registered positive control; snapshot not live."
+    }
+  ],
+  "failedAuthoritativeChecks": [
+    {
+      "url": "https://rdap.verisign.com/com/v1/domain/google.com",
+      "tool": "exa_web_fetch_exa",
+      "result": "CRAWL_UNEXPECTED_CONTENT_TYPE",
+      "interpretation": "Tool cannot consume registry JSON, even for registered positive control. No domain availability inference."
+    },
+    {
+      "url": "https://rdap.verisign.com/com/v1/domain/ordivela.com",
+      "tool": "exa_web_fetch_exa",
+      "result": "CRAWL_UNEXPECTED_CONTENT_TYPE",
+      "interpretation": "Not registry not-found; domain actually has registered third-party record."
+    },
+    {
+      "url": "https://rdap.verisign.com/com/v1/domain/ordivela.com",
+      "tool": "search_service_web_run",
+      "result": "URL is not accessible via this tool.",
+      "interpretation": "Generic tool error, not registry HTTP 404."
+    },
+    {
+      "url": "https://www.nic.it/en/find-your-it/web-whois?domain=ordivela.it",
+      "tool": "exa_web_fetch_exa",
+      "result": "Only Web Whois page title; no domain-specific result.",
+      "interpretation": "Official UI readable but no query execution or availability evidence."
+    },
+    {
+      "url": "https://www.nic.it/en/webwhois?domain=ordivela.it",
+      "tool": "exa_web_fetch_exa",
+      "result": "Only Whois page title; no domain-specific result.",
+      "interpretation": "No evidence of availability."
+    },
+    {
+      "url": "https://lookup.icann.org/en/lookup?name=giorvia.com",
+      "tool": "exa_web_fetch_exa",
+      "result": "CRAWL_EMPTY_CONTENT",
+      "interpretation": "No candidate-specific registry result."
+    },
+    {
+      "url": "https://whois.eurid.eu/en/search/?domain=giorvia.eu",
+      "tool": "exa_web_fetch_exa",
+      "result": "CRAWL_EMPTY_CONTENT",
+      "interpretation": "No official EU result."
+    },
+    {
+      "url": "https://whois.eurid.eu/en/search/?domain=google.eu",
+      "tool": "exa_web_fetch_exa",
+      "result": "CRAWL_EMPTY_CONTENT",
+      "interpretation": "Positive control also fails; no availability inference."
+    },
+    {
+      "url": "https://webwhois.verisign.com/webwhois-ui/index.jsp?whoisChoice=domain&query=giorvia.com",
+      "tool": "exa_web_fetch_exa",
+      "result": "Only Whois title; same result for google.com.",
+      "interpretation": "Query result inaccessible."
+    }
+  ],
+  "registrarChecks": [
+    {
+      "provider": "Porkbun",
+      "url": "https://porkbun.com/checkout/search?q=giorvia.com",
+      "result": "Candidate-derived suggestions visible but no price/available/unavailable status."
+    },
+    {
+      "provider": "Dynadot",
+      "url": "https://www.dynadot.com/domain/search?domain=giorvia.com",
+      "result": "Generic search page only; no candidate-specific result."
+    },
+    {
+      "provider": "Name.com",
+      "url": "https://www.name.com/domain/search/ordivela.com",
+      "result": "Generic page title only."
+    },
+    {
+      "provider": "Namecheap",
+      "url": "https://www.namecheap.com/domains/registration/results/?domain=ordivela.com",
+      "result": "Generic page only."
+    },
+    {
+      "provider": "EuroDNS",
+      "url": "https://www.eurodns.com/domain-name-search?domain=giorvia.com",
+      "result": "Generic search page and TLD prices; no candidate-specific result."
+    },
+    {
+      "provider": "Hover",
+      "url": "https://www.hover.com/domains/results?domain=giorvia.com",
+      "result": "Generic page only."
+    },
+    {
+      "provider": "BookMyName",
+      "url": "https://www.bookmyname.com/whois.cgi?domaine=giorvia.com",
+      "result": "CAPTCHA required; no candidate-specific result."
+    },
+    {
+      "provider": "Domainnameshop",
+      "url": "https://www.domainnameshop.com/whois.cgi?domain=giorvia.com",
+      "result": "Generic search page; alternate parameter same as google.com control."
+    },
+    {
+      "provider": "INWX",
+      "url": "https://www.inwx.com/en/domain/check?domain=giorvia.com",
+      "result": "Generic TLD prices/search page only."
+    },
+    {
+      "provider": "Joker",
+      "url": "https://joker.com/domain/search?domain=giorvia.com",
+      "result": "Generic page only."
+    },
+    {
+      "provider": "GoDaddy",
+      "url": "https://www.godaddy.com/domainsearch/find?domainToCheck=giorvia.com",
+      "result": "CRAWL_UNKNOWN_ERROR"
+    },
+    {
+      "provider": "GoDaddy",
+      "url": "https://www.godaddy.com/domainsearch/find?domainToCheck=giorvia.it",
+      "result": "CRAWL_UNKNOWN_ERROR",
+      "checkedAt": "2026-10-05T10:53:18Z"
+    },
+    {
+      "provider": "DomainTools",
+      "url": "https://whois.domaintools.com/giorvia.it",
+      "result": "SOURCE_NOT_AVAILABLE (also giorvia.com).",
+      "checkedAt": "2026-10-05T10:53:18Z"
+    },
+    {
+      "provider": "Whois.it",
+      "url": "https://www.whois.it/giorvia.it",
+      "result": "CRAWL_UNKNOWN_ERROR",
+      "checkedAt": "2026-10-05T10:53:18Z"
+    },
+    {
+      "provider": "Aruba",
+      "url": "https://hosting.aruba.it/domini.aspx?domain=giorvia.it",
+      "result": "Generic domain page and promotional TLD prices only; no candidate-specific result.",
+      "checkedAt": "2026-10-05T10:53:18Z"
+    },
+    {
+      "provider": "Netsons",
+      "url": "https://www.netsons.com/manage/domainchecker.php?domain=giorvia.it",
+      "result": "CRAWL_UNKNOWN_ERROR; alternate secure.netsons.com also fails.",
+      "checkedAt": "2026-10-05T10:53:18Z"
+    }
+  ],
+  "officialGuidance": [
+    {
+      "url": "https://www.nic.it/en/find-your-it",
+      "finding": "Check Whois for registration availability; register through a Registrar. Registry does not directly register for users."
+    },
+    {
+      "url": "https://www.nic.it/sites/default/files/documenti/2022/Whois_policy_v_2_2_.pdf",
+      "finding": "Official .it Whois is available on port 43 and web; web query uses CAPTCHA."
+    }
+  ],
+  "followUpUrls": [
+    "https://www.nic.it/it/trova-il-tuo-it/web-whois",
+    "https://rdap.verisign.com/com/v1/domain/giorvia.com",
+    "https://rdap.verisign.com/com/v1/domain/spazelia.com",
+    "https://rdap.verisign.com/com/v1/domain/svoltiva.com",
+    "https://porkbun.com/checkout/search?q=giorvia.com",
+    "https://www.dynadot.com/domain/search?domain=giorvia.it"
+  ],
+  "purchase": {
+    "attempted": false,
+    "accountCreated": false,
+    "costAuthorized": false
+  },
+  "researchAccounting": {
+    "sourcesReviewed": 18,
+    "searchCalls": 3,
+    "meaning": "Sum of requested Exa numResults: 8+5+5; fetch pages and reused results are not included."
+  },
+  "cautions": [
+    "No domain has been purchased or reserved.",
+    "Availability can change before checkout, and premium/reserved status requires registrar confirmation.",
+    "Domain status is separate from trademark availability and social handle availability.",
+    "checkedAt records observation/report capture, not a guaranteed fresh registry database snapshot."
+  ]
+}

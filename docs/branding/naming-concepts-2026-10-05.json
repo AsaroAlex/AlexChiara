@@ -1,0 +1,400 @@
+{
+  "date": "2026-10-05",
+  "scope": "Tre concetti creativi per rinominare Filo; nessuna modifica all’applicazione in produzione e nessun dominio o marchio registrato.",
+  "target": "Studi professionali e imprese italiane di servizi; persone che vogliono aprire l’app e trovare le attività importanti già ordinate.",
+  "product_truth": "Priorità email, agenda e 23 moduli amministrativi; check e progressi manuali, integrazioni esterne attive solo quando davvero collegate.",
+  "creative_brief": "Più tempo e spazio. Un tono vivo e incoraggiante, con l’ordine visivo di una buona interfaccia: bianco, carbone, grigio freddo e un accento arancio. Nessun verde o viola.",
+  "main_payoff": "La tua giornata, con più spazio.",
+  "claim_guardrails": [
+    "Non promettere un numero di ore risparmiate senza misurazione.",
+    "Non chiamare automatico un passaggio che richiede revisione o inserimento manuale.",
+    "Non presentare un collegamento a Gmail, banca o SDI come già disponibile se manca la configurazione.",
+    "Non suggerire sostituzioni o valutazioni di dipendenti come beneficio del marchio."
+  ],
+  "naming_validation": "Questi sono concetti, non un esito di disponibilità. Un dominio privo di record DNS non basta; per marchi e usi commerciali occorrono ricerche e verifiche separate. Nessuna voce di questo file dichiara i nomi liberi.",
+  "creative_ranking": [
+    "Spazelia",
+    "Giorvia",
+    "Prontela"
+  ],
+  "ranking_basis": "Spazelia allinea il nome al beneficio di spazio già scelto dalla persona e lascia un territorio più ampio per tutti i moduli. Giorvia è più immediata sulla mattina, ma richiama soprattutto il giorno. È un giudizio di design, non un esito di disponibilità, registrabilità o domanda di mercato.",
+  "suggested_user_test": {
+    "people": 5,
+    "script": "Mostra il nome per cinque secondi, poi chiedi che prodotto immaginano. Pronuncialo senza mostrarlo e chiedi di scriverlo. Confronta il messaggio “La tua giornata, con più spazio” e chiedi quale nome lo rende più chiaro.",
+    "success_criteria": "Comprensione del beneficio e ripetizione/trascrizione senza aiuto. Il numero di persone è adatto a trovare problemi di comprensione, non a stimare preferenze del mercato."
+  },
+  "concepts": [
+    {
+      "name": "Giorvia",
+      "slug": "giorvia",
+      "pronunciation": "gior-VÌ-a; da confermare con un test orale perché il nome è inventato",
+      "roots": "Giorno + via: una mattina che prende una direzione semplice.",
+      "personality": "Calma energica. L’assistente ha già messo ordine, ma lascia il controllo alla persona.",
+      "descriptor": "L’assistente operativo per studi e imprese di servizi.",
+      "secondary_promise": "Apri la giornata: trovi le priorità, gli appuntamenti e il prossimo passo.",
+      "strengths": [
+        "Richiama subito il giorno, la mattina e il percorso; si lega alla promessa della homepage.",
+        "Può coprire email, agenda e amministrazione senza descrivere un solo modulo.",
+        "Ha un suono italiano e una personalità positiva senza usare il lessico medico o l’efficienza aggressiva."
+      ],
+      "risks": [
+        "L’accento non è evidente per tutti: va ascoltato e ripetuto senza mostrare il nome.",
+        "Il riferimento al giorno va bilanciato nella descrizione, perché Filo copre anche attività mensili e scadenze."
+      ],
+      "tone": {
+        "homepage": "La tua giornata, con più spazio. Le priorità sono già qui.",
+        "next_step": "Questo incasso va controllato oggi. Apri i dettagli e segna il prossimo passo.",
+        "button": "Guarda da dove iniziare"
+      },
+      "palette": {
+        "ink": "#202124",
+        "canvas": "#FFFFFF",
+        "surface": "#F4F5F6",
+        "muted_text": "#61646B",
+        "brand_orange": "#E96034",
+        "action_background": "#AB3F18",
+        "action_text": "#FFFFFF",
+        "warm_surface": "#FFE5D8"
+      },
+      "icon_concept": "Una curva sale verso un piccolo sole: il percorso della giornata ha un punto d’arrivo chiaro. Due elementi, leggibili anche a 32 px.",
+      "recommendation": "Alternativa creativa più immediata sulla mattina; da valutare solo dopo la verifica di domini, usi commerciali e marchi.",
+      "contrast_checks": [
+        {
+          "usage": "Testo principale su bianco",
+          "foreground": "#202124",
+          "background": "#FFFFFF",
+          "ratio": 16.1,
+          "minimum": 4.5,
+          "pass": true
+        },
+        {
+          "usage": "Testo principale su superficie grigia",
+          "foreground": "#202124",
+          "background": "#F4F5F6",
+          "ratio": 14.75,
+          "minimum": 4.5,
+          "pass": true
+        },
+        {
+          "usage": "Testo secondario su bianco",
+          "foreground": "#61646B",
+          "background": "#FFFFFF",
+          "ratio": 5.93,
+          "minimum": 4.5,
+          "pass": true
+        },
+        {
+          "usage": "Testo secondario su superficie grigia",
+          "foreground": "#61646B",
+          "background": "#F4F5F6",
+          "ratio": 5.43,
+          "minimum": 4.5,
+          "pass": true
+        },
+        {
+          "usage": "Testo del pulsante principale",
+          "foreground": "#FFFFFF",
+          "background": "#AB3F18",
+          "ratio": 6.08,
+          "minimum": 4.5,
+          "pass": true
+        },
+        {
+          "usage": "Testo su superficie arancio chiaro",
+          "foreground": "#202124",
+          "background": "#FFE5D8",
+          "ratio": 13.38,
+          "minimum": 4.5,
+          "pass": true
+        },
+        {
+          "usage": "Arancio come dettaglio grafico su bianco",
+          "foreground": "#E96034",
+          "background": "#FFFFFF",
+          "ratio": 3.39,
+          "minimum": 3,
+          "pass": true
+        }
+      ],
+      "palette_usage": "Bianco e grigio freddo per pagina e pannelli; carbone per il testo. L’arancio vivo è un accento grafico, mai testo piccolo su bianco. Il pulsante usa l’arancio scuro con testo bianco.",
+      "typography": {
+        "stack": "-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif",
+        "wordmark_weight": 600,
+        "body_weight": 400,
+        "heading_weight": 600,
+        "guidance": "Dimensioni generose, frasi brevi, titoli senza tutto maiuscolo; base 16 px, interlinea 1.5. I font sono quelli già presenti nel sistema, senza file esterni.",
+        "asset_note": "I wordmark SVG mantengono testo vivo e usano font di sistema: l’aspetto preciso varia fra sistemi. Prima di finalizzare un marchio si sceglie e si converte il carattere in tracciati con i diritti necessari."
+      },
+      "assets": {
+        "wordmark": "docs/branding/concepts/giorvia-wordmark.svg",
+        "icon": "docs/branding/concepts/giorvia-icon.svg"
+      },
+      "logo_usage": {
+        "minimum_icon_size_px": 32,
+        "clear_space": "Almeno 8 unità del disegno da 64 intorno al simbolo; nessun elemento dell’interfaccia deve entrare in quello spazio.",
+        "wordmark_minimum_width_px": 200,
+        "backgrounds": [
+          "Bianco",
+          "Trasparente su superficie grigia chiara"
+        ],
+        "avoid": [
+          "Verde o viola nella firma del marchio",
+          "Arancio saturo come sfondo di intere pagine o grandi report",
+          "Croci, scudi o icone mediche",
+          "Maiuscolo integrale e promesse di risparmio non misurate"
+        ]
+      }
+    },
+    {
+      "name": "Spazelia",
+      "slug": "spazelia",
+      "pronunciation": "spa-ZÈ-lia; da verificare anche la trascrizione dopo un ascolto",
+      "roots": "Spazio + un finale morbido e distintivo. Il beneficio è avere margine mentale.",
+      "personality": "Aperta, ordinata, rassicurante. Una pagina ariosa con pochi segnali, ognuno utile.",
+      "descriptor": "L’assistente operativo che lascia spazio al lavoro.",
+      "secondary_promise": "Le cose urgenti davanti a te. Il resto, al suo posto.",
+      "strengths": [
+        "È vicina al beneficio di più spazio, che la persona ha già indicato come importante.",
+        "Il nome è ampio e può accompagnare altri strumenti amministrativi.",
+        "L’identità invita alla chiarezza senza appoggiarsi a simboli di intelligenza artificiale."
+      ],
+      "risks": [
+        "È più lunga: va provata nei messaggi dettati e nelle ricerche da telefono.",
+        "Il collegamento alla giornata è meno immediato; il descrittore deve spiegare il prodotto."
+      ],
+      "tone": {
+        "homepage": "La tua giornata, con più spazio. Tutto quello che serve, senza cercarlo.",
+        "next_step": "Tre risposte da inviare. Parti da quella che blocca il lavoro di oggi.",
+        "button": "Apri le priorità"
+      },
+      "palette": {
+        "ink": "#202124",
+        "canvas": "#FFFFFF",
+        "surface": "#F4F5F6",
+        "muted_text": "#61646B",
+        "brand_orange": "#E56F32",
+        "action_background": "#B44922",
+        "action_text": "#FFFFFF",
+        "warm_surface": "#FFE5D8"
+      },
+      "icon_concept": "Due angoli morbidi e aperti incorniciano uno spazio libero. L’arancio è un accento piccolo: l’ordine resta il protagonista.",
+      "recommendation": "Prima direzione creativa: il beneficio di spazio coincide con la promessa del prodotto; pronuncia, domini e marchi restano da validare.",
+      "contrast_checks": [
+        {
+          "usage": "Testo principale su bianco",
+          "foreground": "#202124",
+          "background": "#FFFFFF",
+          "ratio": 16.1,
+          "minimum": 4.5,
+          "pass": true
+        },
+        {
+          "usage": "Testo principale su superficie grigia",
+          "foreground": "#202124",
+          "background": "#F4F5F6",
+          "ratio": 14.75,
+          "minimum": 4.5,
+          "pass": true
+        },
+        {
+          "usage": "Testo secondario su bianco",
+          "foreground": "#61646B",
+          "background": "#FFFFFF",
+          "ratio": 5.93,
+          "minimum": 4.5,
+          "pass": true
+        },
+        {
+          "usage": "Testo secondario su superficie grigia",
+          "foreground": "#61646B",
+          "background": "#F4F5F6",
+          "ratio": 5.43,
+          "minimum": 4.5,
+          "pass": true
+        },
+        {
+          "usage": "Testo del pulsante principale",
+          "foreground": "#FFFFFF",
+          "background": "#B44922",
+          "ratio": 5.36,
+          "minimum": 4.5,
+          "pass": true
+        },
+        {
+          "usage": "Testo su superficie arancio chiaro",
+          "foreground": "#202124",
+          "background": "#FFE5D8",
+          "ratio": 13.38,
+          "minimum": 4.5,
+          "pass": true
+        },
+        {
+          "usage": "Arancio come dettaglio grafico su bianco",
+          "foreground": "#E56F32",
+          "background": "#FFFFFF",
+          "ratio": 3.16,
+          "minimum": 3,
+          "pass": true
+        }
+      ],
+      "palette_usage": "Bianco e grigio freddo per pagina e pannelli; carbone per il testo. L’arancio vivo è un accento grafico, mai testo piccolo su bianco. Il pulsante usa l’arancio scuro con testo bianco.",
+      "typography": {
+        "stack": "-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif",
+        "wordmark_weight": 600,
+        "body_weight": 400,
+        "heading_weight": 600,
+        "guidance": "Dimensioni generose, frasi brevi, titoli senza tutto maiuscolo; base 16 px, interlinea 1.5. I font sono quelli già presenti nel sistema, senza file esterni.",
+        "asset_note": "I wordmark SVG mantengono testo vivo e usano font di sistema: l’aspetto preciso varia fra sistemi. Prima di finalizzare un marchio si sceglie e si converte il carattere in tracciati con i diritti necessari."
+      },
+      "assets": {
+        "wordmark": "docs/branding/concepts/spazelia-wordmark.svg",
+        "icon": "docs/branding/concepts/spazelia-icon.svg"
+      },
+      "logo_usage": {
+        "minimum_icon_size_px": 32,
+        "clear_space": "Almeno 8 unità del disegno da 64 intorno al simbolo; nessun elemento dell’interfaccia deve entrare in quello spazio.",
+        "wordmark_minimum_width_px": 200,
+        "backgrounds": [
+          "Bianco",
+          "Trasparente su superficie grigia chiara"
+        ],
+        "avoid": [
+          "Verde o viola nella firma del marchio",
+          "Arancio saturo come sfondo di intere pagine o grandi report",
+          "Croci, scudi o icone mediche",
+          "Maiuscolo integrale e promesse di risparmio non misurate"
+        ]
+      }
+    },
+    {
+      "name": "Prontela",
+      "slug": "prontela",
+      "pronunciation": "pron-TÈ-la; nome breve, da testare per possibili trascrizioni alternative",
+      "roots": "Pronto + tela: un piano di lavoro preparato, che puoi completare.",
+      "personality": "Diretta, disponibile, concreta. Ti propone un passo chiaro senza pressarti.",
+      "descriptor": "L’assistente che prepara il prossimo passo.",
+      "secondary_promise": "Meno decisioni da prendere. Più cose pronte da seguire.",
+      "strengths": [
+        "Fa capire la preparazione delle azioni e la velocità d’uso.",
+        "Tre battute fonetiche semplici; adatto a bottoni, notifiche e passaparola.",
+        "Il tono funziona bene per le attività operative di uno studio."
+      ],
+      "risks": [
+        "Può sembrare il nome di una singola funzione più che di una piattaforma completa.",
+        "La radice “pronto” è frequente: il valore distintivo non va presunto prima delle ricerche."
+      ],
+      "tone": {
+        "homepage": "La tua giornata, con più spazio. Il prossimo passo è già pronto.",
+        "next_step": "Il preventivo è pronto da rivedere. Controlla importo e scadenza prima di continuare.",
+        "button": "Rivedi il prossimo passo"
+      },
+      "palette": {
+        "ink": "#202124",
+        "canvas": "#FFFFFF",
+        "surface": "#F4F5F6",
+        "muted_text": "#61646B",
+        "brand_orange": "#ED5A35",
+        "action_background": "#B84021",
+        "action_text": "#FFFFFF",
+        "warm_surface": "#FFE5D8"
+      },
+      "icon_concept": "Tre righe si accorciano verso un gesto di avanzamento: poche priorità, un passo evidente. Nessun segno di spunta implica un lavoro già verificato.",
+      "recommendation": "Terza direzione: la più operativa, da confrontare con Giorvia in un breve test di preferenza e comprensione.",
+      "contrast_checks": [
+        {
+          "usage": "Testo principale su bianco",
+          "foreground": "#202124",
+          "background": "#FFFFFF",
+          "ratio": 16.1,
+          "minimum": 4.5,
+          "pass": true
+        },
+        {
+          "usage": "Testo principale su superficie grigia",
+          "foreground": "#202124",
+          "background": "#F4F5F6",
+          "ratio": 14.75,
+          "minimum": 4.5,
+          "pass": true
+        },
+        {
+          "usage": "Testo secondario su bianco",
+          "foreground": "#61646B",
+          "background": "#FFFFFF",
+          "ratio": 5.93,
+          "minimum": 4.5,
+          "pass": true
+        },
+        {
+          "usage": "Testo secondario su superficie grigia",
+          "foreground": "#61646B",
+          "background": "#F4F5F6",
+          "ratio": 5.43,
+          "minimum": 4.5,
+          "pass": true
+        },
+        {
+          "usage": "Testo del pulsante principale",
+          "foreground": "#FFFFFF",
+          "background": "#B84021",
+          "ratio": 5.54,
+          "minimum": 4.5,
+          "pass": true
+        },
+        {
+          "usage": "Testo su superficie arancio chiaro",
+          "foreground": "#202124",
+          "background": "#FFE5D8",
+          "ratio": 13.38,
+          "minimum": 4.5,
+          "pass": true
+        },
+        {
+          "usage": "Arancio come dettaglio grafico su bianco",
+          "foreground": "#ED5A35",
+          "background": "#FFFFFF",
+          "ratio": 3.43,
+          "minimum": 3,
+          "pass": true
+        }
+      ],
+      "palette_usage": "Bianco e grigio freddo per pagina e pannelli; carbone per il testo. L’arancio vivo è un accento grafico, mai testo piccolo su bianco. Il pulsante usa l’arancio scuro con testo bianco.",
+      "typography": {
+        "stack": "-apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif",
+        "wordmark_weight": 600,
+        "body_weight": 400,
+        "heading_weight": 600,
+        "guidance": "Dimensioni generose, frasi brevi, titoli senza tutto maiuscolo; base 16 px, interlinea 1.5. I font sono quelli già presenti nel sistema, senza file esterni.",
+        "asset_note": "I wordmark SVG mantengono testo vivo e usano font di sistema: l’aspetto preciso varia fra sistemi. Prima di finalizzare un marchio si sceglie e si converte il carattere in tracciati con i diritti necessari."
+      },
+      "assets": {
+        "wordmark": "docs/branding/concepts/prontela-wordmark.svg",
+        "icon": "docs/branding/concepts/prontela-icon.svg"
+      },
+      "logo_usage": {
+        "minimum_icon_size_px": 32,
+        "clear_space": "Almeno 8 unità del disegno da 64 intorno al simbolo; nessun elemento dell’interfaccia deve entrare in quello spazio.",
+        "wordmark_minimum_width_px": 200,
+        "backgrounds": [
+          "Bianco",
+          "Trasparente su superficie grigia chiara"
+        ],
+        "avoid": [
+          "Verde o viola nella firma del marchio",
+          "Arancio saturo come sfondo di intere pagine o grandi report",
+          "Croci, scudi o icone mediche",
+          "Maiuscolo integrale e promesse di risparmio non misurate"
+        ]
+      }
+    }
+  ],
+  "asset_validation": {
+    "svg_files": 6,
+    "xml": "Tutti i sei file analizzati con un parser XML; title, desc e role=img presenti.",
+    "external_resources": 0,
+    "contrast_checks": 21,
+    "contrast_result": "Tutti superano la soglia indicata. Testo normale minimo 4.5:1; dettaglio grafico arancio minimo 3:1.",
+    "browser": "Chromium, viewport 1440 e 390 px; nessun errore JavaScript, nessuna fuoriuscita orizzontale o testo del wordmark tagliato.",
+    "preview": "La tavola HTML e le schermate sono locali nella cartella runtime; non cambiano il sito in produzione."
+  }
+}

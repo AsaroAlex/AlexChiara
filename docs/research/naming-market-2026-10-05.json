@@ -1,0 +1,798 @@
+{
+  "schema_version": 1,
+  "research_date": "2026-10-05",
+  "language": "it",
+  "workstream": "Naming, territorio di marca e posizionamento per Filo",
+  "target_segment": "Studi professionali e piccole imprese italiane di servizi",
+  "methodology": {
+    "provider": "Exa",
+    "search_calls": 3,
+    "search_results_requested": 18,
+    "sources_reviewed": 18,
+    "sources_reviewed_definition": "Somma dei numResults richiesti in tre ricerche (6+6+6), non numero di pagine lette o fonti validate.",
+    "fetch_calls": 1,
+    "fetch_url_requests": 8,
+    "fetch_urls_successful_unique": 8,
+    "new_sources_cited_unique": 8,
+    "reused_sources_cited_unique": 19,
+    "sources_cited_unique": 27,
+    "queries": [
+      {
+        "query": "Official Italian AI administrative assistant software small businesses management daily work email agenda invoicing saves time product brand",
+        "numResults": 6
+      },
+      {
+        "query": "Filo artificial intelligence assistant software app business productivity official company Filo",
+        "numResults": 6
+      },
+      {
+        "query": "Official Italian SME software names assistant Aida Sibill Reggi Genesy Fatture in Cloud Easyfatt TeamSystem management",
+        "numResults": 6
+      }
+    ],
+    "scope_limits": [
+      "Analisi delle pagine ufficiali e dei 19 prodotti già confrontati; nessuna prova di notorietà o classifica completa del mercato.",
+      "Nessuna ricerca primaria con potenziali clienti: le preferenze di pronuncia e memoria sono ipotesi da testare.",
+      "Domini, marchi e handle non sono dichiarati liberi da questa analisi; l’assenza di risultati di ricerca non prova disponibilità.",
+      "Le promesse dei concorrenti sono copy dichiarato, non prestazioni misurate."
+    ]
+  },
+  "market_landscape": [
+    {
+      "name": "Fatture in Cloud",
+      "family": "descrittivo di compito",
+      "lesson_for_filo": "Esplicita subito la fatturazione; limita semanticamente un prodotto che gestisce anche persone, progetti e priorità.",
+      "source_ids": [
+        "reused-fic-features"
+      ],
+      "interpretation": "Analisi editoriale della forma del nome; non è una misura di notorietà o preferenza utenti."
+    },
+    {
+      "name": "Danea Easyfatt",
+      "family": "beneficio + compito",
+      "lesson_for_filo": "Easy e fattura rendono chiaro il punto di ingresso amministrativo.",
+      "source_ids": [
+        "reused-easyfatt-features"
+      ],
+      "interpretation": "Analisi editoriale della forma del nome; non è una misura di notorietà o preferenza utenti."
+    },
+    {
+      "name": "Fattura24",
+      "family": "compito + continuità",
+      "lesson_for_filo": "Memorabile sul compito fattura; il numero evoca disponibilità continua.",
+      "source_ids": [
+        "reused-f24-home"
+      ],
+      "interpretation": "Analisi editoriale della forma del nome; non è una misura di notorietà o preferenza utenti."
+    },
+    {
+      "name": "TeamSystem Enterprise",
+      "family": "ombrello + segmento",
+      "lesson_for_filo": "Suono strutturato e aziendale, con sotto-marchio per il segmento.",
+      "source_ids": [
+        "reused-ts-enterprise"
+      ],
+      "interpretation": "Analisi editoriale della forma del nome; non è una misura di notorietà o preferenza utenti."
+    },
+    {
+      "name": "Zucchetti Tieni il Conto",
+      "family": "frase di azione",
+      "lesson_for_filo": "Italiano quotidiano: fa capire il risultato senza sigle tecniche.",
+      "source_ids": [
+        "reused-tic"
+      ],
+      "interpretation": "Analisi editoriale della forma del nome; non è una misura di notorietà o preferenza utenti."
+    },
+    {
+      "name": "Zucchetti Tieni il Conto PRO",
+      "family": "frase + livello",
+      "lesson_for_filo": "Aggiunge una gerarchia di piano a un nome già legato alla contabilità.",
+      "source_ids": [
+        "reused-tic-pro-help"
+      ],
+      "interpretation": "Analisi editoriale della forma del nome; non è una misura di notorietà o preferenza utenti."
+    },
+    {
+      "name": "Odoo",
+      "family": "nome astratto breve",
+      "lesson_for_filo": "Permette di estendere il marchio a molte applicazioni; il significato va insegnato.",
+      "source_ids": [
+        "reused-odoo-pricing"
+      ],
+      "interpretation": "Analisi editoriale della forma del nome; non è una misura di notorietà o preferenza utenti."
+    },
+    {
+      "name": "Zoho One",
+      "family": "ombrello + unità",
+      "lesson_for_filo": "Un nome di marca riutilizzabile e un descrittore che promette una suite.",
+      "source_ids": [
+        "reused-zoho-one-pricing"
+      ],
+      "interpretation": "Analisi editoriale della forma del nome; non è una misura di notorietà o preferenza utenti."
+    },
+    {
+      "name": "Zoho Books",
+      "family": "ombrello + compito",
+      "lesson_for_filo": "Rende riconoscibile l’ambito contabile entro un marchio più ampio.",
+      "source_ids": [
+        "reused-zoho-books-pricing"
+      ],
+      "interpretation": "Analisi editoriale della forma del nome; non è una misura di notorietà o preferenza utenti."
+    },
+    {
+      "name": "HubSpot Smart CRM + Sales Hub",
+      "family": "metafora di centralità + ambito",
+      "lesson_for_filo": "Hub e CRM indicano aggregazione e relazione commerciale.",
+      "source_ids": [
+        "reused-hubspot-sales"
+      ],
+      "interpretation": "Analisi editoriale della forma del nome; non è una misura di notorietà o preferenza utenti."
+    },
+    {
+      "name": "Pipedrive",
+      "family": "metafora di avanzamento",
+      "lesson_for_filo": "Evoca movimento del lavoro lungo una pipeline commerciale.",
+      "source_ids": [
+        "reused-pipedrive-activities"
+      ],
+      "interpretation": "Analisi editoriale della forma del nome; non è una misura di notorietà o preferenza utenti."
+    },
+    {
+      "name": "Bitrix24",
+      "family": "astratto + continuità",
+      "lesson_for_filo": "Può coprire diversi ambiti; il numero aggiunge l’idea di operatività costante.",
+      "source_ids": [
+        "reused-bitrix-pricing-eu"
+      ],
+      "interpretation": "Analisi editoriale della forma del nome; non è una misura di notorietà o preferenza utenti."
+    },
+    {
+      "name": "Superhuman Mail",
+      "family": "beneficio aspirazionale + ambito",
+      "lesson_for_filo": "Posizionamento energico di maggiore capacità personale, specificato con Mail.",
+      "source_ids": [
+        "reused-superhuman-pricing"
+      ],
+      "interpretation": "Analisi editoriale della forma del nome; non è una misura di notorietà o preferenza utenti."
+    },
+    {
+      "name": "Microsoft 365 Copilot in Outlook",
+      "family": "ombrello + compagno di lavoro",
+      "lesson_for_filo": "Copilot comunica affiancamento; i marchi preesistenti danno contesto.",
+      "source_ids": [
+        "reused-microsoft-priority"
+      ],
+      "interpretation": "Analisi editoriale della forma del nome; non è una misura di notorietà o preferenza utenti."
+    },
+    {
+      "name": "Google Workspace con Gemini in Gmail",
+      "family": "ambiente di lavoro + assistente",
+      "lesson_for_filo": "Workspace definisce lo spazio condiviso; Gemini è un nome personificabile separato.",
+      "source_ids": [
+        "reused-google-gmail-help"
+      ],
+      "interpretation": "Analisi editoriale della forma del nome; non è una misura di notorietà o preferenza utenti."
+    },
+    {
+      "name": "Front",
+      "family": "metafora di primo piano",
+      "lesson_for_filo": "Parola corta di ampia estensione, meno autoesplicativa in italiano.",
+      "source_ids": [
+        "reused-front-pricing"
+      ],
+      "interpretation": "Analisi editoriale della forma del nome; non è una misura di notorietà o preferenza utenti."
+    },
+    {
+      "name": "Missive",
+      "family": "metafora di comunicazione",
+      "lesson_for_filo": "Legame forte con messaggi e corrispondenza.",
+      "source_ids": [
+        "reused-missive-pricing"
+      ],
+      "interpretation": "Analisi editoriale della forma del nome; non è una misura di notorietà o preferenza utenti."
+    },
+    {
+      "name": "ClickUp",
+      "family": "azione + progresso",
+      "lesson_for_filo": "Nome energetico collegato a un gesto e a una direzione.",
+      "source_ids": [
+        "reused-clickup-pricing"
+      ],
+      "interpretation": "Analisi editoriale della forma del nome; non è una misura di notorietà o preferenza utenti."
+    },
+    {
+      "name": "Asana",
+      "family": "astratto evocativo",
+      "lesson_for_filo": "Nome ampio che sostiene attività diverse, con significato da costruire nel tempo.",
+      "source_ids": [
+        "reused-asana-pricing"
+      ],
+      "interpretation": "Analisi editoriale della forma del nome; non è una misura di notorietà o preferenza utenti."
+    },
+    {
+      "name": "FiloMail",
+      "family": "compito + metafora",
+      "lesson_for_filo": "Email, riepiloghi e attività: collisione molto vicina al prodotto attuale.",
+      "source_ids": [
+        "filomail"
+      ],
+      "interpretation": "Il posizionamento è dichiarato dal fornitore, non verificato come prestazione operativa."
+    },
+    {
+      "name": "Filo",
+      "family": "metafora di continuità",
+      "lesson_for_filo": "Assistente per riunioni e follow-up: ulteriore sovrapposizione di nome e beneficio.",
+      "source_ids": [
+        "usefilo"
+      ],
+      "interpretation": "Il posizionamento è dichiarato dal fornitore, non verificato come prestazione operativa."
+    },
+    {
+      "name": "Filo",
+      "family": "metafora di continuità",
+      "lesson_for_filo": "Assistente AI della conoscenza aziendale: terza collisione digitale diretta.",
+      "source_ids": [
+        "filo-sh"
+      ],
+      "interpretation": "Il posizionamento è dichiarato dal fornitore, non verificato come prestazione operativa."
+    },
+    {
+      "name": "Ditta",
+      "family": "parola italiana di impresa",
+      "lesson_for_filo": "Chiarezza immediata sul mondo aziendale; territorio descrittivo già occupato.",
+      "source_ids": [
+        "ditta"
+      ],
+      "interpretation": "Il posizionamento è dichiarato dal fornitore, non verificato come prestazione operativa."
+    },
+    {
+      "name": "Arya",
+      "family": "nome personificabile",
+      "lesson_for_filo": "Il personaggio/assistente con nome breve è già un territorio affollato.",
+      "source_ids": [
+        "arya"
+      ],
+      "interpretation": "Il posizionamento è dichiarato dal fornitore, non verificato come prestazione operativa."
+    },
+    {
+      "name": "MAITIME",
+      "family": "tempo + AI",
+      "lesson_for_filo": "Il risparmio di tempo e l’assistente AI sono promesse concorrenti già presenti.",
+      "source_ids": [
+        "maitime"
+      ],
+      "interpretation": "Il posizionamento è dichiarato dal fornitore, non verificato come prestazione operativa."
+    },
+    {
+      "name": "Hooney",
+      "family": "nome amichevole + metafora sensoriale",
+      "lesson_for_filo": "Un tono caldo e piacevole è già presente nei gestionali per professionisti; differenziare attraverso la prossima azione.",
+      "source_ids": [
+        "hooney"
+      ],
+      "interpretation": "Il posizionamento è dichiarato dal fornitore, non verificato come prestazione operativa."
+    },
+    {
+      "name": "TeamSystem Azienda",
+      "family": "ombrello + destinatario",
+      "lesson_for_filo": "Specificare il destinatario in un descrittore anziché chiudere il nome in un solo compito.",
+      "source_ids": [
+        "ts-azienda"
+      ],
+      "interpretation": "Il posizionamento è dichiarato dal fornitore, non verificato come prestazione operativa."
+    }
+  ],
+  "current_name_assessment": {
+    "name": "Filo",
+    "recommendation": "Cambiare il nome prima di investire nel lancio pubblico e nella registrazione del marchio.",
+    "reason": "Tre prodotti software ufficiali già usano Filo/FiloMail negli ambiti email e attività, riunioni e follow-up, conoscenza aziendale: sovrapposizione di nome e categoria molto vicina a Filo.",
+    "collision_source_ids": [
+      "filomail",
+      "usefilo",
+      "filo-sh"
+    ],
+    "legal_status": "Collisioni di uso commerciale osservate sul web, non valutazione legale definitiva dei diritti di marchio."
+  },
+  "naming_criteria": [
+    {
+      "criterion": "Distinguibilità nel software per il lavoro",
+      "priority": "alta",
+      "test": "Ricerca di omonimi e nomi simili, categorie adiacenti, marchi classi 9/42 e quando pertinente 35. Non basta il dominio libero."
+    },
+    {
+      "criterion": "Pronuncia e dettatura in italiano",
+      "priority": "alta",
+      "test": "Dire il nome una volta a persone del segmento, chiedere come lo scrivono e ripetono; non eseguito qui."
+    },
+    {
+      "criterion": "Estensione a tutte le funzioni",
+      "priority": "alta",
+      "test": "Il nome deve funzionare per email, clienti, incassi, progetti, agenda e altri moduli, senza legarsi a Mail o Fattura."
+    },
+    {
+      "criterion": "Promessa di spazio e azione",
+      "priority": "alta",
+      "test": "Il significato deve sostenere più tempo e il prossimo passo già chiaro, preferenze esplicite dell’utente."
+    },
+    {
+      "criterion": "Fiducia professionale e tono umano",
+      "priority": "media",
+      "test": "Evita impersonale burocratese, aggressività e associazioni ospedaliere; gioia sobria e controllo umano."
+    },
+    {
+      "criterion": "Digitabilità e sistema di domini",
+      "priority": "alta",
+      "test": "Nome senza accenti, trattini e numeri; idealmente 6–9 lettere con .it e .com coerenti e handle uniformi."
+    },
+    {
+      "criterion": "Durata oltre la tecnologia corrente",
+      "priority": "media",
+      "test": "AI resta una descrizione funzionale; non inserirla obbligatoriamente nel nome primario."
+    }
+  ],
+  "positioning": {
+    "primary_buyer": "Titolare, professionista o persona di segreteria che coordina il lavoro quotidiano.",
+    "job_to_be_done": "Aprire la giornata, capire subito cosa viene prima e portare avanti attività e documenti con pochi passaggi.",
+    "recommended_descriptor": "L’assistente operativo per studi e piccole imprese.",
+    "primary_payoff": "La tua giornata, con più spazio.",
+    "supporting_promise": "Il prossimo passo, già pronto.",
+    "reason_to_believe": [
+      "Priorità e scadenze visibili nella dashboard.",
+      "Passaggi suggeriti specifici per ciascun modulo, con progresso segnato dall’utente.",
+      "Dati riutilizzati nei documenti e nelle attività collegate."
+    ],
+    "honest_product_language": "Le funzioni collegate a provider esterni vanno promesse solo quando configurate e operative; il marchio non deve suggerire automatismi già disponibili per ogni integrazione.",
+    "visual_direction": "Bianco caldo, carbone e grigi neutri con un accento mandarino controllato; spazio ampio, gerarchia chiara, energia calma.",
+    "avoid": [
+      "Verde e viola, esplicitamente rifiutati dall’utente.",
+      "Marchi infantili o sanitari per un prodotto che gestisce attività professionali.",
+      "Promesse di rimpiazzo dei dipendenti o risparmio garantito senza dati.",
+      "Claim di leadership non dimostrati."
+    ]
+  },
+  "candidate_names": [
+    {
+      "name": "Giorvia",
+      "normalized": "giorvia",
+      "letters": 7,
+      "pronunciation_it": "gior-vì-a",
+      "syllables_it": 3,
+      "creative_etymology": "giorno + via",
+      "tagline": "La tua giornata, con più spazio.",
+      "rationale": "La prossima azione del giorno è evidente; copre email, agenda e lavoro amministrativo senza citare un singolo modulo.",
+      "tradeoff": "Accento non scritto: verificare che venga ripetuto e digitato correttamente al primo ascolto.",
+      "semantic_shortlist_tier": "prioritaria",
+      "availability_status": "non verificata in questo filone; verifiche domini, marchi e account social delegate ad altri filoni",
+      "originality_status": "Proposta creativa originale del team; non implica esclusività commerciale o assenza di omonimi."
+    },
+    {
+      "name": "Ordivela",
+      "normalized": "ordivela",
+      "letters": 8,
+      "pronunciation_it": "or-di-vé-la",
+      "syllables_it": 4,
+      "creative_etymology": "ordine + vela",
+      "tagline": "Il lavoro prende la direzione giusta.",
+      "rationale": "Unisce organizzazione e avanzamento con un’immagine leggera, professionale e applicabile ai 23 moduli.",
+      "tradeoff": "Otto lettere e quattro sillabe: meno immediato di un nome di due sillabe; la metafora nautica va tenuta sobria.",
+      "semantic_shortlist_tier": "prioritaria",
+      "availability_status": "non verificata in questo filone; verifiche domini, marchi e account social delegate ad altri filoni",
+      "originality_status": "Proposta creativa originale del team; non implica esclusività commerciale o assenza di omonimi."
+    },
+    {
+      "name": "Spazelia",
+      "normalized": "spazelia",
+      "letters": 8,
+      "pronunciation_it": "spa-zè-lia",
+      "syllables_it": 3,
+      "creative_etymology": "spazio + finale personale",
+      "tagline": "Più spazio alle cose che contano.",
+      "rationale": "È il nome più vicino al beneficio emotivo già apprezzato: alleggerire la giornata e ritrovare tempo.",
+      "tradeoff": "La pronuncia della z e la somiglianza a spaziale possono produrre varianti ortografiche: serve un test di dettatura.",
+      "semantic_shortlist_tier": "prioritaria",
+      "availability_status": "non verificata in questo filone; verifiche domini, marchi e account social delegate ad altri filoni",
+      "originality_status": "Proposta creativa originale del team; non implica esclusività commerciale o assenza di omonimi."
+    },
+    {
+      "name": "Prontela",
+      "normalized": "prontela",
+      "letters": 8,
+      "pronunciation_it": "pron-tè-la",
+      "syllables_it": 3,
+      "creative_etymology": "pronto + finale personale",
+      "tagline": "Il prossimo passo, già pronto.",
+      "rationale": "Comunica preparazione, iniziativa e riduzione dello sforzo di decidere da dove partire.",
+      "tradeoff": "Va verificata la confusione con pronta, prontella o Pronto; il tono può diventare troppo vezzeggiativo.",
+      "semantic_shortlist_tier": "prioritaria",
+      "availability_status": "non verificata in questo filone; verifiche domini, marchi e account social delegate ad altri filoni",
+      "originality_status": "Proposta creativa originale del team; non implica esclusività commerciale o assenza di omonimi."
+    },
+    {
+      "name": "Largiva",
+      "normalized": "largiva",
+      "letters": 7,
+      "pronunciation_it": "lar-gì-va",
+      "syllables_it": 3,
+      "creative_etymology": "largo + attiva",
+      "tagline": "Fai spazio alla tua giornata.",
+      "rationale": "Evoca respiro e lavoro che procede, con buona estensione a servizi e funzioni diverse.",
+      "tradeoff": "Può richiamare elargiva: l’associazione va controllata con persone del segmento, non solo giudicata internamente.",
+      "semantic_shortlist_tier": "prioritaria",
+      "availability_status": "non verificata in questo filone; verifiche domini, marchi e account social delegate ad altri filoni",
+      "originality_status": "Proposta creativa originale del team; non implica esclusività commerciale o assenza di omonimi."
+    },
+    {
+      "name": "Tenvia",
+      "normalized": "tenvia",
+      "letters": 6,
+      "pronunciation_it": "ten-vì-a",
+      "syllables_it": 3,
+      "creative_etymology": "tempo + via",
+      "tagline": "Una direzione chiara per ogni giornata.",
+      "rationale": "Breve, semplice da scrivere e utilizzabile come marchio ampio.",
+      "tradeoff": "Il legame con tempo è debole e la semantica non è immediata: richiede più spiegazione.",
+      "semantic_shortlist_tier": "riserva",
+      "availability_status": "non verificata in questo filone; verifiche domini, marchi e account social delegate ad altri filoni",
+      "originality_status": "Proposta creativa originale del team; non implica esclusività commerciale o assenza di omonimi."
+    },
+    {
+      "name": "Ordavia",
+      "normalized": "ordavia",
+      "letters": 7,
+      "pronunciation_it": "or-dà-via",
+      "syllables_it": 3,
+      "creative_etymology": "ordine + via",
+      "tagline": "Le priorità trovano la loro strada.",
+      "rationale": "Concreto sulla guida e sull’ordine, senza limitare il prodotto alla posta o alle fatture.",
+      "tradeoff": "Vicinanza sonora ad altri nomi in -via e ad Ordivela: controllare possibili marchi simili e memoria spontanea.",
+      "semantic_shortlist_tier": "riserva",
+      "availability_status": "non verificata in questo filone; verifiche domini, marchi e account social delegate ad altri filoni",
+      "originality_status": "Proposta creativa originale del team; non implica esclusività commerciale o assenza di omonimi."
+    },
+    {
+      "name": "Temelia",
+      "normalized": "temelia",
+      "letters": 7,
+      "pronunciation_it": "te-mè-lia",
+      "syllables_it": 3,
+      "creative_etymology": "tempo + idea di base stabile",
+      "tagline": "Più tempo, meno cose da rincorrere.",
+      "rationale": "Suono morbido e professionale, con un beneficio ampio che non dipende dalla tecnologia utilizzata.",
+      "tradeoff": "Può sembrare un nome di persona o di benessere; l’applicazione aziendale deve comparire nel descrittore.",
+      "semantic_shortlist_tier": "riserva",
+      "availability_status": "non verificata in questo filone; verifiche domini, marchi e account social delegate ad altri filoni",
+      "originality_status": "Proposta creativa originale del team; non implica esclusività commerciale o assenza di omonimi."
+    },
+    {
+      "name": "Operiva",
+      "normalized": "operiva",
+      "letters": 7,
+      "pronunciation_it": "o-pe-rì-va",
+      "syllables_it": 4,
+      "creative_etymology": "operatività + attiva",
+      "tagline": "Dal da fare al fatto.",
+      "rationale": "Il più orientato al lavoro d’impresa: utile se si desidera un tono operativo e sobrio.",
+      "tradeoff": "Meno personale e gioioso; potrebbe risultare simile a marchi costruiti su Opera/Operativo.",
+      "semantic_shortlist_tier": "riserva",
+      "availability_status": "non verificata in questo filone; verifiche domini, marchi e account social delegate ad altri filoni",
+      "originality_status": "Proposta creativa originale del team; non implica esclusività commerciale o assenza di omonimi."
+    },
+    {
+      "name": "Semplora",
+      "normalized": "semplora",
+      "letters": 8,
+      "pronunciation_it": "sem-plò-ra",
+      "syllables_it": 3,
+      "creative_etymology": "semplice + ora",
+      "tagline": "Ogni giornata diventa più semplice.",
+      "rationale": "Leggibile in italiano e coerente con velocità, accessibilità e minori passaggi.",
+      "tradeoff": "Promessa molto diffusa e nome più lungo; verificare eventuali varianti di dettatura, per esempio Semprora.",
+      "semantic_shortlist_tier": "riserva",
+      "availability_status": "non verificata in questo filone; verifiche domini, marchi e account social delegate ad altri filoni",
+      "originality_status": "Proposta creativa originale del team; non implica esclusività commerciale o assenza di omonimi."
+    },
+    {
+      "name": "Avviora",
+      "normalized": "avviora",
+      "letters": 7,
+      "pronunciation_it": "av-viò-ra",
+      "syllables_it": 3,
+      "creative_etymology": "avvio + ora",
+      "tagline": "Sai subito da dove partire.",
+      "rationale": "Ottimo per la funzione proattiva di suggerire l’azione successiva senza una lunga configurazione.",
+      "tradeoff": "La doppia v può complicare la dettatura; avviare mette l’accento sull’inizio più che sul completamento.",
+      "semantic_shortlist_tier": "riserva",
+      "availability_status": "non verificata in questo filone; verifiche domini, marchi e account social delegate ad altri filoni",
+      "originality_status": "Proposta creativa originale del team; non implica esclusività commerciale o assenza di omonimi."
+    },
+    {
+      "name": "Tempiva",
+      "normalized": "tempiva",
+      "letters": 7,
+      "pronunciation_it": "tem-pì-va",
+      "syllables_it": 3,
+      "creative_etymology": "tempo + attiva",
+      "tagline": "Il tuo tempo torna a lavorare per te.",
+      "rationale": "Rende visibile il beneficio di tempo disponibile e attività che procedono.",
+      "tradeoff": "Vicino a temporale e tempestiva; evitare claim automatici di ore risparmiate senza misurazione.",
+      "semantic_shortlist_tier": "riserva",
+      "availability_status": "non verificata in questo filone; verifiche domini, marchi e account social delegate ad altri filoni",
+      "originality_status": "Proposta creativa originale del team; non implica esclusività commerciale o assenza di omonimi."
+    },
+    {
+      "name": "Spaziva",
+      "normalized": "spaziva",
+      "letters": 7,
+      "pronunciation_it": "spa-zì-va",
+      "syllables_it": 3,
+      "creative_etymology": "spazio + attiva",
+      "tagline": "Più spazio, un passo alla volta.",
+      "rationale": "Ampio, breve ed energico; conserva la promessa di spazio senza nominare un solo servizio.",
+      "tradeoff": "La z può cambiare suono tra persone e il finale può sembrare tecnico: testare percezione e pronuncia.",
+      "semantic_shortlist_tier": "riserva",
+      "availability_status": "non verificata in questo filone; verifiche domini, marchi e account social delegate ad altri filoni",
+      "originality_status": "Proposta creativa originale del team; non implica esclusività commerciale o assenza di omonimi."
+    }
+  ],
+  "excluded_or_lower_priority": [
+    {
+      "name": "Filo",
+      "reason": "Collisioni ufficiali molto vicine alla categoria."
+    },
+    {
+      "name": "Allevia",
+      "reason": "Parola legata al sollievo, con associazione sanitaria/benessere poco coerente con le preferenze esplicite dell’utente; non è un giudizio di disponibilità."
+    },
+    {
+      "name": "Svolia",
+      "reason": "Può richiamare svogliata, riducendo energia e affidabilità percepita; non testato con utenti."
+    },
+    {
+      "name": "Lumora / Allegra",
+      "reason": "Evitati nella proposta creativa per genericità e territorio evocativo affollato; qui non si dichiara uno specifico stato di disponibilità."
+    }
+  ],
+  "next_validation": [
+    "Integrare esiti puntuali dei registri dei domini con data/ora e distinzione tra non registrato, registrato e risposta non disponibile.",
+    "Integrare una ricerca preliminare di marchi e usi simili; far valutare i finalisti prima del deposito.",
+    "Preferire la coppia .it/.com per il nome principale, con handle coerenti quando effettivamente verificabili.",
+    "Eseguire un piccolo test qualitativo di dettatura, ricordo e comprensione con persone del segmento, senza chiamarlo statistico."
+  ],
+  "sources": [
+    {
+      "id": "reused-fic-features",
+      "url": "https://www.fattureincloud.it/software-fatturazione/caratteristiche/",
+      "quality": "official_reused",
+      "title": "Software gestionale cloud e fatturazione: funzionalità",
+      "origin_snapshot": "italian-competitors.json",
+      "verification": "Fonte ufficiale già validata nel confronto competitivo del 5 ottobre 2026; non rifetched in questo filone.",
+      "excerpt": "Una volta approvati, li converti immediatamente in fatture o ordini. ... Tutte le scadenze imminenti ti vengono notificate nella pagina principale."
+    },
+    {
+      "id": "reused-easyfatt-features",
+      "url": "https://www.danea.it/software/easyfatt/caratteristiche/",
+      "quality": "official_reused",
+      "title": "Caratteristiche Easyfatt",
+      "origin_snapshot": "italian-competitors.json",
+      "verification": "Fonte ufficiale già validata nel confronto competitivo del 5 ottobre 2026; non rifetched in questo filone.",
+      "excerpt": "Procedure automatizzate di trasformazione documenti (ad es.: trasformazione del preventivo in fattura, oppure creazione fatture dai DDT del mese). ... Gestione fatture ricorrenti per assistenze, canoni, etc."
+    },
+    {
+      "id": "reused-f24-home",
+      "url": "https://www.fattura24.com/",
+      "quality": "official_reused",
+      "title": "Dalla prima fattura al controllo totale",
+      "origin_snapshot": "italian-competitors.json",
+      "verification": "Fonte ufficiale già validata nel confronto competitivo del 5 ottobre 2026; non rifetched in questo filone.",
+      "excerpt": "Pianifica il tuo budget annuale e confrontalo con i risultati che stai ottenendo. ... Con le API pubbliche colleghi Fattura24 ai software che usi già."
+    },
+    {
+      "id": "reused-ts-enterprise",
+      "url": "https://www.teamsystem.com/aziende/enterprise/",
+      "quality": "official_reused",
+      "title": "Software Gestionale ERP per Aziende potenziato dall'AI",
+      "origin_snapshot": "italian-competitors.json",
+      "verification": "Fonte ufficiale già validata nel confronto competitivo del 5 ottobre 2026; non rifetched in questo filone.",
+      "excerpt": "Ogni piccola azienda può ... configurare il desktop a proprio piacimento, creare dei percorsi preferenziali per avere sempre disponibili le funzioni più utilizzate. ... il prezzo viene definito in base alle esigenze specifiche dell’impresa."
+    },
+    {
+      "id": "reused-tic",
+      "url": "https://www.zucchetti.it/it/cms/professionisti/contabilita-fisco-finanza/fatturazione-elettronica/tieni-il-conto/software-fatturazione-elettronica.html",
+      "quality": "official_reused",
+      "title": "Software Fatturazione Elettronica per Commercialisti",
+      "origin_snapshot": "italian-competitors.json",
+      "verification": "Fonte ufficiale già validata nel confronto competitivo del 5 ottobre 2026; non rifetched in questo filone.",
+      "excerpt": "Alert automatici in presenza di fatture in scadenza, scartate, errate o in caso di superamento di determinate soglie di fatturazione. ... Grafici intuitivi per monitorare i flussi di cassa e pianificare delle entrate e uscite future."
+    },
+    {
+      "id": "reused-tic-pro-help",
+      "url": "https://help.zucchetti.it/dms/ticpro/help/sam/ticpro_standard/pages/intro_ticpro.html",
+      "quality": "official_reused",
+      "title": "Tieni il Conto PRO - introduzione",
+      "origin_snapshot": "italian-competitors.json",
+      "verification": "Fonte ufficiale già validata nel confronto competitivo del 5 ottobre 2026; non rifetched in questo filone.",
+      "excerpt": "Al primo accesso, una procedura guidata accompagna passo passo l'utente ... è possibile importare facilmente le anagrafiche clienti, fornitori e articoli direttamente da un foglio di calcolo. ... ricerca diretta della funzionalità desiderata ... cronologia delle scelte più utilizzate."
+    },
+    {
+      "id": "reused-odoo-pricing",
+      "url": "https://www.odoo.com/it_IT/pricing",
+      "quality": "official_reused",
+      "title": "Tariffe Odoo",
+      "origin_snapshot": "suite-competitors.json",
+      "verification": "Fonte ufficiale già validata nel confronto competitivo del 5 ottobre 2026; non rifetched in questo filone.",
+      "excerpt": "/per utente/al mese"
+    },
+    {
+      "id": "reused-zoho-one-pricing",
+      "url": "https://www.zoho.com/it/one/pricing/",
+      "quality": "official_reused",
+      "title": "Zoho One pricing (fetched content in German)",
+      "origin_snapshot": "suite-competitors.json",
+      "verification": "Fonte ufficiale già validata nel confronto competitivo del 5 ottobre 2026; non rifetched in questo filone.",
+      "excerpt": "Lizenz muss für ALLE Mitarbeiter erworben werden"
+    },
+    {
+      "id": "reused-zoho-books-pricing",
+      "url": "https://www.zoho.com/books/pricing/",
+      "quality": "official_reused",
+      "title": "Pricing | Zoho Books (USA edition)",
+      "origin_snapshot": "suite-competitors.json",
+      "verification": "Fonte ufficiale già validata nel confronto competitivo del 5 ottobre 2026; non rifetched in questo filone.",
+      "excerpt": "STANDARD ... $15"
+    },
+    {
+      "id": "reused-hubspot-sales",
+      "url": "https://www.hubspot.com/products/sales",
+      "quality": "official_reused",
+      "title": "AI Sales Software for Pipeline & Closed Deals",
+      "origin_snapshot": "suite-competitors.json",
+      "verification": "Fonte ufficiale già validata nel confronto competitivo del 5 ottobre 2026; non rifetched in questo filone.",
+      "excerpt": "Guide sellers in a workspace that surfaces leads, deals, tasks, and next best actions with smart queues and daily action summaries."
+    },
+    {
+      "id": "reused-pipedrive-activities",
+      "url": "https://support.pipedrive.com/en/article/activities",
+      "quality": "official_reused",
+      "title": "Activities",
+      "origin_snapshot": "suite-competitors.json",
+      "verification": "Fonte ufficiale già validata nel confronto competitivo del 5 ottobre 2026; non rifetched in questo filone.",
+      "excerpt": "You can link activities to people, organizations, leads, deals or projects to keep a clear view of what's next."
+    },
+    {
+      "id": "reused-bitrix-pricing-eu",
+      "url": "https://www.bitrix24.eu/prices/",
+      "quality": "official_reused",
+      "title": "Bitrix24 plans and pricing",
+      "origin_snapshot": "suite-competitors.json",
+      "verification": "Fonte ufficiale già validata nel confronto competitivo del 5 ottobre 2026; non rifetched in questo filone.",
+      "excerpt": "Each of our plans has a fixed price and a user limit."
+    },
+    {
+      "id": "reused-superhuman-pricing",
+      "url": "https://superhuman.com/plans/mail",
+      "quality": "official_reused",
+      "title": "Superhuman Mail",
+      "origin_snapshot": "productivity-competitors.json",
+      "verification": "Fonte ufficiale già validata nel confronto competitivo del 5 ottobre 2026; non rifetched in questo filone.",
+      "excerpt": "$25 USD per member / month, billed annually; $33 USD per member / month, billed annually."
+    },
+    {
+      "id": "reused-microsoft-priority",
+      "url": "https://support.microsoft.com/en-us/topic/prioritize-my-inbox-65e37040-2c90-4ee3-86d9-e95d5ba0e3cb",
+      "quality": "official_reused",
+      "title": "Microsoft 365 Copilot in Outlook",
+      "origin_snapshot": "productivity-competitors.json",
+      "verification": "Fonte ufficiale già validata nel confronto competitivo del 5 ottobre 2026; non rifetched in questo filone.",
+      "excerpt": "Copilot does not go back and re-evaluate or change the priorities of mail you've already received."
+    },
+    {
+      "id": "reused-google-gmail-help",
+      "url": "https://support.google.com/mail/answer/14199860?hl=it",
+      "quality": "official_reused",
+      "title": "Google Workspace con Gemini in Gmail",
+      "origin_snapshot": "productivity-competitors.json",
+      "verification": "Fonte ufficiale già validata nel confronto competitivo del 5 ottobre 2026; non rifetched in questo filone.",
+      "excerpt": "Riassumi: sintetizza lunghi thread di email in elenchi puntati concisi. Cerca: trova dettagli specifici."
+    },
+    {
+      "id": "reused-front-pricing",
+      "url": "https://front.com/pricing",
+      "quality": "official_reused",
+      "title": "Front",
+      "origin_snapshot": "productivity-competitors.json",
+      "verification": "Fonte ufficiale già validata nel confronto competitivo del 5 ottobre 2026; non rifetched in questo filone.",
+      "excerpt": "The Starter plan only supports a single channel type of Email, Front Chat, or SMS."
+    },
+    {
+      "id": "reused-missive-pricing",
+      "url": "https://missiveapp.com/pricing",
+      "quality": "official_reused",
+      "title": "Missive",
+      "origin_snapshot": "productivity-competitors.json",
+      "verification": "Fonte ufficiale già validata nel confronto competitivo del 5 ottobre 2026; non rifetched in questo filone.",
+      "excerpt": "Starter. 14. per user/month. Billed yearly."
+    },
+    {
+      "id": "reused-clickup-pricing",
+      "url": "https://clickup.com/pricing",
+      "quality": "official_reused",
+      "title": "ClickUp",
+      "origin_snapshot": "productivity-competitors.json",
+      "verification": "Fonte ufficiale già validata nel confronto competitivo del 5 ottobre 2026; non rifetched in questo filone.",
+      "excerpt": "unlimited yearly price:$7 Per user/month, billed yearly unlimited monthly price:$10 Per user/month, billed monthly"
+    },
+    {
+      "id": "reused-asana-pricing",
+      "url": "https://asana.com/pricing",
+      "quality": "official_reused",
+      "title": "Asana",
+      "origin_snapshot": "productivity-competitors.json",
+      "verification": "Fonte ufficiale già validata nel confronto competitivo del 5 ottobre 2026; non rifetched in questo filone.",
+      "excerpt": "For one or two people managing personal projects. Custom templates. Recurring tasks."
+    },
+    {
+      "id": "filomail",
+      "url": "https://www.filomail.com/",
+      "quality": "official_product",
+      "title": "FiloMail",
+      "verification": "Pagina ufficiale letta con Exa web_fetch_exa il 5 ottobre 2026; estratto verificato nel testo restituito.",
+      "excerpt": "Find every task from your email, apps and life; remind you, and get it done."
+    },
+    {
+      "id": "usefilo",
+      "url": "https://usefilo.app/",
+      "quality": "official_product",
+      "title": "Filo",
+      "verification": "Pagina ufficiale letta con Exa web_fetch_exa il 5 ottobre 2026; estratto verificato nel testo restituito.",
+      "excerpt": "A simple and beautiful meeting assistant designed to help you turn calls into clear next steps"
+    },
+    {
+      "id": "filo-sh",
+      "url": "https://www.filo.sh/",
+      "quality": "official_product",
+      "title": "Filo",
+      "verification": "Pagina ufficiale letta con Exa web_fetch_exa il 5 ottobre 2026; estratto verificato nel testo restituito.",
+      "excerpt": "Ask questions. Get answers. Stay in Slack."
+    },
+    {
+      "id": "ditta",
+      "url": "https://ditta.io/",
+      "quality": "official_product",
+      "title": "Ditta",
+      "verification": "Pagina ufficiale letta con Exa web_fetch_exa il 5 ottobre 2026; estratto verificato nel testo restituito.",
+      "excerpt": "Una sola piattaforma per portare l'AI in tutta l'azienda."
+    },
+    {
+      "id": "arya",
+      "url": "https://arya.so/",
+      "quality": "official_product",
+      "title": "Arya",
+      "verification": "Pagina ufficiale letta con Exa web_fetch_exa il 5 ottobre 2026; estratto verificato nel testo restituito.",
+      "excerpt": "Il sistema operativo della tua impresa."
+    },
+    {
+      "id": "maitime",
+      "url": "https://maitime.ai/",
+      "quality": "official_product",
+      "title": "MAITIME",
+      "verification": "Pagina ufficiale letta con Exa web_fetch_exa il 5 ottobre 2026; estratto verificato nel testo restituito.",
+      "excerpt": "Chiedimi qualsiasi cosa. Sono MAITIME, l'AI che aiuta le piccole imprese a crescere."
+    },
+    {
+      "id": "hooney",
+      "url": "https://www.hooney.it/",
+      "quality": "official_product",
+      "title": "Hooney",
+      "verification": "Pagina ufficiale letta con Exa web_fetch_exa il 5 ottobre 2026; estratto verificato nel testo restituito.",
+      "excerpt": "Gestisci con semplicità, lavora con gusto!"
+    },
+    {
+      "id": "ts-azienda",
+      "url": "https://www.teamsystem.com/commercialisti/teamsystem-azienda/",
+      "quality": "official_product",
+      "title": "TeamSystem Azienda",
+      "verification": "Pagina ufficiale letta con Exa web_fetch_exa il 5 ottobre 2026; estratto verificato nel testo restituito.",
+      "excerpt": "La soluzione gestionale per la piccola e media impresa"
+    }
+  ]
+}

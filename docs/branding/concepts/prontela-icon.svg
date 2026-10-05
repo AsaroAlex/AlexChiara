@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="prontela-icon-title prontela-icon-desc">
+<title id="prontela-icon-title">Simbolo Prontela</title>
+<desc id="prontela-icon-desc">Tre righe si accorciano verso un gesto di avanzamento: poche priorità, un passo evidente. Nessun segno di spunta implica un lavoro già verificato.</desc>
+<path d="M11 16H36M11 31H30M11 46H24" fill="none" stroke="#202124" stroke-width="6" stroke-linecap="round"/><path d="M43 23L52 32L43 41" fill="none" stroke="#ED5A35" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
