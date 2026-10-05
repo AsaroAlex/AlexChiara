@@ -14,6 +14,9 @@ from fastapi.staticfiles import StaticFiles
 
 from . import ai
 from .agenda import agenda_summary, create_agenda_router
+from .business import business_summary, create_business_router
+from .business_catalog import list_services
+from .business_chat import propose_business_service
 from .briefing import mailbox_scope
 from .real_data import real_data_only, visible_service, workspace_data
 from .watches import build_watch_summary, create_watches_router, propose_watch
@@ -23,11 +26,7 @@ from .db import Database, iso_now
 from .models import Action, Activation, ChatInput, CompanyInput, DemoFailure, Preferences
 from .service import Scheduler
 
-CATALOG = [
-    {"id": "priority-email", "name": "Risposte ai clienti prioritari", "category": "Email", "available": True, "status": "available", "description": "Controlla ogni giorno le richieste in attesa e prepara bozze da verificare."},
-    {"id": "agenda", "name": "Calendario collegato", "category": "Agenda", "available": False, "status": "coming_soon", "description": "In arrivo: sincronizzazione automatica del calendario. L'agenda manuale è già nella panoramica."},
-    {"id": "social", "name": "Contenuti social", "category": "Social", "available": False, "status": "coming_soon", "description": "In arrivo. La pubblicazione sui social non è disponibile."},
-]
+CATALOG = list_services()
 
 
 def create_workspace_app(data_dir=None, start_worker=True):
@@ -51,6 +50,7 @@ def create_workspace_app(data_dir=None, start_worker=True):
     app.state.runtime = runtime
     app.include_router(create_agenda_router(db))
     app.include_router(create_watches_router(db))
+    app.include_router(create_business_router(db))
     allowed_hosts = {"127.0.0.1", "localhost", "::1", "testserver"}
     allowed_hosts.update(host.strip().lower() for host in os.environ.get("ALEXCHIARA_ALLOWED_HOSTS", "").split(",") if host.strip())
 
@@ -119,12 +119,14 @@ def create_workspace_app(data_dir=None, start_worker=True):
             "real_data_only": real_data_only(),
             "watches": build_watch_summary(db),
             "agenda": agenda_summary(db),
+            "business": business_summary(db),
             "limitations": [
                 "Ogni account ha uno spazio separato: il server deve restare attivo per i controlli programmati.",
                 "La posta collegata viene letta senza inviare email o modificare la casella.",
                 "Le bozze richiedono revisione umana: approvarle le segna come verificate, senza inviarle.",
                 "Le bozze usano regole locali e richiedono revisione umana.",
-                "L'agenda contiene solo gli appuntamenti aggiunti da te. Calendario collegato e social sono in programma.",
+                "I servizi aziendali usano i dati inseriti da te e preparano documenti locali da rivedere.",
+                "Calendario esterno, SDI, banche, invio PEC e telefonia richiedono integrazioni dedicate.",
             ],
         }
         response = JSONResponse(result)
@@ -144,14 +146,17 @@ def create_workspace_app(data_dir=None, start_worker=True):
         watch = propose_watch(db, payload.message)
         if watch:
             return {"supported": bool(watch.get("watch_suggestion")), "service_id": None, **watch}
+        business = propose_business_service(payload.message)
+        if business:
+            return business
         message = payload.message.lower()
         send_requested = bool(re.search(r"\b(invia|inviare|inviami|inviate|manda|mandare|spedisci|send)\b", message))
         is_email = any(word in message for word in ("email", "e-mail", "posta", "client", "preventiv", "prioritar", "bozz"))
         future_service = any(word in message for word in ("agenda", "appuntament", "calendario", "social", "instagram", "facebook"))
         if future_service and not is_email:
-            return {"supported": False, "reply": "Ti propongo di iniziare dalla panoramica: puoi aggiungere i tuoi appuntamenti e scaricare l'ordine del giorno. Il calendario collegato e i social sono in arrivo. Posso anche aiutarti a configurare un controllo quotidiano delle email importanti e le bozze da verificare.", "service_id": None}
+            return {"supported": False, "reply": "Puoi aggiungere gli appuntamenti dalla panoramica e scaricare l'ordine del giorno. Per sincronizzare un calendario esterno serve ancora un'integrazione dedicata. Nel catalogo trovi anche verbali e attività delle riunioni.", "service_id": None}
         if not is_email:
-            return {"supported": False, "reply": "Posso aiutarti con le risposte ai clienti prioritari: dimmi quali contatti seguire e a che ora controllare la posta ogni giorno.", "service_id": None}
+            return {"supported": False, "reply": "Dimmi cosa vuoi organizzare: email, preventivi, incassi, acquisti, commesse, scadenze o documenti. Ti propongo il servizio da aprire, poi inserisci i dati della tua attività.", "service_id": None}
         service = visible_service(db)
         preferences = {key: service[key] for key in ("priority_contacts", "hour", "minute", "timezone")}
         hour_match = re.search(r"\balle\s+(\d{1,2})(?:[:.](\d{2}))?\b", message)

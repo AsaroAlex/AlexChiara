@@ -581,3 +581,137 @@ dialog::backdrop { background: #20212455; backdrop-filter: blur(5px); }
   .mail-dialog-body .dialog-actions, #mail-confirm-dialog .dialog-actions { flex-direction: column-reverse; }
   .mail-dialog-body .dialog-actions .button, #mail-confirm-dialog .dialog-actions .button { width: 100%; }
 }
+
+/* A focused workspace for the real activities of a small business. */
+.business-priorities { padding: 24px; min-width: 0; overflow-wrap: anywhere; }
+.business-priorities .card-title-row { align-items: center; flex-wrap: wrap; gap: 4px 16px; }
+.business-priorities .card-title-row h2 { font-size: 20px; }
+.business-priorities-summary, #business-priorities-summary { margin-top: 7px; }
+.business-next-actions { display: grid; margin-top: 12px; }
+.business-next-action { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 18px 0; border-top: 1px solid var(--line); }
+.business-next-action:first-child { border-top: 0; }
+.business-next-action:last-child { padding-bottom: 0; }
+.business-next-action > div { min-width: 0; }
+.business-next-action > .button { flex-shrink: 0; font-size: 12px; }
+.business-next-action h3 { font-size: 15px; margin-top: 8px; overflow-wrap: anywhere; }
+.business-next-step { margin-top: 8px; font-size: 13px; color: var(--ink); }
+.business-summary-empty { padding: 16px 0 0; }
+.business-summary-empty p { margin-top: 6px; font-size: 13px; }
+.business-summary-empty .button { margin-top: 14px; font-size: 13px; }
+.business-existing-services { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.business-existing-services .catalog-feature { display: flex; flex-direction: column; min-width: 0; }
+.business-existing-services .card-topline { align-items: flex-start; flex-wrap: wrap; gap: 10px; margin-bottom: 0; }
+.business-existing-services .card-topline h2 { font-size: 20px; }
+.business-existing-services .boundary-note { margin-top: 16px; padding: 12px; font-size: 12px; }
+.business-existing-services .card-actions { margin-top: auto; padding-top: 18px; }
+.business-catalog-tools { display: grid; grid-template-columns: minmax(0,1fr) minmax(180px,.35fr); gap: 16px; }
+.business-catalog-tools label, .business-records-tools label { margin: 0 0 8px; font-size: 13px; }
+.business-categories { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0 18px; }
+.business-category { border-radius: 9px; font-size: 12px; padding: 10px 12px; font-weight: 500; }
+.business-category[aria-pressed=true] { background: var(--ink); border-color: var(--ink); color: white; }
+#business-catalog-count { margin-bottom: 14px; font-size: 12px; }
+.business-service-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; }
+.business-service-card { padding: 22px; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; overflow-wrap: anywhere; }
+.business-service-top { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.business-service-top .small-text { font-size: 11px; line-height: 1.5; }
+.business-service-top .icon-box { width: 34px; height: 34px; border-radius: 10px; }
+.business-service-top .icon { width: 17px; height: 17px; }
+.business-service-card h3 { font-size: 17px; line-height: 1.4; }
+.business-service-card > p { margin-top: 9px; font-size: 13px; line-height: 1.6; }
+.business-service-counts { margin-top: auto; padding: 20px 0 10px; }
+.business-service-counts .small-text { font-size: 12px; }
+.business-service-card > .button { width: 100%; margin-top: 4px; font-size: 13px; }
+.business-catalog-more { margin-top: 22px; text-align: center; }
+.business-catalog-more:empty { display: none; }
+.business-integrations { margin-top: 30px; border-top: 1px solid var(--line); padding-top: 12px; }
+.business-integrations > summary { display: flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 550; }
+.business-integrations > summary::after { content: '+'; font-size: 20px; margin-left: auto; color: var(--muted); }
+.business-integrations[open] > summary::after { content: '−'; }
+.business-integrations > p { max-width: 720px; font-size: 13px; margin: 6px 0 20px; }
+.business-integration-card { background: #f7f7f8; }
+.business-integration-card .status-pill { margin-bottom: 16px; white-space: normal; }
+.business-integration-card .business-integration-next { border-top: 1px solid var(--line); padding-top: 14px; margin-top: 18px; font-size: 12px; }
+.business-module-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin: 20px 0 16px; }
+.business-module-heading > div { min-width: 0; }
+.business-module-heading .eyebrow { display: block; }
+.business-module-heading h2 { font-size: 30px; line-height: 1.25; }
+.business-module-heading p { margin-top: 10px; max-width: 680px; }
+.business-module-heading > .button { flex-shrink: 0; }
+#business-workspace > .text-button .icon { transform: rotate(180deg); }
+.business-module-boundary { font-size: 12px; border-left: 2px solid var(--line); padding-left: 12px; margin-bottom: 28px; max-width: 800px; }
+.business-records-tools { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin: 20px 0 16px; }
+.business-records-tools > div { max-width: 290px; flex: 1; }
+.business-records-tools > p { padding-bottom: 12px; font-size: 12px; }
+.business-record-list { display: grid; gap: 12px; }
+.business-record { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 22px; min-width: 0; }
+.business-record > div { min-width: 0; }
+.business-record h3 { font-size: 17px; margin-top: 10px; overflow-wrap: anywhere; }
+.business-record > div > .small-text { margin-top: 6px; overflow-wrap: anywhere; }
+.business-record .card-actions { flex-shrink: 0; justify-content: flex-end; margin-top: 0; }
+.business-record .button { font-size: 13px; }
+.business-record-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.business-record-meta .status-pill { white-space: normal; }
+.business-empty { padding: 30px; grid-column: 1/-1; }
+.business-empty > .icon { color: var(--muted); width: 26px; height: 26px; margin-bottom: 16px; }
+.business-empty p { margin: 8px 0 18px; max-width: 550px; }
+.business-empty .button { font-size: 13px; }
+.business-form-dialog { width: 730px; }
+.business-form-dialog .icon-button, .business-detail-dialog .icon-button, #business-delete-dialog .icon-button { width: 44px; height: 44px; }
+.business-record-form { padding: 12px 28px 28px; }
+.business-record-form > h2 { font-size: 27px; margin-bottom: 10px; }
+#business-common-fields, #business-detail-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 0 18px; }
+#business-common-fields .business-form-field:first-child, .business-form-wide { grid-column: 1/-1; }
+.business-form-field { min-width: 0; }
+.business-form-field label { font-size: 13px; }
+.business-form-field label .muted { font-size: 12px; font-weight: 400; }
+#business-detail-fields:not(:empty) { border-top: 1px solid var(--line); margin-top: 24px; padding-top: 4px; }
+.business-form-extra { border-top: 1px solid var(--line); margin-top: 24px; padding-top: 8px; }
+.business-form-extra > summary { display: flex; align-items: center; min-height: 44px; font-size: 13px; color: var(--muted); }
+.business-form-extra .helper-text { font-size: 12px; }
+.business-record-form > .notice { margin: 20px 0 0; }
+.business-record-form .dialog-actions { justify-content: flex-end; }
+.business-detail-dialog { width: 790px; }
+#business-detail-body { padding: 12px 28px 28px; }
+#business-detail-title { font-size: 27px; overflow-wrap: anywhere; }
+#business-detail-body > .business-record-meta { margin: 16px 0; }
+.business-detail-contact { margin: 12px 0; overflow-wrap: anywhere; }
+.business-document-heading { margin: 28px 0 8px; }
+.business-document { border: 1px solid var(--line); background: #fafafa; border-radius: 12px; padding: 20px; margin: 18px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font-family: inherit; font-size: 14px; line-height: 1.7; color: var(--ink); }
+@media (max-width: 1200px) {
+  .business-service-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .business-next-action { flex-direction: column; gap: 12px; }
+  .business-record { flex-direction: column; gap: 16px; }
+  .business-record .card-actions { justify-content: flex-start; }
+}
+@media (max-width: 1000px) {
+  .morning-grid .business-priorities { order: 2; width: 100%; }
+  .morning-grid .agenda-card { order: 3; }
+  .morning-grid .morning-briefing { order: 4; }
+  .business-next-action { flex-direction: row; }
+}
+@media (max-width: 700px) {
+  .business-priorities { padding: 20px; }
+  .business-next-action { flex-direction: column; gap: 12px; }
+  .business-service-grid, .business-existing-services { grid-template-columns: 1fr; }
+  .business-service-card { padding: 20px; }
+  .business-catalog-tools { grid-template-columns: 1fr; gap: 14px; }
+  .business-categories { gap: 7px; margin: 18px 0 16px; }
+  .business-category { font-size: 12px; }
+  .business-module-heading { flex-direction: column; gap: 16px; }
+  .business-module-heading h2 { font-size: 26px; }
+  .business-module-heading > .button { width: 100%; }
+  .business-records-tools { align-items: stretch; flex-direction: column; gap: 10px; }
+  .business-records-tools > div { max-width: none; }
+  .business-records-tools > p { padding: 0; }
+  .business-record { padding: 20px; }
+  .business-record .card-actions { width: 100%; flex-direction: column; align-items: stretch; gap: 8px; }
+  .business-empty { padding: 24px 20px; }
+  .business-record-form, #business-detail-body { padding: 12px 20px 24px; }
+  .business-record-form > h2, #business-detail-title { font-size: 25px; }
+  #business-common-fields, #business-detail-fields { grid-template-columns: 1fr; gap: 0; }
+  .business-record-form .dialog-actions { flex-direction: column-reverse; }
+  #business-detail-body .card-actions { flex-direction: column; align-items: stretch; }
+  .business-document { padding: 16px; font-size: 13px; }
+}
+.business-record-pages { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+.business-record-pages:empty { display: none; }

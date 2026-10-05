@@ -2,7 +2,7 @@
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-const state = { data: null, gmail: null, providers: [], mailSetup: null, mailChange: null, imapProvider: null, page: 'overview', companyDirty: false, companyInitialized: false, loading: false, wizard: null, currentRun: null, chatBusy: false, chatPreferences: null, watchSuggestion: null, watchSignature: null, briefingSignature: null, agendaSignature: null, agendaDate: null, agendaView: null };
+const state = { data: null, gmail: null, providers: [], mailSetup: null, mailChange: null, imapProvider: null, page: 'overview', companyDirty: false, companyInitialized: false, loading: false, wizard: null, currentRun: null, chatBusy: false, chatPreferences: null, watchSuggestion: null, watchSignature: null, briefingSignature: null, agendaSignature: null, agendaDate: null, agendaView: null, businessServices: [], businessSummary: null, businessCategory: 'all', businessSearch: '', businessScope: 'all', businessLimit: 6, businessService: null, businessRecords: [], businessFilter: 'open', businessOffset: 0, businessTotal: 0, businessPageSize: 100, businessRecord: null, businessEditing: null, businessDelete: null, businessRequest: 0, businessCatalogSignature: null, businessRecordsSignature: null, businessSummarySignature: null };
 let toastTimer;
 let lastFocused;
 
@@ -86,7 +86,7 @@ function closeDialog(selector) { if (selector === '#imap-dialog') clearImapSecre
 async function refresh(forceCompany = false) {
   const data = await api('/api/bootstrap');
   state.data = data;
-  await refreshProviders();
+  await Promise.all([refreshProviders(), refreshBusiness()]);
   if (state.agendaDate && state.agendaDate !== data.agenda?.date) {
     const day = state.agendaDate;
     const agenda = await api(`/api/agenda?date=${encodeURIComponent(day)}`);
@@ -112,6 +112,7 @@ function render(forceCompany = false) {
   const hour = Number(new Intl.DateTimeFormat('it-IT', { timeZone: 'Europe/Rome', hour: 'numeric', hourCycle: 'h23' }).format(new Date()));
   $('#greeting-label').textContent = `${hour < 13 ? 'Buongiorno' : hour < 19 ? 'Buon pomeriggio' : 'Buonasera'}${company.name ? `, ${company.name}` : ', c’è Filo'}`;
   setPill('#overview-service-status', service.status);
+  $('#catalog-mail-status').textContent = connection.status === 'connected' ? 'Casella collegata' : connection.status === 'expired' ? 'Da ricollegare' : 'Collega la casella';
   const expired = connection.status === 'expired';
   notice('#connection-alert', expired ? 'La connessione alla casella è scaduta. Ricollega la casella per riprendere i controlli.' : '');
   $('.demo-banner').hidden = Boolean(state.data.real_data_only) || connection.provider !== 'demo';
@@ -163,6 +164,214 @@ function render(forceCompany = false) {
   renderMorning();
   renderWatches();
   renderAgenda();
+  renderBusiness();
+}
+
+const businessStatusLabels = { todo: 'Da fare', in_progress: 'In corso', waiting: 'In attesa', done: 'Completata', cancelled: 'Annullata' };
+const businessPriorityLabels = { low: 'Bassa', normal: 'Normale', high: 'Alta', urgent: 'Urgente' };
+function businessService(id) { return state.businessServices.find(service => service.id === id); }
+function businessOpen(record) { return !['done', 'cancelled'].includes(record.status); }
+function businessDay() { return state.businessSummary?.date || new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()); }
+function businessDue(record) {
+  const active = businessOpen(record);
+  const date = record.due_date ? prettyDate(`${record.due_date}T12:00:00+02:00`, false) : '';
+  if (active && record.due_date && record.due_date < businessDay()) return { label: `Scaduta · ${date}`, style: 'error' };
+  if (active && record.due_date === businessDay()) return { label: 'Da fare oggi', style: 'warning' };
+  if (active && (record.urgency === 'attention' || record.attention)) return { label: 'Da controllare', style: 'warning' };
+  if (!record.due_date) return { label: 'Senza scadenza', style: 'neutral' };
+  return { label: active ? `Entro ${date}` : date, style: 'neutral' };
+}
+
+function businessRecordStatus(record) { return el('span', `status-pill ${record.status === 'done' ? 'success' : 'neutral'}`, businessStatusLabels[record.status] || 'Da fare'); }
+async function refreshBusiness() {
+  try {
+    const [catalog, summary] = await Promise.all([api('/api/business/services'), state.data?.business ? Promise.resolve(state.data.business) : api('/api/business/summary')]);
+    state.businessServices = catalog.services || [];
+    state.businessSummary = summary;
+    notice('#business-catalog-error', '');
+    if (state.businessService) await loadBusinessRecords(state.businessService, false);
+  } catch (error) { notice('#business-catalog-error', `I servizi non si sono aggiornati. ${error.message}`); }
+}
+function renderBusiness() {
+  renderBusinessCatalog(); renderBusinessSummary();
+  $('#business-catalog').hidden = Boolean(state.businessService);
+  $('#business-workspace').hidden = !state.businessService;
+  if (state.businessService) renderBusinessRecords();
+}
+function renderBusinessCatalog() {
+  const services = state.businessServices.filter(service => service.kind === 'business' && service.availability === 'available');
+  const categories = [...new Set(services.map(service => service.category))];
+  const signature = JSON.stringify({ services: state.businessServices, category: state.businessCategory, search: state.businessSearch, scope: state.businessScope, limit: state.businessLimit });
+  if (signature === state.businessCatalogSignature) return;
+  state.businessCatalogSignature = signature;
+  replace('#business-categories', ...['all', ...categories].map(category => {
+    const button = actionButton(category === 'all' ? 'Tutte le aree' : category, 'business-category', 'secondary', undefined, { category });
+    button.classList.add('business-category'); button.setAttribute('aria-pressed', String(state.businessCategory === category)); return button;
+  }));
+  const search = state.businessSearch.trim().toLocaleLowerCase('it');
+  const filtered = services.filter(service => (state.businessCategory === 'all' || service.category === state.businessCategory) && (state.businessScope !== 'used' || service.record_count > 0) && (!search || `${service.name} ${service.description} ${service.category}`.toLocaleLowerCase('it').includes(search)));
+  $('#business-catalog-count').textContent = `${filtered.length} ${filtered.length === 1 ? 'servizio disponibile' : 'servizi disponibili'}${state.businessCategory === 'all' ? '' : ` · ${state.businessCategory}`}`;
+  if (!filtered.length) { const empty = el('div', 'card business-empty'); empty.append(icon('grid'), el('h3', '', 'Nessun servizio con questi filtri.'), el('p', '', 'Prova un’altra parola o torna a tutte le aree.'), actionButton('Azzera i filtri', 'business-clear-filters', 'secondary')); replace('#business-service-list', empty); }
+  else replace('#business-service-list', ...filtered.slice(0, state.businessLimit).map(service => {
+    const card = el('article', 'card business-service-card'); card.dataset.serviceId = service.id;
+    const top = el('div', 'business-service-top'); const mark = el('span', 'icon-box neutral'); mark.append(icon($('#icon-' + service.icon) ? service.icon : 'grid'));
+    top.append(mark, el('span', 'small-text', service.category));
+    card.append(top, el('h3', '', service.name), el('p', '', service.description));
+    const counts = el('div', 'business-service-counts');
+    if (service.overdue_count) counts.append(el('span', 'status-pill error', `${service.overdue_count} ${service.overdue_count === 1 ? 'scaduta' : 'scadute'}`));
+    else counts.append(el('span', 'small-text', service.open_count ? `${service.open_count} ${service.open_count === 1 ? 'attività aperta' : 'attività aperte'}` : 'Pronto per le tue attività'));
+    card.append(counts, actionButton('Apri', 'open-business', 'secondary', 'arrow', { service: service.id })); return card;
+  }));
+  replace('#business-catalog-more', ...(filtered.length > state.businessLimit ? [actionButton(`Mostra altri servizi (${filtered.length - state.businessLimit})`, 'business-more', 'secondary', 'arrow')] : []));
+  const integrations = state.businessServices.filter(service => service.kind === 'integration');
+  $('#business-integration-panel').hidden = !integrations.length;
+  replace('#business-integration-list', ...integrations.map(service => {
+    const card = el('article', 'card business-service-card business-integration-card'); card.append(el('span', 'status-pill neutral', 'Integrazione da attivare'), el('h3', '', service.name), el('p', '', service.description));
+    if (service.next_action) card.append(el('p', 'business-integration-next', service.next_action)); return card;
+  }));
+}
+function renderBusinessSummary() {
+  const summary = state.businessSummary;
+  const signature = JSON.stringify(summary);
+  if (signature === state.businessSummarySignature) return;
+  state.businessSummarySignature = signature;
+  const totals = summary?.totals || {};
+  $('#business-priorities-summary').textContent = totals.overdue ? `${totals.overdue} ${totals.overdue === 1 ? 'attività scaduta' : 'attività scadute'}${totals.today ? ` · ${totals.today} per oggi` : ''}. Scadenze aggiunte da te.` : totals.today ? `${totals.today} ${totals.today === 1 ? 'attività per oggi' : 'attività per oggi'}. Scadenze aggiunte da te.` : 'Scadenze e attività aggiunte da te, in ordine.';
+  const actions = summary?.next_actions || [];
+  if (!actions.length) { const empty = el('div', 'business-summary-empty'); empty.append(el('h3', '', totals.total ? 'Le tue attività sono in ordine.' : 'Da quale attività vuoi partire?'), el('p', '', totals.total ? 'Le attività completate restano nei tuoi servizi.' : 'Aggiungi un incasso, un preventivo o una scadenza. Le priorità arriveranno qui.'), actionButton('Scegli un servizio', 'business-open-catalog', 'secondary', 'arrow')); replace('#business-next-actions', empty); return; }
+  replace('#business-next-actions', ...actions.slice(0, 5).map(record => {
+    const row = el('article', 'business-next-action'); row.dataset.recordId = record.id;
+    const content = el('div'); const meta = el('div', 'business-record-meta'); const due = businessDue(record);
+    meta.append(el('span', `status-pill ${due.style}`, due.label), el('span', 'small-text', businessService(record.service_id)?.name || record.service_name || 'Attività'));
+    content.append(meta, el('h3', '', record.title));
+    if (record.contact) content.append(el('p', 'small-text', record.contact));
+    content.append(el('p', 'business-next-step', record.next_action || businessService(record.service_id)?.next_action || 'Rivedi le informazioni e completa il prossimo passo.'));
+    row.append(content, actionButton('Apri attività', 'business-open-record', 'secondary', 'arrow', { id: record.id, service: record.service_id })); return row;
+  }));
+}
+async function loadBusinessRecords(serviceId, renderNow = true) {
+  const request = ++state.businessRequest;
+  try {
+    const result = await api(`/api/business/records?service_id=${encodeURIComponent(serviceId)}&limit=${state.businessPageSize}&offset=${state.businessOffset}${state.businessFilter === 'all' ? '' : `&status=${encodeURIComponent(state.businessFilter)}`}`);
+    if (state.businessService !== serviceId || request !== state.businessRequest) return;
+    state.businessRecords = result.items || []; state.businessTotal = result.total ?? state.businessRecords.length; notice('#business-records-error', '');
+    if (renderNow) renderBusinessRecords();
+  } catch (error) { if (state.businessService === serviceId && request === state.businessRequest) notice('#business-records-error', error.message); }
+}
+async function openBusinessModule(id) {
+  const service = businessService(id);
+  if (!service || service.kind !== 'business' || service.availability !== 'available') throw new Error('Questo collegamento non è ancora disponibile.');
+  state.businessService = id; state.businessRecords = []; state.businessOffset = 0; state.businessTotal = 0; state.businessRecordsSignature = null;
+  location.hash = 'services'; setPage('services'); renderBusiness();
+  await loadBusinessRecords(id); $('#business-module-title').tabIndex = -1; $('#business-module-title').focus({ preventScroll: true }); $('#business-workspace').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function renderBusinessRecords() {
+  const service = businessService(state.businessService);
+  if (!service) return;
+  $('#business-module-title').textContent = service.name; $('#business-module-category').textContent = service.category;
+  $('#business-module-description').textContent = service.description;
+  $('#business-module-boundary').textContent = service.output_footer || 'Informazioni e documenti preparati dai tuoi dati. Rivedi il risultato prima di usarlo o inviarlo.';
+  const signature = JSON.stringify({ service: service.id, records: state.businessRecords, filter: state.businessFilter, total: state.businessTotal, offset: state.businessOffset, date: businessDay() });
+  if (signature === state.businessRecordsSignature) return;
+  state.businessRecordsSignature = signature;
+  const records = state.businessRecords.filter(record => state.businessFilter === 'all' || (state.businessFilter === 'done' ? record.status === 'done' : businessOpen(record)));
+  $('#business-records-count').textContent = state.businessTotal > state.businessPageSize ? `${state.businessOffset + 1}–${state.businessOffset + records.length} di ${state.businessTotal} attività · dati aggiunti da te` : `${state.businessTotal} attività · dati aggiunti da te`;
+  const pages = [];
+  if (state.businessOffset > 0) pages.push(actionButton('Attività precedenti', 'business-record-page', 'secondary', undefined, { offset: String(Math.max(0, state.businessOffset - state.businessPageSize)) }));
+  if (state.businessOffset + state.businessPageSize < state.businessTotal) pages.push(actionButton('Attività successive', 'business-record-page', 'secondary', 'arrow', { offset: String(state.businessOffset + state.businessPageSize) }));
+  replace('#business-record-pages', ...pages);
+  if (!records.length) { const empty = el('div', 'card business-empty'); empty.append(icon('check'), el('h3', '', state.businessRecords.length ? 'Nessuna attività con questo filtro.' : `Inizia con ${service.name.toLocaleLowerCase('it')}.`), el('p', '', state.businessRecords.length ? 'Scegli tutte le attività per consultare lo storico.' : 'Inserisci la prima attività reale. Filo prepara il riepilogo e ti mostra le scadenze.'), actionButton('Aggiungi attività', 'business-new', 'primary', 'arrow')); replace('#business-record-list', empty); return; }
+  replace('#business-record-list', ...records.map(record => {
+    const card = el('article', 'card business-record'); card.dataset.recordId = record.id;
+    const content = el('div'); const meta = el('div', 'business-record-meta'); const due = businessDue(record);
+    meta.append(businessRecordStatus(record), el('span', `status-pill ${due.style}`, due.label));
+    if (['urgent', 'high'].includes(record.priority)) meta.append(el('span', 'status-pill warning', `Priorità ${businessPriorityLabels[record.priority].toLocaleLowerCase('it')}`));
+    content.append(meta, el('h3', '', record.title)); if (record.contact) content.append(el('p', 'small-text', record.contact));
+    const actions = el('div', 'card-actions'); actions.append(actionButton('Apri attività', 'business-open-record', 'secondary', 'arrow', { id: record.id, service: record.service_id }));
+    if (businessOpen(record)) actions.append(actionButton('Segna completata', 'business-status', 'ghost', 'check', { id: record.id, status: 'done' }));
+    card.append(content, actions); return card;
+  }));
+}
+function businessFormField(field, value = '') {
+  const container = el('div', `business-form-field ${field.type === 'textarea' ? 'business-form-wide' : ''}`);
+  const id = `business-field-${field.id}`; const label = el('label', '', field.label); label.htmlFor = id;
+  if (!field.required) label.append(el('span', 'muted', ' (facoltativo)'));
+  const input = el(field.type === 'textarea' ? 'textarea' : field.type === 'select' ? 'select' : 'input'); input.id = id; input.name = field.id;
+  if (field.type === 'textarea') input.rows = 3;
+  else if (field.type === 'select') { input.append(new Option('Scegli…', '')); for (const option of field.options || []) input.append(new Option(typeof option === 'string' ? option : option.label, typeof option === 'string' ? option : option.value)); }
+  else { input.type = ['date', 'number', 'money'].includes(field.type) ? (field.type === 'money' ? 'number' : field.type) : 'text'; if (field.type === 'money') input.step = field.step || '0.01'; else if (field.type === 'number') input.step = field.step || '1'; }
+  if (field.type === 'date') { input.min = '1900-01-01'; input.max = '2200-12-31'; }
+  input.required = Boolean(field.required); if (field.max_length) input.maxLength = field.max_length;
+  if (field.min !== undefined) input.min = field.min; if (field.max !== undefined) input.max = field.max;
+  input.value = value ?? ''; container.append(label, input); return container;
+}
+function openBusinessForm(record = null) {
+  const service = businessService(record?.service_id || state.businessService);
+  if (!service) return;
+  state.businessEditing = record; state.businessService = service.id;
+  $('#business-form-module').textContent = service.name; $('#business-form-title').textContent = record ? 'Modifica attività' : 'Aggiungi attività';
+  const fields = [
+    { id: 'title', label: 'Titolo dell’attività', type: 'text', required: true, max_length: 160 },
+    { id: 'contact', label: 'Cliente, referente o fornitore', type: 'text', max_length: 160 },
+    { id: 'due_date', label: 'Scadenza', type: 'date' },
+    { id: 'status', label: 'Stato', type: 'select', required: true, options: Object.entries(businessStatusLabels).map(([value, label]) => ({ value, label })) },
+    { id: 'priority', label: 'Priorità', type: 'select', required: true, options: Object.entries(businessPriorityLabels).map(([value, label]) => ({ value, label })) },
+  ];
+  replace('#business-common-fields', ...fields.map(field => businessFormField(field, record?.[field.id] ?? (field.id === 'status' ? 'todo' : field.id === 'priority' ? 'normal' : ''))));
+  replace('#business-detail-fields', ...(service.fields || []).map(field => businessFormField(field, record?.details?.[field.id])));
+  $('#business-record-notes').value = record?.notes || ''; $('#business-record-saved-minutes').value = record?.saved_minutes || 0;
+  notice('#business-form-error', ''); openDialog('#business-form-dialog'); $('#business-field-title').focus();
+}
+async function openBusinessRecord(id, serviceId) {
+  let record = state.businessRecords.find(item => item.id === id);
+  if (!record) { const result = await api(`/api/business/records/${encodeURIComponent(id)}`); record = result.item; }
+  if (!record) throw new Error('L’attività non è più disponibile. Aggiorna i tuoi servizi.');
+  state.businessRecord = record; renderBusinessDetail(record); openDialog('#business-detail-dialog');
+}
+function renderBusinessDetail(record) {
+  const service = businessService(record.service_id); const body = $('#business-detail-body'); body.replaceChildren();
+  $('#business-detail-module').textContent = service?.name || 'Attività';
+  const title = el('h2', '', record.title); title.id = 'business-detail-title'; const meta = el('div', 'business-record-meta'); const due = businessDue(record);
+  meta.append(businessRecordStatus(record), el('span', `status-pill ${due.style}`, due.label));
+  body.append(title, meta); if (record.contact) body.append(el('p', 'business-detail-contact', record.contact));
+  const actions = el('div', 'card-actions');
+  actions.append(actionButton(businessOpen(record) ? 'Segna completata' : 'Riapri attività', 'business-status', 'primary', 'check', { id: record.id, status: businessOpen(record) ? 'done' : 'todo' }), actionButton('Modifica', 'business-edit', 'secondary', undefined, { id: record.id }));
+  const download = el('a', 'button secondary', 'Scarica il documento'); download.href = `/api/business/records/${encodeURIComponent(record.id)}/export`; download.setAttribute('download', ''); download.append(icon('arrow')); actions.append(download, actionButton('Elimina', 'business-delete', 'ghost', undefined, { id: record.id })); body.append(actions);
+  body.append(el('h3', 'business-document-heading', 'Il tuo documento'), el('p', 'small-text', 'Preparato dalle informazioni inserite. Rivedilo prima di utilizzarlo.'));
+  const document = el('pre', 'business-document', record.document || 'Il documento non è ancora disponibile.'); body.append(document);
+  if (record.saved_minutes) body.append(el('p', 'helper-text', `${record.saved_minutes} minuti risparmiati: tua stima dichiarata.`));
+}
+async function saveBusinessRecord(event) {
+  event.preventDefault(); const form = event.currentTarget; if (!form.reportValidity()) return;
+  const service = businessService(state.businessService); if (!service) return;
+  const values = new FormData(form); const details = {};
+  for (const field of service.fields || []) { const value = String(values.get(field.id) || '').trim(); if (value) details[field.id] = ['number', 'money'].includes(field.type) ? Number(value) : value; else if (state.businessEditing && !field.required) details[field.id] = null; }
+  const body = { title: String(values.get('title') || '').trim(), contact: String(values.get('contact') || '').trim(), due_date: values.get('due_date') || null, status: values.get('status'), priority: values.get('priority'), notes: String(values.get('notes') || '').trim(), saved_minutes: Number(values.get('saved_minutes') || 0), details };
+  if (!state.businessEditing) body.service_id = service.id;
+  notice('#business-form-error', '');
+  await withBusy($('button[type="submit"]', form), async () => {
+    try { const editing = state.businessEditing; const result = await api(editing ? `/api/business/records/${encodeURIComponent(editing.id)}` : '/api/business/records', { method: editing ? 'PATCH' : 'POST', body }); closeDialog('#business-form-dialog'); state.businessEditing = null; await refresh(); if (result.item && $('#business-detail-dialog').open) { state.businessRecord = result.item; renderBusinessDetail(result.item); } toast(editing ? 'Attività aggiornata. Il documento è pronto da rivedere.' : 'Attività salvata. Il documento e le scadenze sono pronti.'); }
+    catch (error) { notice('#business-form-error', error.message); }
+  });
+}
+async function handleBusinessAction(button) {
+  const action = button.dataset.action;
+  if (action === 'open-business') { await openBusinessModule(button.dataset.service || button.dataset.id); return; }
+  if (action === 'business-open-catalog' || action === 'business-back') { state.businessService = null; state.businessRequest++; location.hash = 'services'; setPage('services'); renderBusiness(); $('#services-title').tabIndex = -1; $('#services-title').focus(); return; }
+  if (action === 'open-business-agenda') { location.hash = 'overview'; setPage('overview'); $('#agenda-title').scrollIntoView({ behavior: 'smooth', block: 'start' }); $('#agenda-view-date').focus({ preventScroll: true }); return; }
+  if (action === 'business-category') { state.businessCategory = button.dataset.category; state.businessLimit = 6; renderBusinessCatalog(); return; }
+  if (action === 'business-clear-filters') { state.businessCategory = 'all'; state.businessSearch = ''; state.businessScope = 'all'; state.businessLimit = 6; $('#business-service-search').value = ''; $('#business-service-scope').value = 'all'; renderBusinessCatalog(); return; }
+  if (action === 'business-more') { state.businessLimit += 6; renderBusinessCatalog(); return; }
+  if (action === 'business-record-page') { state.businessOffset = Number(button.dataset.offset); await withBusy(button, () => loadBusinessRecords(state.businessService)); return; }
+  if (action === 'business-new') { openBusinessForm(); return; }
+  if (action === 'business-close-form') { closeDialog('#business-form-dialog'); return; }
+  if (action === 'business-close-detail') { closeDialog('#business-detail-dialog'); return; }
+  if (action === 'business-close-delete') { state.businessDelete = null; closeDialog('#business-delete-dialog'); return; }
+  if (action === 'business-open-record') { await withBusy(button, () => openBusinessRecord(button.dataset.id, button.dataset.service)); return; }
+  if (action === 'business-edit') { const record = state.businessRecord; if (record?.id === button.dataset.id) { closeDialog('#business-detail-dialog'); await openBusinessModule(record.service_id); openBusinessForm(record); } return; }
+  if (action === 'business-delete') { state.businessDelete = button.dataset.id; $('#business-delete-description').textContent = `“${state.businessRecord?.title || 'Questa attività'}” e il suo documento verranno rimossi dai tuoi servizi.`; openDialog('#business-delete-dialog'); return; }
+  if (action === 'business-confirm-delete') { await withBusy(button, async () => { const id = state.businessDelete; if (!id) return; await api(`/api/business/records/${encodeURIComponent(id)}`, { method: 'DELETE' }); closeDialog('#business-delete-dialog'); if ($('#business-detail-dialog').open) closeDialog('#business-detail-dialog'); state.businessDelete = null; state.businessRecord = null; await refresh(); toast('Attività eliminata.'); }); return; }
+  if (action === 'business-status') { await withBusy(button, async () => { const result = await api(`/api/business/records/${encodeURIComponent(button.dataset.id)}`, { method: 'PATCH', body: { status: button.dataset.status } }); await refresh(); if (result.item && $('#business-detail-dialog').open && state.businessRecord?.id === result.item.id) { state.businessRecord = result.item; renderBusinessDetail(result.item); } toast(button.dataset.status === 'done' ? 'Attività completata. Resta disponibile nello storico.' : 'Attività riaperta.'); }); }
 }
 
 function currentBriefing() {
@@ -549,6 +758,7 @@ function renderRunDetail(run) {
 
 async function handleAction(button) {
   const action = button.dataset.action;
+  if (action === 'open-business' || action === 'open-business-agenda' || action.startsWith('business-')) { await handleBusinessAction(button); return; }
   if (action === 'review-priority') {
     const row = $$('.priority-item').find(item => item.dataset.draftId === button.dataset.id) || $('.priority-item');
     if (row) { $('details', row).open = true; row.scrollIntoView({ behavior: 'smooth', block: 'center' }); $('summary', row).focus({ preventScroll: true }); }
@@ -630,6 +840,10 @@ document.addEventListener('change', event => {
   if (event.target.id === 'authorize-draft') state.wizard.authorizedDraft = event.target.checked;
   if ($('#activate-button')) $('#activate-button').disabled = !state.wizard.authorizedRead || !state.wizard.authorizedDraft;
 });
+$('#business-record-form').addEventListener('submit', saveBusinessRecord);
+$('#business-service-search').addEventListener('input', event => { state.businessSearch = event.target.value; state.businessLimit = 6; renderBusinessCatalog(); });
+$('#business-service-scope').addEventListener('change', event => { state.businessScope = event.target.value; state.businessLimit = 6; renderBusinessCatalog(); });
+$('#business-record-filter').addEventListener('change', async event => { state.businessFilter = event.target.value; state.businessOffset = 0; if (state.businessService) await loadBusinessRecords(state.businessService); });
 $('#imap-dialog').addEventListener('close', clearImapSecret);
 $('#imap-dialog').addEventListener('cancel', clearImapSecret);
 $('#imap-form').addEventListener('submit', async event => {
@@ -695,7 +909,7 @@ $('#chat-form').addEventListener('submit', async event => {
   const input = $('#chat-input'); const message = input.value.trim(); if (!message) return;
   addChatMessage(message, 'user'); input.value = ''; state.chatBusy = true;
   await withBusy($('button', event.currentTarget), async () => {
-    try { const result = await api('/api/chat', { method: 'POST', body: { message } }); addChatMessage(result.reply || 'Posso aiutarti a configurare la segreteria email.'); state.chatPreferences = result.preferences || null; state.watchSuggestion = result.watch_suggestion || null; const suggestion = $('#chat-suggestion'); suggestion.replaceChildren(); suggestion.hidden = !result.supported; if (state.watchSuggestion) suggestion.append(actionButton('Segui questa risposta', 'confirm-watch', 'secondary', 'check')); else if (result.supported) suggestion.append(actionButton(state.data.service.status === 'inactive' ? 'Configura la segreteria email' : 'Rivedi le preferenze', state.data.service.status === 'inactive' ? 'open-chat-wizard' : 'edit-chat-preferences', 'secondary', 'arrow')); }
+    try { const result = await api('/api/chat', { method: 'POST', body: { message } }); addChatMessage(result.reply || 'Posso aiutarti a configurare la segreteria email.'); state.chatPreferences = result.preferences || null; state.watchSuggestion = result.watch_suggestion || null; const suggestion = $('#chat-suggestion'); suggestion.replaceChildren(); suggestion.hidden = !result.supported; if (state.watchSuggestion) suggestion.append(actionButton('Segui questa risposta', 'confirm-watch', 'secondary', 'check')); else if (result.business_service_id) suggestion.append(actionButton(`Apri ${businessService(result.business_service_id)?.name || 'il servizio'}`, 'open-business', 'secondary', 'arrow', { service: result.business_service_id })); else if (result.supported) suggestion.append(actionButton(state.data.service.status === 'inactive' ? 'Configura la segreteria email' : 'Rivedi le preferenze', state.data.service.status === 'inactive' ? 'open-chat-wizard' : 'edit-chat-preferences', 'secondary', 'arrow')); }
     catch (error) { addChatMessage(error.message, 'assistant error'); }
     finally { state.chatBusy = false; }
   });

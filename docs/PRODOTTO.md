@@ -1,3 +1,5 @@
+> Documento storico del primo MVP. Per le funzionalità attuali e il catalogo PMI vedi [README](../README.md) e [Servizi PMI](PMI.md). I prezzi e i budget qui sotto sono ipotesi iniziali, non il prezzo configurato nell’app.
+
 # Servizi AI per piccoli studi: scelta dell'MVP e piano di validazione
 
 Data della ricerca e delle ipotesi: **4 ottobre 2026**. Primo segmento: **studi italiani di consulenza B2B, 2–10 persone, già su Google Workspace**. Primo servizio: **Segreteria email**, con lettura dei messaggi dei quattro clienti prioritari, riepiloghi e bozze conservate nell'applicazione. Nessun invio e nessuna modifica della casella.

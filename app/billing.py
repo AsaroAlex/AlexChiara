@@ -261,7 +261,7 @@ def create_billing_router(store):
             "plan": {
                 "name": config["FILO_PLAN_LABEL"] or "Filo",
                 "price_label": config["FILO_PLAN_PRICE_LABEL"] or None,
-                "features": ["Priorità email e bozze da verificare", "Avvisi sui contatti da seguire", "Agenda e ordine del giorno"],
+                "features": ["Priorità email, avvisi e agenda", "Clienti, preventivi e incassi", "Fornitori, acquisti e commesse", "Scadenze e documenti da rivedere"],
             },
         }
 

@@ -1,6 +1,6 @@
 # Filo · servizi già pronti per il lavoro di ogni giorno
 
-MVP in italiano per piccoli studi di consulenza B2B. Il primo servizio è **Segreteria email**: controlla i clienti prioritari, segnala richieste aperte e prepara bozze da rivedere. La panoramica presenta subito le cose da fare, un riepilogo neutro a destra e un’agenda manuale con ordine del giorno scaricabile. La sincronizzazione del calendario e i social sono servizi futuri.
+Applicazione in italiano per PMI e piccoli studi. **Segreteria email** controlla i contatti prioritari e prepara bozze da rivedere. Il catalogo include **23 moduli aziendali locali** per clienti, preventivi, bozze fattura, incassi, spese, acquisti, commesse, documenti, scadenze, magazzino, assistenza e organizzazione del lavoro. La panoramica presenta le cose da fare, un riepilogo neutro a destra e l’agenda manuale. Le integrazioni esterne non ancora disponibili sono indicate nel catalogo.
 
 ## Avvio
 
@@ -19,6 +19,12 @@ bash scripts/check.sh
 ```
 
 `requirements.lock` blocca anche le dipendenze transitive. Le istruzioni di installazione non modificano codice, test o file delle dipendenze. L'ambiente cloud è già isolato: usa il checkout esistente, senza creare worktree.
+
+## Servizi per la PMI
+
+Apri **Servizi**, cerca un modulo o scegli un’area e aggiungi una scheda con i dati della tua impresa. Filo prepara il documento locale, calcola i totali di preventivi/bozze fattura, ordina scadenze e priorità e segnala scorte sotto la soglia inserita. Puoi aggiornare, completare, riaprire o esportare ogni attività. La chat suggerisce il servizio da aprire, senza modificare dati o permessi da sola. I nuovi spazi partono vuoti.
+
+[La guida dei servizi PMI](docs/PMI.md) descrive funzioni e limiti: bozze fiscali interne, riferimenti documentali e dati aggiunti dall’utente; SDI, banche, PEC, calendario esterno e telefonia richiedono integrazioni dedicate. I minuti risparmiati sono dichiarazioni dell’utente, senza una stima automatica del costo del personale.
 
 ## Account e abbonamento
 
