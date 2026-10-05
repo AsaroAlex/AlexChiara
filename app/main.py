@@ -1,10 +1,13 @@
 """Public Spazelia site and authenticated, isolated workspaces."""
+import asyncio
 from contextlib import asynccontextmanager, closing
 import json
 import logging
 import os
 from pathlib import Path
 import re
+import secrets
+import shutil
 import sqlite3
 import threading
 import time
@@ -14,6 +17,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from . import ai
 from .agenda import agenda_summary, create_agenda_router
@@ -430,10 +434,29 @@ def _has_scheduled_work(path):
         return True
 
 
+class PasswordChangeInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    current_password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=1, max_length=128)
+
+
+class AccountDeletionInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    password: str = Field(min_length=1, max_length=128)
+    confirmation: str = Field(max_length=20)
+
+    @field_validator("confirmation")
+    @classmethod
+    def typed_confirmation(cls, value):
+        if value.strip().upper() != "ELIMINA":
+            raise ValueError("Scrivi ELIMINA per confermare la cancellazione.")
+        return value
+
+
 def create_app(data_dir=None, start_worker=True):
     """Serve a public site and resolve private data from the signed-in account."""
-    from .accounts import AccountStore, OWNER_ID, create_account_router
-    from .billing import BillingStore, create_billing_router
+    from .accounts import AccountError, AccountStore, OWNER_ID, SESSION_COOKIE, client_address, create_account_router, session_response
+    from .billing import BillingStore, create_billing_router, erase_customer
 
     runtime = Path(data_dir or os.environ.get("ALEXCHIARA_DATA_DIR") or Path(__file__).resolve().parent.parent / ".runtime")
     static = Path(__file__).resolve().parent.parent / "static"
@@ -441,6 +464,7 @@ def create_app(data_dir=None, start_worker=True):
     billing = BillingStore(runtime / "billing.sqlite3")
     workspaces = {}
     workspace_lock = threading.Lock()
+    deleted_accounts = set()
     running = False
 
     def workspace(user_id):
@@ -449,6 +473,9 @@ def create_app(data_dir=None, start_worker=True):
                 return workspaces[user_id]
             if user_id != OWNER_ID and not re.fullmatch(r"[a-f0-9]{32}", user_id):
                 raise ValueError("Identificativo dello spazio non valido.")
+            if user_id in deleted_accounts:
+                # A request still in flight must not recreate a deleted workspace.
+                raise LookupError("Account eliminato.")
             directory = runtime if user_id == OWNER_ID else runtime / "workspaces" / user_id
             fresh = not (directory / "alexchiara.sqlite3").exists()
             private_app = create_workspace_app(directory, start_worker=False)
@@ -461,6 +488,24 @@ def create_app(data_dir=None, start_worker=True):
             if running and start_worker:
                 private_app.state.scheduler.start()
             return private_app
+
+    def remove_workspace(user_id):
+        """Stop the worker and erase every file of a deleted member's workspace."""
+        with workspace_lock:
+            deleted_accounts.add(user_id)
+            private_app = workspaces.pop(user_id, None)
+        if private_app is not None:
+            private_app.state.scheduler.stop()
+        directory = runtime / "workspaces" / user_id
+        if directory.is_dir():
+            # An atomic rename first: an interrupted erase leaves a folder that
+            # is recognisably deleted and removed at the next start.
+            trash = runtime / "workspaces" / f".deleted-{user_id}-{secrets.token_hex(4)}"
+            os.replace(directory, trash)
+            shutil.rmtree(trash, ignore_errors=True)
+
+    for leftover in (runtime / "workspaces").glob(".deleted-*") if (runtime / "workspaces").is_dir() else ():
+        shutil.rmtree(leftover, ignore_errors=True)
 
     # This remains the original workspace; registering never grants access to it.
     owner_workspace = workspace(OWNER_ID)
@@ -504,7 +549,8 @@ def create_app(data_dir=None, start_worker=True):
     allowed_hosts = {"127.0.0.1", "localhost", "::1", "testserver"}
     allowed_hosts.update(host.strip().lower() for host in os.environ.get("ALEXCHIARA_ALLOWED_HOSTS", "").split(",") if host.strip())
     public_pages = {"/", "/login", "/register"}
-    auth_paths = {"/api/auth/session", "/api/auth/login", "/api/auth/register", "/api/auth/logout"}
+    auth_paths = {"/api/auth/session", "/api/auth/login", "/api/auth/register", "/api/auth/logout",
+                  "/api/auth/password/forgot", "/api/auth/password/reset"}
     # Browsers and crawlers request these well-known files without a session.
     public_files = {
         "/favicon.ico": ("brand/favicon.ico", "image/x-icon"),
@@ -592,6 +638,8 @@ def create_app(data_dir=None, start_worker=True):
 
     @app.api_route("/login", methods=page_methods)
     @app.api_route("/register", methods=page_methods)
+    @app.api_route("/forgot-password", methods=page_methods)
+    @app.api_route("/reset-password", methods=page_methods)
     def auth_page():
         return FileResponse(static / "auth.html")
 
@@ -621,6 +669,36 @@ def create_app(data_dir=None, start_worker=True):
             raise HTTPException(status_code=404, detail="La ricerca non è ancora disponibile.")
         return FileResponse(report, media_type="text/html", headers={"Cache-Control": "no-store"})
 
+    def account_failure(exc):
+        return JSONResponse({"detail": exc.detail}, status_code=exc.status_code, headers={"Cache-Control": "no-store"})
+
+    @app.post("/api/account/password")
+    def change_password(payload: PasswordChangeInput, request: Request):
+        user = request.state.filo_user
+        try:
+            accounts.change_password(user["id"], payload.current_password, payload.new_password, request.cookies.get(SESSION_COOKIE), client_address(request))
+        except AccountError as exc:
+            return account_failure(exc)
+        return JSONResponse({"message": "Password aggiornata. Gli altri dispositivi dovranno accedere di nuovo."}, headers={"Cache-Control": "no-store"})
+
+    @app.post("/api/account/delete")
+    async def delete_account(payload: AccountDeletionInput, request: Request):
+        user = request.state.filo_user
+        try:
+            if user["id"] == OWNER_ID:
+                raise AccountError(409, "L'account del gestore non si può eliminare: custodisce lo spazio originale del servizio.")
+            await asyncio.to_thread(accounts.confirm_deletion, user["id"], payload.password, client_address(request))
+        except AccountError as exc:
+            return account_failure(exc)
+        # Order matters: Stripe first (it can fail and stop everything), then
+        # the account and its sessions, then the workspace files.
+        await erase_customer(billing, user["id"])
+        await asyncio.to_thread(accounts.delete_member, user["id"])
+        await asyncio.to_thread(remove_workspace, user["id"])
+        logger.info("Account deleted on request")
+        cookie, guest = accounts.new_guest_session()
+        return session_response(request, cookie, guest, {"deleted": True, "message": "Il tuo account e i dati del tuo spazio sono stati eliminati."})
+
     @app.api_route("/api/health", methods=page_methods)
     def health():
         alive = all(private.state.scheduler.alive() for private in list(workspaces.values()))
@@ -641,6 +719,9 @@ def create_app(data_dir=None, start_worker=True):
                 return
             try:
                 private_app = workspace(user["id"])
+            except LookupError:
+                await JSONResponse({"detail": "Accedi a Spazelia per continuare."}, status_code=401)(scope, receive, send)
+                return
             except Exception:
                 logger.exception("Workspace %s could not be opened", user["id"])
                 await JSONResponse({"detail": "Il tuo spazio non è disponibile in questo momento. Riprova tra poco o contatta l'assistenza."}, status_code=503)(scope, receive, send)

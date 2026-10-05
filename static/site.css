@@ -138,6 +138,17 @@ input:focus { border-color: var(--ink); outline: 2px solid var(--ink); outline-o
 .notice { padding: 14px 16px; border-radius: 12px; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; margin-bottom: 20px; }
 .notice.quiet { background: var(--quiet); color: var(--muted); }
 .notice.error { background: #fff0f0; color: var(--error); border: 1px solid #f1d7d8; }
+.notice.success { background: #eef7f1; color: #1f6b43; border: 1px solid #cfe6d8; }
+.forgot-link { margin: -8px 0 18px; text-align: right; font-size: 13px; }
+.forgot-link .text-link { font-size: 13px; }
+.security-card, .danger-card { display: grid; gap: 18px; align-content: start; }
+.account-form { display: grid; gap: 0; }
+.account-form .button { justify-self: start; }
+.danger-card { border-color: #f1d7d8; }
+.danger-copy { font-size: 14px; }
+.deleted-notice { margin-top: 24px; }
+.button.danger { background: var(--error); color: white; border-color: var(--error); }
+.button.danger:hover { background: #8f1b20; border-color: #8f1b20; }
 .notice strong { display: block; color: var(--ink); font-weight: 600; }
 .notice p { margin-top: 4px; font-size: 13px; }
 .account-main { padding-block: 64px 100px; min-height: calc(100vh - 193px); }
