@@ -151,10 +151,16 @@ def build_watch_summary(db, now=None):
             SELECT * FROM watch_requests WHERE provider=? AND scope_key=? AND done_at IS NULL
             ORDER BY day, created_at, id
         """, (provider, scope_key))] if initialized and provider in REAL_PROVIDERS else []
+        # Only checks made after the oldest reminder can match it, and mail
+        # adapters read a seven-day window, so later checks cannot see older days.
+        created = [_stamp(watch["created_at"]) for watch in watches]
+        window_start = (min(created) - timedelta(days=1)).isoformat() if created and all(created) else ""
+        window_end = (date.fromisoformat(max(watch["day"] for watch in watches)) + timedelta(days=9)).isoformat() if watches else ""
         snapshots = [dict(row) for row in conn.execute("""
             SELECT checked_at, messages FROM briefing_snapshots WHERE provider=? AND scope_key=?
+            AND checked_at>=? AND checked_at<=?
             ORDER BY checked_at,run_id
-        """, (provider, scope_key))] if watches else []
+        """, (provider, scope_key, window_start, window_end))] if watches else []
     items = []
     for watch in watches:
         match = _match(watch, snapshots, now)
@@ -202,6 +208,13 @@ def needs_watch_poll(db, now=None):
     now = _now(now)
     connection = db.get_connection() or {}
     if connection.get("provider") not in {"gmail", "outlook", "imap"} or connection.get("status") != "connected":
+        return False
+    today = now.astimezone(ROME).date().isoformat()
+    with db.connection() as conn:
+        # Called every scheduler tick: skip the full summary without a reminder for today.
+        initialized = conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='watch_requests'").fetchone()
+        pending = initialized and conn.execute("SELECT 1 FROM watch_requests WHERE day=? AND done_at IS NULL LIMIT 1", (today,)).fetchone()
+    if not pending:
         return False
     summary = build_watch_summary(db, now)
     today = now.astimezone(ROME).date().isoformat()

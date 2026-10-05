@@ -134,8 +134,8 @@ def connect_body(**extra):
             "host": "imap.example.test", **extra}
 
 
-def save_credentials(db):
-    credentials = imap_mail._credentials_from_payload(imap_mail.ImapConnect(**connect_body()))
+def save_credentials(db, password=PASSWORD):
+    credentials = imap_mail._credentials_from_payload(imap_mail.ImapConnect(**connect_body(password=password)))
     db.set_setting("imap_credentials", _cipher(db).encrypt(json.dumps(credentials).encode()).decode())
     db.set_setting("gmail_revision", 1)
     db.set_connection("imap", "connected", "studio@example.test", mail_provider="imap")
@@ -419,12 +419,95 @@ def test_oversized_message_is_skipped_before_body_fetch(db, monkeypatch):
     assert queries == ["(UID RFC822.SIZE INTERNALDATE)"]
 
 
-def test_body_size_mismatch_is_not_parsed_as_a_complete_message(db, monkeypatch):
+@pytest.mark.parametrize("delta", [-7, 7, 300])
+def test_estimated_rfc822_size_still_reads_the_message(db, monkeypatch, delta):
+    # Exchange reports estimated sizes unless EnableExactRFC822Size is set.
     raw = raw_message()
-    fake = FakeIMAP(folders={"INBOX": {1: {"raw": raw, "size": len(raw) - 1}}}, sent=False)
+    fake = FakeIMAP(folders={"INBOX": {1: {"raw": raw, "size": len(raw) + delta}}}, sent=False)
+    install_fake(monkeypatch, fake)
+    save_credentials(db)
+    [message] = imap_mail.load_imap_messages(db, CONTACTS)
+    assert message["body"] == "Potete inviare il preventivo?"
+
+
+def test_literal_cut_at_the_fetch_limit_is_not_parsed_as_a_complete_message(db, monkeypatch):
+    raw = raw_message(body="x" * imap_mail.MAX_MESSAGE_BYTES)[:imap_mail.MAX_MESSAGE_BYTES]
+    fake = FakeIMAP(folders={"INBOX": {1: {"raw": raw, "size": imap_mail.MAX_MESSAGE_BYTES}}}, sent=False)
     install_fake(monkeypatch, fake)
     save_credentials(db)
     assert imap_mail.load_imap_messages(db, CONTACTS) == []
+
+
+@pytest.mark.parametrize("header,value", [("Message-ID", "<[20261005@mailer.example>"), ("To", "m@"), ("References", "<a@b> <[c@d>")])
+def test_one_malformed_header_does_not_block_the_other_messages(db, monkeypatch, header, value):
+    bad = raw_message().replace(b"Message-ID: <request@example.test>", f"{header}: {value}".encode() if header != "Message-ID" else f"Message-ID: {value}".encode())
+    if header != "Message-ID":
+        bad = bad.replace(b"Subject:", f"{header}: {value}\r\nSubject:".encode(), 1)
+    good = raw_message(message_id="<good@example.test>")
+    fake = FakeIMAP(folders={"INBOX": {1: {"raw": bad}, 2: {"raw": good}}}, sent=False)
+    install_fake(monkeypatch, fake)
+    save_credentials(db)
+    result = imap_mail.load_imap_messages(db, CONTACTS)
+    assert any(message["body"] == "Potete inviare il preventivo?" for message in result)
+
+
+@pytest.mark.parametrize("code", ["UNAVAILABLE", "LIMIT", "INUSE", "SERVERBUG"])
+def test_temporary_login_refusals_are_retried_without_expiring_the_mailbox(db, monkeypatch, code):
+    fake = FakeIMAP(sent=False)
+
+    def refuse(username, password):
+        raise imaplib.IMAP4.error(f"[{code}] Try again later")
+    fake.login = refuse
+    install_fake(monkeypatch, fake)
+    save_credentials(db)
+    with pytest.raises(ConnectorError) as raised:
+        imap_mail.load_imap_messages(db, CONTACTS)
+    assert raised.value.retryable is True
+    assert raised.value.expired is False
+
+
+def test_rejected_credentials_still_require_a_new_connection(db, monkeypatch):
+    fake = FakeIMAP(sent=False)
+
+    def refuse(username, password):
+        raise imaplib.IMAP4.error("[AUTHENTICATIONFAILED] Invalid credentials")
+    fake.login = refuse
+    install_fake(monkeypatch, fake)
+    save_credentials(db)
+    with pytest.raises(ConnectorError) as raised:
+        imap_mail.load_imap_messages(db, CONTACTS)
+    assert raised.value.retryable is False
+    assert raised.value.expired is True
+
+
+def test_non_ascii_password_uses_sasl_plain(db, monkeypatch):
+    fake = FakeIMAP(sent=False)
+    fake.capabilities = ("IMAP4REV1", "AUTH=PLAIN")
+    calls = []
+
+    def authenticate(mechanism, authobject):
+        calls.append((mechanism, authobject(b"")))
+        return "OK", [b"Authenticated"]
+    fake.authenticate = authenticate
+    fake.login = lambda *_: pytest.fail("LOGIN cannot carry UTF-8")
+    install_fake(monkeypatch, fake)
+    save_credentials(db, password="pàssword-è-sicura")
+    imap_mail.load_imap_messages(db, CONTACTS)
+    assert calls == [("PLAIN", "\0studio@example.test\0pàssword-è-sicura".encode())]
+
+
+@pytest.mark.parametrize("error,retryable", [(ssl.SSLEOFError("EOF occurred"), True), (ssl.SSLCertVerificationError("bad cert"), False)])
+def test_tls_errors_are_classified(db, monkeypatch, error, retryable):
+    fake = FakeIMAP(sent=False)
+
+    def fail(*_):
+        raise error
+    fake.list = fail
+    install_fake(monkeypatch, fake)
+    save_credentials(db)
+    with pytest.raises(ConnectorError) as raised:
+        imap_mail.load_imap_messages(db, CONTACTS)
+    assert raised.value.retryable is retryable
 
 
 def test_older_than_seven_days_message_is_not_fetched(db, monkeypatch):

@@ -375,3 +375,103 @@ def test_checkout_attempt_idempotency_survives_retry_but_new_price_creates_new_a
     assert changed["idempotency_key"] != first["idempotency_key"]
     expired = store.checkout_attempt("alice", "price_b", now=4000)
     assert expired["idempotency_key"] != changed["idempotency_key"]
+
+
+def test_same_second_events_resolve_to_the_current_stripe_state(environment, monkeypatch):
+    store, client = environment
+    configured(monkeypatch)
+    store.save_customer("alice", "cus_alice")
+    calls = []
+
+    async def fake_stripe(method, path, config, **options):
+        calls.append((method, path))
+        return event(status="active")["data"]["object"]
+
+    monkeypatch.setattr(billing, "_stripe_request", fake_stripe)
+    assert send_event(client, event("evt_updated", created=500, status="active")).status_code == 200
+    # Stripe delivers the older "created" (incomplete) event last, in the same second.
+    assert send_event(client, event("evt_created", "customer.subscription.created", created=500, status="incomplete")).status_code == 200
+    assert calls == [("GET", "/subscriptions/sub_alice")]
+    assert state(client)["subscription_status"] == "active"
+
+
+def test_test_mode_records_do_not_count_after_switching_to_live_keys(environment, monkeypatch):
+    store, client = environment
+    configured(monkeypatch)
+    store.save_customer("alice", "cus_test_alice", livemode=False)
+    assert send_event(client, {**event(customer="cus_test_alice"), "livemode": False}).status_code == 200
+    assert state(client)["subscription_status"] == "active"
+    monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_live_isolated_never_real")
+    assert state(client)["subscription_status"] == "free"
+    assert state(client)["portal_available"] is False
+    calls = []
+
+    async def fake_stripe(method, path, config, **options):
+        calls.append((method, path, options.get("idempotency_key")))
+        if path == "/customers":
+            return {"id": "cus_live_alice"}
+        return {"id": "cs_live_alice", "url": "https://checkout.stripe.com/c/pay/live", "expires_at": int(time.time()) + 3600}
+
+    monkeypatch.setattr(billing, "_stripe_request", fake_stripe)
+    assert client.post("/api/billing/checkout", headers=headers()).json() == {"url": "https://checkout.stripe.com/c/pay/live"}
+    assert store.customer_for_user("alice", True) == "cus_live_alice"
+    assert [call[1] for call in calls] == ["/customers", "/checkout/sessions"]
+
+
+def test_customer_deleted_in_stripe_is_recreated_once(environment, monkeypatch):
+    store, client = environment
+    configured(monkeypatch)
+    store.save_customer("alice", "cus_deleted", livemode=False)
+    calls = []
+
+    async def fake_stripe(method, path, config, data=None, idempotency_key=None):
+        calls.append((path, (data or {}).get("customer"), idempotency_key))
+        if path == "/customers":
+            return {"id": "cus_fresh"}
+        if data["customer"] == "cus_deleted":
+            raise billing.StripeResourceMissing("customer")
+        return {"id": "cs_fresh", "url": "https://checkout.stripe.com/c/pay/fresh", "expires_at": int(time.time()) + 3600}
+
+    monkeypatch.setattr(billing, "_stripe_request", fake_stripe)
+    assert client.post("/api/billing/checkout", headers=headers()).json() == {"url": "https://checkout.stripe.com/c/pay/fresh"}
+    assert store.customer_for_user("alice") == "cus_fresh"
+    assert [call[0] for call in calls] == ["/checkout/sessions", "/customers", "/checkout/sessions"]
+    # A new idempotency key is used for the replacement session.
+    assert calls[0][2] != calls[2][2]
+
+
+def test_portal_for_a_deleted_customer_is_a_clear_conflict(environment, monkeypatch):
+    store, client = environment
+    configured(monkeypatch)
+    store.save_customer("alice", "cus_deleted")
+
+    async def fake_stripe(*_, **__):
+        raise billing.StripeResourceMissing("customer")
+
+    monkeypatch.setattr(billing, "_stripe_request", fake_stripe)
+    response = client.post("/api/billing/portal", headers=headers())
+    assert response.status_code == 409
+
+
+def test_unsent_checkout_attempt_is_restarted_before_stripe_would_reject_its_expiry(environment):
+    store, _ = environment
+    first = store.checkout_attempt("alice", "price_a", now=1000)
+    assert store.checkout_attempt("alice", "price_a", now=1000 + 20 * 60)["idempotency_key"] == first["idempotency_key"]
+    restarted = store.checkout_attempt("alice", "price_a", now=1000 + 40 * 60)
+    assert restarted["idempotency_key"] != first["idempotency_key"]
+    assert restarted["expires_at"] - (1000 + 40 * 60) == 3600
+
+
+def test_resource_missing_is_detected_without_exposing_the_body(monkeypatch):
+    configured(monkeypatch)
+    real_client = httpx.AsyncClient
+
+    def handler(request):
+        return httpx.Response(404, json={"error": {"code": "resource_missing", "param": "customer", "message": "No such customer: cus_x"}})
+
+    monkeypatch.setattr(billing.httpx, "AsyncClient", lambda **kwargs: real_client(transport=httpx.MockTransport(handler), **kwargs))
+    with pytest.raises(billing.StripeResourceMissing) as caught:
+        asyncio.run(billing._stripe_request("POST", "/checkout/sessions", billing._configuration(), data={"customer": "cus_x"}))
+    assert caught.value.param == "customer"
+    assert caught.value.status_code == 503
+    assert "cus_x" not in caught.value.detail

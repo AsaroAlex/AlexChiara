@@ -21,7 +21,15 @@ from .db import iso_now
 
 logger = logging.getLogger(__name__)
 MAX_ATTEMPTS = 3
+# A daily check has one slot per day: it keeps retrying for about two hours,
+# so a short provider or network outage does not skip the day's briefing.
+SCHEDULED_RETRY_DELAYS = (60, 300, 900, 1800, 3600)
 WATCH_INTERVAL = timedelta(minutes=5)
+# Reminder checks run every five minutes; once a day old, a check that saw
+# nothing new (its messages reappear in a later check) is removed.
+PRUNE_AFTER = timedelta(days=1)
+PRUNE_EVERY = timedelta(hours=1)
+KEEP_ACTIONS = 10000
 
 
 def _real_data_only():
@@ -45,6 +53,10 @@ def next_slot(service, now=None):
     return slot.isoformat()
 
 
+def max_attempts(run):
+    return len(SCHEDULED_RETRY_DELAYS) + 1 if run.get("trigger") == "scheduled" else MAX_ATTEMPTS
+
+
 def public_service(db, now=None):
     service = db.get_setting("service")
     service["next_run_at"] = next_slot(service, now) if service["status"] == "active" else None
@@ -60,17 +72,18 @@ class Scheduler:
         self._stop = threading.Event()
         self._thread = None
         self._lock = threading.Lock()
+        self._pruned_at = None
         self.recover()
 
     def recover(self):
         now = iso_now()
         with self.db.connection() as conn:
-            interrupted = conn.execute("SELECT id,attempts FROM runs WHERE status='running'").fetchall()
+            interrupted = conn.execute("SELECT id,attempts,trigger FROM runs WHERE status='running'").fetchall()
             for row in interrupted:
-                can_retry = row["attempts"] < MAX_ATTEMPTS
+                can_retry = row["attempts"] < max_attempts(dict(row))
                 conn.execute("UPDATE runs SET status=?,next_attempt_at=?,error=?,error_step='ripristino',retryable=?,finished_at=? WHERE id=?", (
                     "retry_wait" if can_retry else "failed", now if can_retry else None,
-                    "Il server si è interrotto durante il controllo. Recupero automatico avviato." if can_retry else "Il server si è interrotto. Raggiunto il limite di tre tentativi.",
+                    "Il server si è interrotto durante il controllo. Recupero automatico avviato." if can_retry else "Il server si è interrotto. Raggiunto il limite dei tentativi automatici.",
                     int(can_retry), None if can_retry else now, row["id"]))
                 self._log_in_transaction(conn, "run_recovered", row["id"], {"attempts": row["attempts"]})
 
@@ -85,9 +98,12 @@ class Scheduler:
         self._thread = threading.Thread(target=self._loop, daemon=True, name="alexchiara-scheduler")
         self._thread.start()
 
-    def stop(self):
+    def alive(self):
+        return bool(self._thread and self._thread.is_alive())
+
+    def stop(self, wait=True):
         self._stop.set()
-        if self._thread:
+        if self._thread and wait:
             self._thread.join(timeout=self.operation_timeout + 2)
 
     def _loop(self):
@@ -215,11 +231,59 @@ class Scheduler:
         key = f"priority-email:watch:{scope}:{bucket}"
         self.enqueue("watch", key, now)
 
+    def prune_history(self, now=None):
+        """Remove superseded reminder checks without changing any visible result.
+
+        A watch check older than a day, without drafts, is deleted when each of
+        its observed messages also appears in a later check of the same
+        mailbox; briefing, reminders and suggestions read the same evidence.
+        """
+        now = utc(now)
+        cutoff = (now - PRUNE_AFTER).isoformat()
+        removed = 0
+        with self.db.connection() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            candidates = {row["id"] for row in conn.execute("""
+                SELECT r.id FROM runs r WHERE r.trigger='watch' AND r.status IN ('succeeded','failed')
+                AND r.created_at<? AND NOT EXISTS (SELECT 1 FROM drafts d WHERE d.run_id=r.id)
+            """, (cutoff,))}
+            if not candidates:
+                return 0
+            observed = set()
+            for row in conn.execute("SELECT run_id FROM briefing_snapshots"):
+                observed.add(row["run_id"])
+            obsolete = [run_id for run_id in candidates if run_id not in observed]
+            scopes = conn.execute("SELECT DISTINCT provider,scope_key FROM briefing_snapshots").fetchall()
+            for scope in scopes:
+                later = set()
+                for snapshot in conn.execute("""
+                    SELECT run_id,messages FROM briefing_snapshots WHERE provider=? AND scope_key=?
+                    ORDER BY checked_at DESC,run_id DESC
+                """, (scope["provider"], scope["scope_key"])):
+                    try:
+                        messages = {json.dumps(message, sort_keys=True) for message in json.loads(snapshot["messages"])}
+                    except (TypeError, ValueError):
+                        continue
+                    if snapshot["run_id"] in candidates and later and messages <= later:
+                        obsolete.append(snapshot["run_id"])
+                    later |= messages
+            for run_id in obsolete:
+                conn.execute("DELETE FROM briefing_snapshots WHERE run_id=?", (run_id,))
+                removed += conn.execute("DELETE FROM runs WHERE id=?", (run_id,)).rowcount
+            conn.execute("DELETE FROM actions WHERE id<=(SELECT MAX(id) FROM actions)-?", (KEEP_ACTIONS,))
+        return removed
+
     def tick(self, now=None):
         now = utc(now)
         if not self._lock.acquire(blocking=False):
             return []
         try:
+            if self._pruned_at is None or now - self._pruned_at >= PRUNE_EVERY:
+                self._pruned_at = now
+                try:
+                    self.prune_history(now)
+                except Exception:
+                    logger.exception("History pruning failed")
             service = self.db.get_setting("service")
             if service["status"] != "active" or (_real_data_only() and service.get("provider") == "demo"):
                 return []
@@ -229,7 +293,10 @@ class Scheduler:
                 row = conn.execute("SELECT * FROM runs WHERE status IN ('queued','retry_wait') AND (next_attempt_at IS NULL OR next_attempt_at<=?) ORDER BY created_at,id LIMIT 1", (now.isoformat(),)).fetchone()
                 if not row:
                     return []
-                conn.execute("UPDATE runs SET status='running',attempts=attempts+1,started_at=?,finished_at=NULL,error=NULL,error_step=NULL WHERE id=? AND status IN ('queued','retry_wait')", (now.isoformat(), row["id"]))
+                claimed = conn.execute("UPDATE runs SET status='running',attempts=attempts+1,started_at=?,finished_at=NULL,error=NULL,error_step=NULL WHERE id=? AND status IN ('queued','retry_wait')", (now.isoformat(), row["id"])).rowcount
+                if not claimed:
+                    # Cancelled (deactivated, contacts changed) since it was read.
+                    return []
                 run = dict(row)
                 run["attempts"] += 1
             self._execute(run, now)
@@ -286,10 +353,15 @@ class Scheduler:
                 guard_current(preferences, company)
                 # Provider content never crosses the permission boundary above.
                 analyze = getattr(ai, "analyze", None)
-                if analyze:
-                    result = analyze(messages, company, preferences["priority_contacts"], provider=run["provider"])
-                else:
+                try:
+                    result = (analyze(messages, company, preferences["priority_contacts"], provider=run["provider"]) if analyze
+                              else ai.analyze_messages(messages, company, preferences["priority_contacts"]))
+                except ai.AIError:
+                    # The optional hosted model never blocks the check: the
+                    # deterministic local rules prepare the drafts instead.
+                    logger.warning("Hosted analysis unavailable for run %s; using local rules", run["id"])
                     result = ai.analyze_messages(messages, company, preferences["priority_contacts"])
+                    result["summary"] = "Analisi AI non disponibile: bozze preparate con le regole locali. " + result["summary"]
                 snapshot = capture_snapshot(messages, preferences["priority_contacts"], run["provider"], now, scope_key)
                 sources = {str(ai._field(message, "id")): message for message in messages}
                 return result, snapshot, sources
@@ -325,9 +397,11 @@ class Scheduler:
             self._fail(run, now, "L'analisi non è riuscita. I dati non sono stati inviati né modificati. Riprova il controllo.", "analisi", True)
 
     def _fail(self, run, now, message, step, retryable):
-        retry = bool(retryable and run["attempts"] < MAX_ATTEMPTS)
+        retry = bool(retryable and run["attempts"] < max_attempts(run))
         delay = timedelta(seconds=2 ** run["attempts"])
-        if run.get("trigger") == "watch":
+        if run.get("trigger") == "scheduled":
+            delay = timedelta(seconds=SCHEDULED_RETRY_DELAYS[min(run["attempts"], len(SCHEDULED_RETRY_DELAYS)) - 1])
+        elif run.get("trigger") == "watch":
             delay = max(delay, WATCH_INTERVAL)
         next_attempt = (now + delay).isoformat() if retry else None
         with self.db.connection() as conn:
@@ -340,7 +414,7 @@ class Scheduler:
         run = self.db.run(run_id)
         if not run:
             raise LookupError("Controllo non trovato")
-        if run["status"] not in ("failed", "retry_wait") or not run["retryable"] or run["attempts"] >= MAX_ATTEMPTS:
+        if run["status"] not in ("failed", "retry_wait") or not run["retryable"] or run["attempts"] >= max_attempts(run):
             raise ValueError("Questo controllo non può essere riprovato. Avvia un nuovo controllo dopo aver risolto il problema.")
         with self.db.connection() as conn:
             row = conn.execute("SELECT preferences,company FROM runs WHERE id=?", (run_id,)).fetchone()

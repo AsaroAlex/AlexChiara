@@ -99,3 +99,47 @@ def test_malformed_host_headers_are_rejected_before_routing(client, host):
 @pytest.mark.parametrize("host", ["localhost", "LOCALHOST:8000", "127.0.0.1:8000", "[::1]:8000"])
 def test_well_formed_allowed_hosts_are_accepted(client, host):
     assert client.get("/api/health", headers={"host": host}).status_code == 200
+
+
+def test_only_workspaces_with_scheduled_work_open_at_startup(tmp_path, monkeypatch):
+    from app.accounts import AccountStore
+    from app.db import Database
+
+    monkeypatch.setenv("FILO_ACCESS_PASSWORD", OWNER_PASSWORD)
+    store = AccountStore(tmp_path / "accounts.sqlite3")
+    ids = {}
+    for name in ("attivo", "dormiente", "corrotto"):
+        _, session = store.register(name.title(), f"{name}@example.test", "una-password-lunga-12", store.new_guest_session()[0], "127.0.0.1")
+        ids[name] = session["user"]["id"]
+    active = Database(tmp_path / "workspaces" / ids["attivo"] / "alexchiara.sqlite3")
+    service = active.get_setting("service")
+    service["status"] = "active"
+    active.set_setting("service", service)
+    Database(tmp_path / "workspaces" / ids["dormiente"] / "alexchiara.sqlite3")
+    broken = tmp_path / "workspaces" / ids["corrotto"] / "alexchiara.sqlite3"
+    broken.parent.mkdir(parents=True)
+    broken.write_bytes(b"not a database")
+    app = create_app(data_dir=tmp_path, start_worker=False)
+    with TestClient(app):
+        loaded = set(app.state.workspaces)
+    assert ids["attivo"] in loaded and "owner" in loaded
+    assert ids["dormiente"] not in loaded
+    assert ids["corrotto"] not in loaded
+
+
+def test_a_damaged_workspace_returns_a_clear_error_instead_of_crashing(tmp_path, monkeypatch):
+    from app.accounts import AccountStore, SESSION_COOKIE
+
+    monkeypatch.setenv("FILO_ACCESS_PASSWORD", OWNER_PASSWORD)
+    store = AccountStore(tmp_path / "accounts.sqlite3")
+    cookie, session = store.register("Rotto", "rotto@example.test", "una-password-lunga-12", store.new_guest_session()[0], "127.0.0.1")
+    broken = tmp_path / "workspaces" / session["user"]["id"] / "alexchiara.sqlite3"
+    broken.parent.mkdir(parents=True)
+    broken.write_bytes(b"not a database")
+    app = create_app(data_dir=tmp_path, start_worker=False)
+    with TestClient(app) as client:
+        client.cookies.set(SESSION_COOKIE, cookie)
+        response = client.get("/api/bootstrap")
+        assert response.status_code == 503
+        assert "non è disponibile" in response.json()["detail"]
+        assert client.get("/api/health").status_code == 200

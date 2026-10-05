@@ -23,6 +23,7 @@ import httpx
 STRIPE_API = "https://api.stripe.com/v1"
 MAX_WEBHOOK_BYTES = 512 * 1024
 SIGNATURE_TOLERANCE = 300
+CHECKOUT_MIN_LIFETIME = 31 * 60
 SUBSCRIPTION_STATES = {
     "active", "trialing", "past_due", "canceled", "unpaid", "incomplete",
     "incomplete_expired", "paused",
@@ -81,6 +82,19 @@ def _redirect_url(value, hostname):
     raise HTTPException(503, PROVIDER_UNAVAILABLE)
 
 
+class StripeResourceMissing(HTTPException):
+    """Stripe no longer knows an object, e.g. a customer deleted in the Dashboard
+    or created with the other (test/live) key. Uncaught, it is a plain 503."""
+
+    def __init__(self, param):
+        super().__init__(503, PROVIDER_UNAVAILABLE)
+        self.param = param
+
+
+def _live(config):
+    return config["STRIPE_SECRET_KEY"].startswith(("sk_live_", "rk_live_"))
+
+
 async def _stripe_request(method, path, config, *, data=None, idempotency_key=None):
     """Do not relay Stripe bodies, credentials or stack traces to the browser."""
     if not config["STRIPE_SECRET_KEY"]:
@@ -95,6 +109,13 @@ async def _stripe_request(method, path, config, *, data=None, idempotency_key=No
                 headers=headers, data=data,
             )
         if not response.is_success:
+            if response.status_code == 404:
+                try:
+                    error = response.json().get("error", {})
+                except (ValueError, AttributeError):
+                    error = {}
+                if isinstance(error, dict) and error.get("code") == "resource_missing":
+                    raise StripeResourceMissing(str(error.get("param") or ""))
             raise HTTPException(503, PROVIDER_UNAVAILABLE)
         result = response.json()
         if not isinstance(result, dict):
@@ -133,6 +154,10 @@ class BillingStore:
                     received_at INTEGER NOT NULL
                 );
             """)
+            # Test and live keys see different Stripe objects: tag each mapping.
+            for table in ("customers", "subscriptions"):
+                if "livemode" not in {row["name"] for row in conn.execute(f"PRAGMA table_info({table})")}:
+                    conn.execute(f"ALTER TABLE {table} ADD COLUMN livemode INTEGER")
             conn.execute("INSERT OR IGNORE INTO billing_settings VALUES ('installation_id', ?)", (secrets.token_hex(16),))
             self.installation_id = conn.execute("SELECT value FROM billing_settings WHERE key='installation_id'").fetchone()["value"]
         self.path.chmod(0o600)
@@ -151,21 +176,31 @@ class BillingStore:
         finally:
             conn.close()
 
-    def customer_for_user(self, user_id):
+    def customer_record(self, user_id):
         with self.connection() as conn:
-            row = conn.execute("SELECT customer_id FROM customers WHERE user_id=?", (user_id,)).fetchone()
-        return row["customer_id"] if row else None
+            row = conn.execute("SELECT customer_id,livemode FROM customers WHERE user_id=?", (user_id,)).fetchone()
+        return dict(row) if row else None
 
-    def save_customer(self, user_id, customer_id):
+    def customer_for_user(self, user_id, livemode=None):
+        row = self.customer_record(user_id)
+        if not row or (livemode is not None and row["livemode"] is not None and row["livemode"] != int(livemode)):
+            return None
+        return row["customer_id"]
+
+    def save_customer(self, user_id, customer_id, livemode=None, replaces=None):
+        livemode = None if livemode is None else int(livemode)
         with self.connection() as conn:
-            conn.execute("INSERT OR IGNORE INTO customers VALUES (?, ?)", (user_id, customer_id))
+            if replaces:
+                conn.execute("UPDATE customers SET customer_id=?,livemode=? WHERE user_id=? AND customer_id=?", (customer_id, livemode, user_id, replaces))
+            conn.execute("INSERT OR IGNORE INTO customers(user_id,customer_id,livemode) VALUES (?,?,?)", (user_id, customer_id, livemode))
             row = conn.execute("SELECT customer_id FROM customers WHERE user_id=?", (user_id,)).fetchone()
             if not row or row["customer_id"] != customer_id:
                 raise HTTPException(503, PROVIDER_UNAVAILABLE)
 
-    def subscription_for_user(self, user_id):
+    def subscription_for_user(self, user_id, livemode=None):
         with self.connection() as conn:
-            rows = conn.execute("SELECT * FROM subscriptions WHERE user_id=? ORDER BY event_created DESC", (user_id,)).fetchall()
+            rows = conn.execute("""SELECT * FROM subscriptions WHERE user_id=? AND (? IS NULL OR livemode IS NULL OR livemode=?)
+                ORDER BY event_created DESC""", (user_id, None if livemode is None else int(livemode), None if livemode is None else int(livemode))).fetchall()
         # A late cancellation of an old subscription cannot hide a newer one.
         rank = {"active": 0, "trialing": 1, "past_due": 2, "unpaid": 3, "paused": 4, "incomplete": 5}
         row = min(rows, key=lambda item: (rank.get(item["status"], 10), -item["event_created"])) if rows else None
@@ -180,12 +215,23 @@ class BillingStore:
         with self.connection() as conn:
             conn.execute("BEGIN IMMEDIATE")
             row = conn.execute("SELECT * FROM checkout_attempts WHERE user_id=?", (user_id,)).fetchone()
-            if not row or row["expires_at"] <= now or row["price_id"] != price_id:
+            # Stripe requires at least 30 minutes until expiry: an attempt that
+            # never produced a session is restarted rather than resent too late.
+            if not row or row["expires_at"] <= now or row["price_id"] != price_id or (not row["url"] and row["expires_at"] - now < CHECKOUT_MIN_LIFETIME):
                 conn.execute("INSERT INTO checkout_attempts VALUES (?, ?, ?, ?, NULL, NULL) ON CONFLICT(user_id) DO UPDATE SET idempotency_key=excluded.idempotency_key,price_id=excluded.price_id,expires_at=excluded.expires_at,checkout_id=NULL,url=NULL", (
                     user_id, "filo-checkout-" + secrets.token_hex(24), price_id, now + 3600,
                 ))
                 row = conn.execute("SELECT * FROM checkout_attempts WHERE user_id=?", (user_id,)).fetchone()
         return dict(row)
+
+    def reset_checkout(self, user_id):
+        with self.connection() as conn:
+            conn.execute("DELETE FROM checkout_attempts WHERE user_id=?", (user_id,))
+
+    def subscription_event_created(self, subscription_id):
+        with self.connection() as conn:
+            row = conn.execute("SELECT event_created,status FROM subscriptions WHERE subscription_id=?", (subscription_id,)).fetchone()
+        return dict(row) if row else None
 
     def save_checkout(self, user_id, key, checkout_id, url, expires_at):
         with self.connection() as conn:
@@ -217,9 +263,12 @@ class BillingStore:
                         period_end = subscription.get("current_period_end")
                         if not isinstance(period_end, int) or isinstance(period_end, bool) or period_end < 0:
                             period_end = None
-                        conn.execute("INSERT INTO subscriptions VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(subscription_id) DO UPDATE SET status=excluded.status,cancel_at_period_end=excluded.cancel_at_period_end,current_period_end=excluded.current_period_end,event_created=excluded.event_created", (
+                        livemode = event.get("livemode", subscription.get("livemode"))
+                        conn.execute("""INSERT INTO subscriptions(subscription_id,user_id,customer_id,status,cancel_at_period_end,current_period_end,event_created,livemode)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(subscription_id) DO UPDATE SET status=excluded.status,cancel_at_period_end=excluded.cancel_at_period_end,current_period_end=excluded.current_period_end,event_created=excluded.event_created,livemode=excluded.livemode""", (
                             subscription_id, row["user_id"], customer, status,
                             int(subscription.get("cancel_at_period_end") is True), period_end, event["created"],
+                            int(livemode) if isinstance(livemode, bool) else None,
                         ))
             if completed_checkout:
                 conn.execute("UPDATE checkout_attempts SET expires_at=0 WHERE checkout_id=?", (completed_checkout,))
@@ -253,10 +302,11 @@ def create_billing_router(store):
     async def billing_status(request: Request):
         user = _user(request)
         config = _configuration()
-        subscription = store.subscription_for_user(user["id"])
+        live = _live(config) if _configured(config) else None
+        subscription = store.subscription_for_user(user["id"], live)
         return {
             "configured": _configured(config),
-            "portal_available": _configured(config) and bool(store.customer_for_user(user["id"])),
+            "portal_available": _configured(config) and bool(store.customer_for_user(user["id"], live)),
             "subscription_status": subscription["status"], "subscription": subscription,
             "plan": {
                 "name": config["FILO_PLAN_LABEL"] or "Spazelia",
@@ -274,26 +324,30 @@ def create_billing_router(store):
         origin = _public_origin(request, config)
         if not _provider_id(config["STRIPE_PRICE_ID"], "price_"):
             raise HTTPException(503, NOT_CONFIGURED)
-        async with user_locks.setdefault(user["id"], asyncio.Lock()):
-            if store.subscription_for_user(user["id"])["status"] in LIVE_SUBSCRIPTION_STATES:
-                raise HTTPException(409, "Hai già un abbonamento. Gestiscilo dalla tua area personale.")
-            customer_id = store.customer_for_user(user["id"])
-            if not customer_id:
-                customer_data = {"metadata[user_id]": user["id"]}
-                if isinstance(user.get("email"), str) and re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", user["email"]):
-                    customer_data["email"] = user["email"]
-                if user.get("name"):
-                    customer_data["name"] = user["name"]
-                customer = await _stripe_request("POST", "/customers", config, data=customer_data,
-                    idempotency_key="filo-customer-" + hashlib.sha256((store.installation_id + ":" + user["id"]).encode()).hexdigest())
-                customer_id = _provider_id(customer.get("id"), "cus_")
-                if not customer_id:
-                    raise HTTPException(503, PROVIDER_UNAVAILABLE)
-                store.save_customer(user["id"], customer_id)
+        live = _live(config)
+
+        async def new_customer(replaces=None):
+            customer_data = {"metadata[user_id]": user["id"]}
+            if isinstance(user.get("email"), str) and re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", user["email"]):
+                customer_data["email"] = user["email"]
+            if user.get("name"):
+                customer_data["name"] = user["name"]
+            # A replacement (other key mode, or deleted in the Dashboard) needs
+            # its own idempotency key, or Stripe would return the old customer.
+            seed = store.installation_id + ":" + user["id"] + ("" if not replaces else ":" + ("live" if live else "test") + ":" + replaces)
+            customer = await _stripe_request("POST", "/customers", config, data=customer_data,
+                idempotency_key="filo-customer-" + hashlib.sha256(seed.encode()).hexdigest())
+            created = _provider_id(customer.get("id"), "cus_")
+            if not created:
+                raise HTTPException(503, PROVIDER_UNAVAILABLE)
+            store.save_customer(user["id"], created, live, replaces=replaces)
+            return created
+
+        async def create_session(customer_id):
             attempt = store.checkout_attempt(user["id"], config["STRIPE_PRICE_ID"])
             if attempt["url"]:
-                return {"url": _redirect_url(attempt["url"], "checkout.stripe.com")}
-            session = await _stripe_request("POST", "/checkout/sessions", config, data={
+                return attempt, None
+            return attempt, await _stripe_request("POST", "/checkout/sessions", config, data={
                 "mode": "subscription", "customer": customer_id,
                 "line_items[0][price]": config["STRIPE_PRICE_ID"], "line_items[0][quantity]": "1",
                 "client_reference_id": user["id"], "metadata[user_id]": user["id"],
@@ -301,6 +355,25 @@ def create_billing_router(store):
                 "success_url": origin + "/account?billing=success", "cancel_url": origin + "/account?billing=cancelled",
                 "expires_at": str(attempt["expires_at"]),
             }, idempotency_key=attempt["idempotency_key"])
+
+        async with user_locks.setdefault(user["id"], asyncio.Lock()):
+            if store.subscription_for_user(user["id"], live)["status"] in LIVE_SUBSCRIPTION_STATES:
+                raise HTTPException(409, "Hai già un abbonamento. Gestiscilo dalla tua area personale.")
+            customer_id = store.customer_for_user(user["id"], live)
+            if not customer_id:
+                previous = store.customer_record(user["id"])
+                customer_id = await new_customer(previous["customer_id"] if previous else None)
+            try:
+                attempt, session = await create_session(customer_id)
+            except StripeResourceMissing as missing:
+                if missing.param != "customer":
+                    raise
+                # The saved customer no longer exists for this key: start over once.
+                store.reset_checkout(user["id"])
+                customer_id = await new_customer(customer_id)
+                attempt, session = await create_session(customer_id)
+            if session is None:
+                return {"url": _redirect_url(attempt["url"], "checkout.stripe.com")}
             url = _redirect_url(session.get("url"), "checkout.stripe.com")
             session_id = _provider_id(session.get("id"), "cs_")
             expires_at = session.get("expires_at")
@@ -315,12 +388,15 @@ def create_billing_router(store):
         config = _configuration()
         if not _configured(config):
             raise HTTPException(503, NOT_CONFIGURED)
-        customer = store.customer_for_user(user["id"])
+        customer = store.customer_for_user(user["id"], _live(config))
         if not customer:
             raise HTTPException(409, "Non hai ancora un abbonamento da gestire.")
-        session = await _stripe_request("POST", "/billing_portal/sessions", config, data={
-            "customer": customer, "return_url": _public_origin(request, config) + "/account?billing=returned",
-        })
+        try:
+            session = await _stripe_request("POST", "/billing_portal/sessions", config, data={
+                "customer": customer, "return_url": _public_origin(request, config) + "/account?billing=returned",
+            })
+        except StripeResourceMissing:
+            raise HTTPException(409, "Non hai ancora un abbonamento da gestire.") from None
         return {"url": _redirect_url(session.get("url"), "billing.stripe.com")}
 
     @router.post("/webhook")
@@ -356,6 +432,13 @@ def create_billing_router(store):
             subscription = dict(obj)
             if event["type"] == "customer.subscription.deleted":
                 subscription["status"] = "canceled"
+            else:
+                subscription_id = _provider_id(obj.get("id"), "sub_")
+                stored = store.subscription_event_created(subscription_id) if subscription_id else None
+                if stored and stored["event_created"] == event["created"] and stored["status"] != obj.get("status"):
+                    # Events of the same second arrive in any order: ask Stripe
+                    # for the current state instead of trusting the last delivery.
+                    subscription = await _stripe_request("GET", "/subscriptions/" + subscription_id, config)
         elif event["type"] in {"checkout.session.completed", "checkout.session.async_payment_succeeded"} and obj.get("mode") == "subscription":
             subscription_id = _provider_id(obj.get("subscription"), "sub_")
             if subscription_id:
